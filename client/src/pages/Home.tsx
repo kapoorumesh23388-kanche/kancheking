@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import PlayerProfile from "@/components/PlayerProfile";
-import GameModeSelector from "@/components/GameModeSelector";
 import { Link } from "wouter";
 
 export default function Home() {
@@ -26,15 +25,13 @@ export default function Home() {
           </Button>
         </div>
 
-        <div className="space-y-6 mb-8">
+        <div className="mb-10">
           <PlayerProfile
             name="Rajesh Kumar"
             marbles={1000}
             gamesPlayed={45}
             gamesWon={32}
           />
-          
-          <GameModeSelector />
         </div>
 
         <div className="text-center">

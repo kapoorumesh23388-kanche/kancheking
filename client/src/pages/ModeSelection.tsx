@@ -26,14 +26,6 @@ export default function ModeSelection() {
             />
           </Link>
 
-          <Link href="/game/local">
-            <ModeCard
-              icon="👥"
-              title="1v1 Local"
-              description="Play with a friend on the same device. Take turns and challenge each other!"
-            />
-          </Link>
-
           <ModeCard
             icon="🌐"
             title="Online Multiplayer"
