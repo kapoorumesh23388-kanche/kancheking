@@ -4,14 +4,14 @@ import PlayerBox from "@/components/PlayerBox";
 import FistDisplay from "@/components/FistDisplay";
 import GuessingPanel from "@/components/GuessingPanel";
 import ResultDisplay from "@/components/ResultDisplay";
-import MarbleDisplay from "@/components/MarbleDisplay";
+import MarbleSelector from "@/components/MarbleSelector";
 import { Button } from "@/components/ui/button";
 
 type GamePhase = "selecting" | "guessing" | "revealing" | "result";
 
 export default function GamePlay() {
   const [phase, setPhase] = useState<GamePhase>("selecting");
-  const [selectedMarbles, setSelectedMarbles] = useState(0);
+  const [selectedMarbleIds, setSelectedMarbleIds] = useState<number[]>([]);
   const [fistOpen, setFistOpen] = useState(false);
   const [gameResult, setGameResult] = useState<{
     won: boolean;
@@ -19,14 +19,23 @@ export default function GamePlay() {
     details: string;
   } | null>(null);
 
-  const handleSelectMarbles = (count: number) => {
-    setSelectedMarbles(count);
-    console.log(`Selected ${count} marbles`);
+  const handleToggleMarble = (id: number) => {
+    setSelectedMarbleIds(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(marbleId => marbleId !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  };
+
+  const handleClearAll = () => {
+    setSelectedMarbleIds([]);
   };
 
   const handleConfirmSelection = () => {
     setPhase("guessing");
-    console.log("Moving to guessing phase");
+    console.log("Moving to guessing phase with", selectedMarbleIds.length, "marbles");
   };
 
   const handleGuess = (guess: string, bet: number) => {
@@ -35,7 +44,7 @@ export default function GamePlay() {
     setFistOpen(true);
     
     setTimeout(() => {
-      const actualCount = selectedMarbles;
+      const actualCount = selectedMarbleIds.length;
       const isEven = actualCount % 2 === 0;
       let won = false;
       let message = "";
@@ -65,7 +74,7 @@ export default function GamePlay() {
 
   const handlePlayAgain = () => {
     setPhase("selecting");
-    setSelectedMarbles(0);
+    setSelectedMarbleIds([]);
     setFistOpen(false);
     setGameResult(null);
     console.log("Starting new game");
@@ -98,34 +107,18 @@ export default function GamePlay() {
               <div className="space-y-6">
                 <Card className="bg-white/5 border-2 border-primary/20">
                   <CardContent className="p-6">
-                    <h3 className="text-2xl font-bold text-primary text-center mb-4">
-                      Select Marbles (1-20)
-                    </h3>
-                    <div className="flex gap-3 justify-center flex-wrap mb-6">
-                      {Array.from({ length: 20 }, (_, i) => i + 1).map((count) => (
-                        <Button
-                          key={count}
-                          variant={selectedMarbles === count ? "default" : "outline"}
-                          className={`w-14 h-14 text-xl font-bold ${
-                            selectedMarbles === count
-                              ? "bg-gradient-to-r from-primary to-[#FFA500] text-primary-foreground"
-                              : "bg-primary/20 text-primary border-2 border-primary/40"
-                          }`}
-                          onClick={() => handleSelectMarbles(count)}
-                          data-testid={`button-select-${count}`}
-                        >
-                          {count}
-                        </Button>
-                      ))}
-                    </div>
-                    {selectedMarbles > 0 && <MarbleDisplay count={selectedMarbles} />}
+                    <MarbleSelector
+                      selectedMarbleIds={selectedMarbleIds}
+                      onToggleMarble={handleToggleMarble}
+                      onClearAll={handleClearAll}
+                      maxMarbles={20}
+                    />
                     <Button
                       className="w-full mt-6 bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground py-6 text-xl font-bold"
                       onClick={handleConfirmSelection}
-                      disabled={selectedMarbles === 0}
                       data-testid="button-confirm-selection"
                     >
-                      Confirm Selection
+                      Confirm Selection ({selectedMarbleIds.length} marbles)
                     </Button>
                   </CardContent>
                 </Card>
@@ -142,7 +135,7 @@ export default function GamePlay() {
             {phase === "revealing" && (
               <FistDisplay
                 isOpen={fistOpen}
-                marbleCount={selectedMarbles}
+                marbleCount={selectedMarbleIds.length}
                 label="Revealing..."
               />
             )}
