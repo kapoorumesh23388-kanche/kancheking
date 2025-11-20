@@ -35,11 +35,29 @@ export default function GamePlay() {
     setFistOpen(true);
     
     setTimeout(() => {
-      const won = Math.random() > 0.5;
+      const actualCount = selectedMarbles;
+      const isEven = actualCount % 2 === 0;
+      let won = false;
+      let message = "";
+      
+      if (guess === "kali") {
+        won = actualCount === 0;
+        message = won ? "Kali Hai! 🎉" : "Jhota Hai! 😢";
+      } else if (guess === "jhota") {
+        won = actualCount > 0;
+        message = won ? "Jhota Hai! 🎉" : "Kali Hai! 😢";
+      } else if (guess === "even") {
+        won = isEven;
+        message = won ? "Even Hai! 🎉" : "Odd Hai! 😢";
+      } else if (guess === "odd") {
+        won = !isEven;
+        message = won ? "Odd Hai! 🎉" : "Even Hai! 😢";
+      }
+      
       setGameResult({
         won,
         change: bet,
-        details: `The answer was ${guess === "even" ? "Odd" : "Even"}. ${won ? "Correct!" : "Wrong!"}`
+        details: message
       });
       setPhase("result");
     }, 2000);
@@ -81,14 +99,14 @@ export default function GamePlay() {
                 <Card className="bg-white/5 border-2 border-primary/20">
                   <CardContent className="p-6">
                     <h3 className="text-2xl font-bold text-primary text-center mb-4">
-                      Select Marbles (0-5)
+                      Select Marbles (1-20)
                     </h3>
-                    <div className="flex gap-4 justify-center flex-wrap mb-6">
-                      {[0, 1, 2, 3, 4, 5].map((count) => (
+                    <div className="flex gap-3 justify-center flex-wrap mb-6">
+                      {Array.from({ length: 20 }, (_, i) => i + 1).map((count) => (
                         <Button
                           key={count}
                           variant={selectedMarbles === count ? "default" : "outline"}
-                          className={`w-16 h-16 text-2xl font-bold ${
+                          className={`w-14 h-14 text-xl font-bold ${
                             selectedMarbles === count
                               ? "bg-gradient-to-r from-primary to-[#FFA500] text-primary-foreground"
                               : "bg-primary/20 text-primary border-2 border-primary/40"
