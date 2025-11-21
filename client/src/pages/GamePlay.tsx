@@ -51,8 +51,8 @@ export default function GamePlay() {
 
   const handleConfirmSelection = () => {
     setPhase("guessing");
-    // If AI is guesser, make AI guess after a delay
-    if (!isHiderPlayer1) {
+    // If Player 1 is hider, AI (Player 2) is guesser - make AI guess after a delay
+    if (isHiderPlayer1) {
       setTimeout(() => {
         const guesses = ["even", "odd", "kali", "jhota"];
         const randomGuess = guesses[Math.floor(Math.random() * guesses.length)];
@@ -217,7 +217,7 @@ export default function GamePlay() {
 
             {phase === "guessing" && (
               <div className="space-y-6">
-                <FistDisplay isOpen={false} label={isHiderPlayer1 ? "AI's Hidden Marbles" : "Your Hidden Marbles"} />
+                <FistDisplay isOpen={false} label={isHiderPlayer1 ? "Your Hidden Marbles" : "AI's Hidden Marbles"} />
                 {isHiderPlayer1 ? (
                   <div className="bg-white/5 border-2 border-primary/20 rounded-lg p-6 text-center">
                     <p className="text-2xl font-bold text-primary mb-4">
