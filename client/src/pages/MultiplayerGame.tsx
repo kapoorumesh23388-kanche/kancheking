@@ -192,8 +192,8 @@ export default function MultiplayerGame() {
 
             {phase === "guessing" && (
               <GuessingPanel
-                playerMarbles={isPlayer1 ? player1Marbles : player2Marbles}
-                onGuess={handleGuess}
+                maxBet={isPlayer1 ? player1Marbles : player2Marbles}
+                onGuess={(guess) => handleGuess(guess)}
               />
             )}
 

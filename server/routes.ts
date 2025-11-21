@@ -142,8 +142,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.recordTransaction({
         userId,
         amount: -2500,
-        type: "game_loss",
-        description: "Tournament entry fee",
+        type: "tournament_entry",
+        description: "Tournament entry fee (2500 marbles)",
         transactionId: null,
       });
 
@@ -156,6 +156,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, marbles: newMarbles });
     } catch (error) {
       res.status(500).json({ error: "Failed to join tournament" });
+    }
+  });
+
+  app.post("/api/tournament/winner", async (req, res) => {
+    try {
+      const { userId, windowId } = req.body;
+      const WINNER_POINTS = 250000;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const newPoints = user.points + WINNER_POINTS;
+      await storage.updateUserPoints(userId, newPoints);
+
+      await storage.addGamePoints({
+        userId,
+        points: WINNER_POINTS,
+        gameType: "tournament_win",
+        opponent: null,
+        won: true,
+      });
+
+      await storage.recordTransaction({
+        userId,
+        amount: WINNER_POINTS,
+        type: "tournament_reward",
+        description: `Tournament Win - 250,000 Points (≈₹25,000 value)`,
+        transactionId: null,
+      });
+
+      res.json({ success: true, points: newPoints, reward: WINNER_POINTS });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to record tournament win" });
+    }
+  });
+
+  app.post("/api/catalog/redeem", async (req, res) => {
+    try {
+      const { userId, itemId } = req.body;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const items = await storage.getCatalogItems();
+      const item = items.find(i => i.id === itemId);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      if (user.points < item.pointsCost) {
+        return res.status(400).json({ error: "Insufficient points" });
+      }
+
+      const newPoints = user.points - item.pointsCost;
+      await storage.updateUserPoints(userId, newPoints);
+
+      await storage.recordTransaction({
+        userId,
+        amount: -item.pointsCost,
+        type: "catalog_redemption",
+        description: `Redeemed: ${item.name}`,
+        transactionId: null,
+      });
+
+      res.json({ success: true, points: newPoints, item: item.name });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to redeem item" });
     }
   });
 

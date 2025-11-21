@@ -7,9 +7,21 @@ import type { CatalogItem } from "@shared/schema";
 
 export default function Shop() {
   const [copiedCode, setCopiedCode] = useState(false);
-  const [marbleCount, setMarbleCount] = useState(1000);
-  const [pointCount, setPointCount] = useState(250);
+  const [marbleCount, setMarbleCount] = useState(() => {
+    const saved = localStorage.getItem("playerMarbles");
+    return saved ? parseInt(saved) : 1000;
+  });
+  const [pointCount, setPointCount] = useState(5000);
   const referralCode = "RAJESH123";
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem("playerMarbles");
+      if (saved) setMarbleCount(parseInt(saved));
+    };
+    window.addEventListener("marbleUpdate", handleStorageChange);
+    return () => window.removeEventListener("marbleUpdate", handleStorageChange);
+  }, []);
 
   // Fetch catalog items from backend
   const { data: catalogItems = [], isLoading } = useQuery<CatalogItem[]>({
@@ -99,6 +111,41 @@ export default function Shop() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Catalog Items - Premium Products */}
+        <div className="mb-8">
+          <h3 className="text-2xl font-bold mb-4">💎 Premium Catalog - Redeem with Points</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {catalogItems && catalogItems.length > 0 ? (
+              catalogItems.map((item) => (
+                <Card key={item.id} className="hover:shadow-lg transition-shadow border-primary/20">
+                  <CardHeader>
+                    <CardTitle className="text-lg">{item.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-center space-y-3">
+                    <p className="text-muted-foreground text-sm">{item.description}</p>
+                    <p className="text-2xl font-bold text-purple-400">{item.pointsCost?.toLocaleString()} Points</p>
+                    <p className="text-xs text-muted-foreground">Worth ~₹{(item.pointsCost || 0 / 10).toLocaleString()}</p>
+                    <Button 
+                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold"
+                      disabled={pointCount < (item.pointsCost || 0)}
+                      data-testid={`button-redeem-${item.id}`}
+                    >
+                      {pointCount >= (item.pointsCost || 0) ? "Redeem" : "Not Enough Points"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card className="col-span-full bg-blue-500/10 border-blue-500/30">
+                <CardContent className="pt-6 text-center">
+                  <p className="text-muted-foreground mb-2">📦 No Premium Items Available</p>
+                  <p className="text-sm text-muted-foreground">Check back when catalog updates with exclusive items!</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
 
         {/* Marble Packages */}
         <div className="mb-8">

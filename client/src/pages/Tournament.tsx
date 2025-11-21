@@ -8,21 +8,47 @@ export default function Tournament() {
   const playerCount = 85;
   const entryFee = 2500;
   const userMarbles = 10000;
+  const userPoints = 5000;
+  const winnerPoints = 250000;
+  const pointValue = 25000; // ~25k rupees value
 
   const tournamentWindows = [
     {
       id: 1,
       players: 85,
       status: "Open",
-      prizePool: 850000,
+      pointPool: 85 * 50000, // Each player's participation points
+      winnerReward: winnerPoints,
     },
     {
       id: 2,
       players: 0,
       status: "Waiting",
-      prizePool: 0,
+      pointPool: 0,
+      winnerReward: winnerPoints,
     },
   ];
+
+  const handleJoinTournament = async () => {
+    if (userMarbles >= entryFee) {
+      // API call to join tournament
+      try {
+        const response = await fetch("/api/tournament/join", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: "current-user-id",
+            windowId: activeWindow,
+          }),
+        });
+        if (response.ok) {
+          alert("Successfully joined tournament!");
+        }
+      } catch (error) {
+        console.error("Failed to join tournament:", error);
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen pt-20 pb-10">
@@ -31,36 +57,73 @@ export default function Tournament() {
           <h2 className="text-5xl font-bold text-primary mb-3" style={{ textShadow: '0 0 20px rgba(255,215,0,0.5)' }}>
             🏆 Kali Jhota Tournament
           </h2>
-          <p className="text-xl text-muted-foreground">100-Player Battles | 2500 Marble Entry | Massive Rewards</p>
+          <p className="text-xl text-muted-foreground">100-Player Battles | 2500 Marble Entry | 250,000 Points for Winner</p>
         </div>
 
-        {/* Entry Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        {/* Entry Stats & Points Info */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/30">
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-muted-foreground mb-2">Your Marbles</p>
-                <p className="text-3xl font-bold text-yellow-500">{userMarbles}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-red-500/20 to-pink-500/20 border-red-500/30">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-muted-foreground mb-2">Entry Fee</p>
-                <p className="text-3xl font-bold text-red-500">{entryFee}</p>
+                <p className="text-muted-foreground mb-2 text-xs">Your Marbles</p>
+                <p className="text-2xl font-bold text-yellow-500">{userMarbles}</p>
               </div>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-purple-500/30">
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-muted-foreground mb-2">Can Afford</p>
-                <p className="text-3xl font-bold text-purple-500">{Math.floor(userMarbles / entryFee)}</p>
+                <p className="text-muted-foreground mb-2 text-xs">Your Points</p>
+                <p className="text-2xl font-bold text-purple-500">{userPoints}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-r from-red-500/20 to-pink-500/20 border-red-500/30">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <p className="text-muted-foreground mb-2 text-xs">Entry Fee</p>
+                <p className="text-2xl font-bold text-red-500">{entryFee}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-500/30">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <p className="text-muted-foreground mb-2 text-xs">Tournaments</p>
+                <p className="text-2xl font-bold text-green-500">Unlimited</p>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Points System Info */}
+        <Card className="mb-8 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/30">
+          <CardHeader>
+            <CardTitle className="text-xl">💎 Points & Rewards System</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <p className="text-sm font-semibold text-primary">Tournament Winner</p>
+                <p className="text-2xl font-bold text-yellow-400">{winnerPoints.toLocaleString()} Points</p>
+                <p className="text-xs text-muted-foreground mt-1">Worth ~₹{(winnerPoints / 10).toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-primary">Points Value</p>
+                <p className="text-2xl font-bold text-green-400">~₹{pointValue.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-1">Approx redemption value</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-primary">Redemption</p>
+                <p className="text-2xl font-bold text-purple-400">Premium Items</p>
+                <p className="text-xs text-muted-foreground mt-1">Available in Shop catalog</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground bg-black/30 p-3 rounded">
+              ℹ️ Win tournaments to earn massive points! Redeem points in the Shop when catalog updates with premium products. You can participate in unlimited tournaments.
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Tournament Windows */}
         <div className="mb-8">
@@ -100,15 +163,16 @@ export default function Tournament() {
                       </div>
                     </div>
                     <div>
-                      <p className="text-muted-foreground mb-2">Prize Pool</p>
-                      <p className="text-2xl font-bold text-yellow-500">₹{window.prizePool.toLocaleString()}</p>
+                      <p className="text-muted-foreground mb-2">Winner Gets</p>
+                      <p className="text-2xl font-bold text-yellow-400">{window.winnerReward.toLocaleString()} Points</p>
                     </div>
                     {window.status === "Open" && (
                       <Button
-                        className="w-full"
+                        className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground font-bold"
                         size="lg"
                         data-testid="button-join-tournament"
                         disabled={userMarbles < entryFee}
+                        onClick={handleJoinTournament}
                       >
                         Join Tournament (2500 Marbles)
                       </Button>
