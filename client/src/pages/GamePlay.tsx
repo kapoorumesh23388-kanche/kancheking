@@ -9,6 +9,13 @@ import { Button } from "@/components/ui/button";
 
 type GamePhase = "selecting" | "guessing" | "revealing" | "result";
 
+interface GameState {
+  lastGuess?: string;
+  lastBet?: number;
+}
+
+const gameState: GameState = {};
+
 export default function GamePlay() {
   const [phase, setPhase] = useState<GamePhase>("selecting");
   const [selectedMarbleIds, setSelectedMarbleIds] = useState<number[]>([]);
@@ -18,6 +25,8 @@ export default function GamePlay() {
   const [player2Marbles, setPlayer2Marbles] = useState(120);
   const [aiHiddenCount, setAiHiddenCount] = useState(0);
   const [showRevealButton, setShowRevealButton] = useState(false);
+  const [lastGuess, setLastGuess] = useState<string>("");
+  const [lastBet, setLastBet] = useState(10);
   const [gameResult, setGameResult] = useState<{
     won: boolean;
     change: number;
@@ -47,6 +56,8 @@ export default function GamePlay() {
 
   const handleGuess = (guess: string, bet: number) => {
     console.log(`Guess: ${guess}, Bet: ${bet}`);
+    setLastGuess(guess);
+    setLastBet(bet);
     setShowRevealButton(true);
   };
 
@@ -56,44 +67,38 @@ export default function GamePlay() {
     setShowRevealButton(false);
     
     setTimeout(() => {
-      const actualCount = selectedMarbleIds.length;
+      const actualCount = isHolderPlayer1 ? selectedMarbleIds.length : aiHiddenCount;
       const isOdd = actualCount % 2 === 1;
       let won = false;
       let message = "";
-      let actualGuess = "";
       
       // Logic: Odd marbles = Kali, Even marbles (0,2,4...) = Jhota
-      if (window.lastGuess === "kali") {
+      if (lastGuess === "kali") {
         won = isOdd;
         message = won ? "Kali Hai! 🎉" : "Jhota Hai! 😢";
-        actualGuess = "Kali";
-      } else if (window.lastGuess === "jhota") {
+      } else if (lastGuess === "jhota") {
         won = !isOdd;
         message = won ? "Jhota Hai! 🎉" : "Kali Hai! 😢";
-        actualGuess = "Jhota";
-      } else if (window.lastGuess === "even") {
+      } else if (lastGuess === "even") {
         won = !isOdd;
         message = won ? "Even Hai! 🎉" : "Odd Hai! 😢";
-        actualGuess = "Even";
-      } else if (window.lastGuess === "odd") {
+      } else if (lastGuess === "odd") {
         won = isOdd;
         message = won ? "Odd Hai! 🎉" : "Even Hai! 😢";
-        actualGuess = "Odd";
       }
       
-      // Update marble counts
-      const betAmount = window.lastBet || 10;
+      // Update marble counts - guesser wins means they stay guesser until they lose
       if (isHolderPlayer1) {
-        setPlayer1Marbles(prev => won ? prev - betAmount : prev + betAmount);
-        setPlayer2Marbles(prev => won ? prev + betAmount : prev - betAmount);
+        setPlayer1Marbles(prev => won ? prev - lastBet : prev + lastBet);
+        setPlayer2Marbles(prev => won ? prev + lastBet : prev - lastBet);
       } else {
-        setPlayer1Marbles(prev => won ? prev + betAmount : prev - betAmount);
-        setPlayer2Marbles(prev => won ? prev - betAmount : prev + betAmount);
+        setPlayer1Marbles(prev => won ? prev + lastBet : prev - lastBet);
+        setPlayer2Marbles(prev => won ? prev - lastBet : prev + lastBet);
       }
       
       setGameResult({
         won,
-        change: betAmount,
+        change: lastBet,
         details: message,
         roleSwitched: won,
         aiChoice: `${actualCount} marbles (${isOdd ? "Odd/Kali" : "Even/Jhota"})`
@@ -195,7 +200,7 @@ export default function GamePlay() {
 
             {phase === "guessing" && (
               <div className="space-y-6">
-                <FistDisplay isOpen={false} label={isHolderPlayer1 ? "AI's Hidden Marbles" : "Player 1's Hidden Marbles"} />
+                <FistDisplay isOpen={false} label={isHolderPlayer1 ? "AI's Hidden Marbles" : "Your Hidden Marbles"} />
                 <GuessingPanel onGuess={handleGuess} />
                 {showRevealButton && (
                   <Button
