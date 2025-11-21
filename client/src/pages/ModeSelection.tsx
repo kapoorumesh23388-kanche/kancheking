@@ -18,18 +18,26 @@ export default function ModeSelection() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Link href="/game/solo">
+          <Link href="/game/ai">
             <ModeCard
-              icon="🎯"
-              title="Solo Practice"
-              description="Practice your guessing skills against the computer. Perfect for learning the game!"
+              icon="🤖"
+              title="Play with AI"
+              description="Test your skills against an intelligent computer opponent. Great for practice!"
+            />
+          </Link>
+
+          <Link href="/game/friend">
+            <ModeCard
+              icon="👥"
+              title="Play with Friend"
+              description="Invite your friend with a room code or link. Play together in real-time!"
             />
           </Link>
 
           <ModeCard
             icon="🌐"
-            title="Online Multiplayer"
-            description="Challenge players from around the world in real-time matches."
+            title="Play Random Online"
+            description="Challenge a random player from around the world in real-time matches."
             requirement="100 Marbles Required"
           />
 
@@ -38,12 +46,6 @@ export default function ModeSelection() {
             title="Tournament"
             description="Compete in brackets against multiple players for big prizes!"
             requirement="500 Marbles Entry"
-          />
-
-          <ModeCard
-            icon="⭐"
-            title="Daily Challenge"
-            description="Complete special challenges and earn bonus marbles every day."
           />
 
           <Link href="/leaderboard">
