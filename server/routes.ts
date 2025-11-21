@@ -302,6 +302,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Feedback Collection
+  const feedbackStore: Array<{ name: string; email: string; message: string; timestamp: string }> = [];
+
+  app.post("/api/feedback", async (req, res) => {
+    try {
+      const { name, email, message } = req.body;
+      const feedback = {
+        name: name || "Anonymous",
+        email: email || "Not provided",
+        message,
+        timestamp: new Date().toISOString(),
+      };
+      feedbackStore.push(feedback);
+      
+      // Log feedback to console for debugging
+      console.log("New feedback received:", feedback);
+      
+      res.json({ success: true, message: "Feedback received!" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to submit feedback" });
+    }
+  });
+
+  app.get("/api/feedback", async (req, res) => {
+    try {
+      res.json({ count: feedbackStore.length, feedbacks: feedbackStore });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch feedback" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
