@@ -43,44 +43,18 @@ export default function GuessingPanel({ onGuess }: GuessingPanelProps) {
         
         <div className="grid grid-cols-2 gap-4">
           <Button
-            className="h-auto py-5 text-2xl font-bold bg-gradient-to-r from-[#00C853] to-[#00E676] hover:from-[#00C853]/80 hover:to-[#00E676]/80 text-white shadow-lg transition-all hover:-translate-y-1"
-            onClick={() => handleGuess("even")}
-            data-testid="button-guess-even"
-          >
-            <div className="flex flex-col items-center gap-1">
-              <span>Even</span>
-              <span className="text-sm opacity-90">(Jhota)</span>
-            </div>
-          </Button>
-          <Button
-            className="h-auto py-5 text-2xl font-bold bg-gradient-to-r from-[#FF6B6B] to-[#FF8E53] hover:from-[#FF6B6B]/80 hover:to-[#FF8E53]/80 text-white shadow-lg transition-all hover:-translate-y-1"
-            onClick={() => handleGuess("odd")}
-            data-testid="button-guess-odd"
-          >
-            <div className="flex flex-col items-center gap-1">
-              <span>Odd</span>
-              <span className="text-sm opacity-90">(Kali)</span>
-            </div>
-          </Button>
-          <Button
             className="h-auto py-5 text-2xl font-bold bg-gradient-to-r from-[#9C27B0] to-[#E91E63] hover:from-[#9C27B0]/80 hover:to-[#E91E63]/80 text-white shadow-lg transition-all hover:-translate-y-1"
             onClick={() => handleGuess("kali")}
             data-testid="button-guess-kali"
           >
-            <div className="flex flex-col items-center gap-1">
-              <span>Kali</span>
-              <span className="text-sm opacity-90">(Odd)</span>
-            </div>
+            Kali
           </Button>
           <Button
             className="h-auto py-5 text-2xl font-bold bg-gradient-to-r from-[#2196F3] to-[#00BCD4] hover:from-[#2196F3]/80 hover:to-[#00BCD4]/80 text-white shadow-lg transition-all hover:-translate-y-1"
             onClick={() => handleGuess("jhota")}
             data-testid="button-guess-jhota"
           >
-            <div className="flex flex-col items-center gap-1">
-              <span>Jhota</span>
-              <span className="text-sm opacity-90">(Even)</span>
-            </div>
+            Jhota
           </Button>
         </div>
       </CardContent>
