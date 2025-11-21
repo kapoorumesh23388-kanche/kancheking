@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button";
 
 type GamePhase = "selecting" | "guessing" | "revealing" | "result";
 
-interface GameState {
+type GameState = {
   lastGuess?: string;
   lastBet?: number;
-}
+};
 
 const gameState: GameState = {};
 
@@ -20,7 +20,7 @@ export default function GamePlay() {
   const [phase, setPhase] = useState<GamePhase>("selecting");
   const [selectedMarbleIds, setSelectedMarbleIds] = useState<number[]>([]);
   const [fistOpen, setFistOpen] = useState(false);
-  const [isHolderPlayer1, setIsHolderPlayer1] = useState(true);
+  const [isHiderPlayer1, setIsHiderPlayer1] = useState(true);
   const [player1Marbles, setPlayer1Marbles] = useState(150);
   const [player2Marbles, setPlayer2Marbles] = useState(120);
   const [aiHiddenCount, setAiHiddenCount] = useState(0);
@@ -51,6 +51,18 @@ export default function GamePlay() {
 
   const handleConfirmSelection = () => {
     setPhase("guessing");
+    // If AI is guesser, make AI guess after a delay
+    if (!isHiderPlayer1) {
+      setTimeout(() => {
+        const guesses = ["even", "odd", "kali", "jhota"];
+        const randomGuess = guesses[Math.floor(Math.random() * guesses.length)];
+        const randomBet = Math.floor(Math.random() * 20) + 5;
+        setLastGuess(randomGuess);
+        setLastBet(randomBet);
+        setShowRevealButton(true);
+        console.log(`AI Guessed: ${randomGuess}, Bet: ${randomBet} marbles`);
+      }, 1500);
+    }
     console.log("Moving to guessing phase with", selectedMarbleIds.length, "marbles");
   };
 
@@ -67,7 +79,7 @@ export default function GamePlay() {
     setShowRevealButton(false);
     
     setTimeout(() => {
-      const actualCount = isHolderPlayer1 ? selectedMarbleIds.length : aiHiddenCount;
+      const actualCount = isHiderPlayer1 ? selectedMarbleIds.length : aiHiddenCount;
       const isOdd = actualCount % 2 === 1;
       let won = false;
       let message = "";
@@ -88,10 +100,14 @@ export default function GamePlay() {
       }
       
       // Update marble counts - guesser wins means they stay guesser until they lose
-      if (isHolderPlayer1) {
+      // isHiderPlayer1 = true means Player 1 is hiding, AI (Player 2) is guessing
+      // If won = true, guesser (AI or Player 1) won
+      if (isHiderPlayer1) {
+        // Player 1 is hider, AI is guesser
         setPlayer1Marbles(prev => won ? prev - lastBet : prev + lastBet);
         setPlayer2Marbles(prev => won ? prev + lastBet : prev - lastBet);
       } else {
+        // AI is hider, Player 1 is guesser
         setPlayer1Marbles(prev => won ? prev + lastBet : prev - lastBet);
         setPlayer2Marbles(prev => won ? prev - lastBet : prev + lastBet);
       }
@@ -110,13 +126,14 @@ export default function GamePlay() {
   const handlePlayAgain = () => {
     // If guesser won, switch roles for next round
     if (gameResult?.roleSwitched) {
-      setIsHolderPlayer1(!isHolderPlayer1);
+      setIsHiderPlayer1(!isHiderPlayer1);
     }
     setPhase("selecting");
     setSelectedMarbleIds([]);
     setFistOpen(false);
     setGameResult(null);
-    console.log("Starting new game, holder is now:", !isHolderPlayer1 ? "Player 1" : "Player 2");
+    setShowRevealButton(false);
+    console.log("Starting new game, hider is now:", !isHiderPlayer1 ? "Player 1" : "Player 2");
   };
 
   return (
@@ -128,8 +145,8 @@ export default function GamePlay() {
               <PlayerBox
                 name="Player 1"
                 marbles={player1Marbles}
-                role={isHolderPlayer1 ? "Holder" : "Guesser"}
-                isActive={isHolderPlayer1 ? phase === "selecting" : phase === "guessing"}
+                role={isHiderPlayer1 ? "Hider" : "Guesser"}
+                isActive={isHiderPlayer1 ? phase === "selecting" : phase === "guessing"}
               />
             </div>
             <div className="text-center">
@@ -142,8 +159,8 @@ export default function GamePlay() {
               <PlayerBox
                 name="Player 2 (AI)"
                 marbles={player2Marbles}
-                role={!isHolderPlayer1 ? "Holder" : "Guesser"}
-                isActive={!isHolderPlayer1 ? phase === "selecting" : phase === "guessing"}
+                role={!isHiderPlayer1 ? "Hider" : "Guesser"}
+                isActive={!isHiderPlayer1 ? phase === "selecting" : phase === "guessing"}
               />
             </div>
           </div>
@@ -154,7 +171,7 @@ export default function GamePlay() {
 
             {phase === "selecting" && (
               <div className="space-y-6">
-                {isHolderPlayer1 ? (
+                {isHiderPlayer1 ? (
                   <Card className="bg-white/5 border-2 border-primary/20">
                     <CardContent className="p-6">
                       <h3 className="text-2xl font-bold text-primary mb-4 text-center">
@@ -186,7 +203,7 @@ export default function GamePlay() {
                         className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground py-6 text-xl font-bold"
                         onClick={() => {
                           setAiHiddenCount(Math.floor(Math.random() * 21));
-                          setPhase("guessing");
+                          handleConfirmSelection();
                         }}
                         data-testid="button-ai-ready"
                       >
@@ -200,16 +217,35 @@ export default function GamePlay() {
 
             {phase === "guessing" && (
               <div className="space-y-6">
-                <FistDisplay isOpen={false} label={isHolderPlayer1 ? "AI's Hidden Marbles" : "Your Hidden Marbles"} />
-                <GuessingPanel onGuess={handleGuess} />
-                {showRevealButton && (
-                  <Button
-                    className="w-full bg-gradient-to-r from-[#00FF88] to-[#00C853] hover:from-[#00FF88]/80 hover:to-[#00C853]/80 text-black py-6 text-2xl font-bold animate-pulse"
-                    onClick={handleReveal}
-                    data-testid="button-reveal"
-                  >
-                    🖐️ Reveal Hand
-                  </Button>
+                <FistDisplay isOpen={false} label={isHiderPlayer1 ? "AI's Hidden Marbles" : "Your Hidden Marbles"} />
+                {isHiderPlayer1 ? (
+                  <div className="bg-white/5 border-2 border-primary/20 rounded-lg p-6 text-center">
+                    <p className="text-2xl font-bold text-primary mb-4">
+                      {showRevealButton ? "🤖 AI is guessing..." : "Waiting for AI to guess..."}
+                    </p>
+                    {showRevealButton && (
+                      <Button
+                        className="w-full bg-gradient-to-r from-[#00FF88] to-[#00C853] hover:from-[#00FF88]/80 hover:to-[#00C853]/80 text-black py-6 text-2xl font-bold animate-pulse"
+                        onClick={handleReveal}
+                        data-testid="button-reveal"
+                      >
+                        🖐️ Reveal Hand
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <GuessingPanel onGuess={handleGuess} />
+                    {showRevealButton && (
+                      <Button
+                        className="w-full bg-gradient-to-r from-[#00FF88] to-[#00C853] hover:from-[#00FF88]/80 hover:to-[#00C853]/80 text-black py-6 text-2xl font-bold animate-pulse"
+                        onClick={handleReveal}
+                        data-testid="button-reveal"
+                      >
+                        🖐️ Reveal Hand
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -217,7 +253,7 @@ export default function GamePlay() {
             {phase === "revealing" && (
               <FistDisplay
                 isOpen={fistOpen}
-                marbleCount={isHolderPlayer1 ? selectedMarbleIds.length : aiHiddenCount}
+                marbleCount={isHiderPlayer1 ? selectedMarbleIds.length : aiHiddenCount}
                 label="Revealing..."
               />
             )}
