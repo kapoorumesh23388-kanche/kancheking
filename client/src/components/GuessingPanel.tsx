@@ -6,14 +6,24 @@ import { useState } from "react";
 
 interface GuessingPanelProps {
   onGuess?: (guess: string, bet: number) => void;
+  maxBet?: number;
 }
 
-export default function GuessingPanel({ onGuess }: GuessingPanelProps) {
-  const [bet, setBet] = useState(10);
+export default function GuessingPanel({ onGuess, maxBet = 100 }: GuessingPanelProps) {
+  const [bet, setBet] = useState(Math.min(10, maxBet));
+
+  const handleBetChange = (value: string) => {
+    const numValue = parseInt(value) || 0;
+    if (numValue <= maxBet && numValue > 0) {
+      setBet(numValue);
+    }
+  };
 
   const handleGuess = (guessType: string) => {
-    onGuess?.(guessType, bet);
-    console.log(`Guessed: ${guessType}, Bet: ${bet} marbles`);
+    if (bet > 0 && bet <= maxBet) {
+      onGuess?.(guessType, bet);
+      console.log(`Guessed: ${guessType}, Bet: ${bet} marbles`);
+    }
   };
 
   return (
@@ -34,11 +44,13 @@ export default function GuessingPanel({ onGuess }: GuessingPanelProps) {
             id="bet-input"
             type="number"
             value={bet}
-            onChange={(e) => setBet(parseInt(e.target.value) || 0)}
+            onChange={(e) => handleBetChange(e.target.value)}
             className="w-40 text-center text-xl border-2 border-primary/30 bg-black/30 text-white focus:border-primary focus:shadow-[0_0_15px_rgba(255,215,0,0.5)]"
             min={1}
+            max={maxBet}
             data-testid="input-bet"
           />
+          <span className="text-sm text-muted-foreground">(Max: {maxBet})</span>
         </div>
         
         <div className="grid grid-cols-2 gap-4">

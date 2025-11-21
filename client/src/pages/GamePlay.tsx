@@ -6,6 +6,12 @@ import GuessingPanel from "@/components/GuessingPanel";
 import ResultDisplay from "@/components/ResultDisplay";
 import MarbleSelector from "@/components/MarbleSelector";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type GamePhase = "selecting" | "guessing" | "revealing" | "result";
 
@@ -34,6 +40,8 @@ export default function GamePlay() {
     roleSwitched?: boolean;
     aiChoice?: string;
   } | null>(null);
+  const [showAdReward, setShowAdReward] = useState(false);
+  const [adRewardPlayer, setAdRewardPlayer] = useState<"player1" | "player2" | null>(null);
 
   const handleToggleMarble = (id: number) => {
     setSelectedMarbleIds(prev => {
@@ -51,12 +59,12 @@ export default function GamePlay() {
 
   const handleConfirmSelection = () => {
     setPhase("guessing");
-    // If Player 1 is hider, AI (Player 2) is guesser - make AI guess after a delay
     if (isHiderPlayer1) {
       setTimeout(() => {
-        const guesses = ["even", "odd", "kali", "jhota"];
+        const guesses = ["kali", "jhota"];
         const randomGuess = guesses[Math.floor(Math.random() * guesses.length)];
-        const randomBet = Math.floor(Math.random() * 20) + 5;
+        const maxAiBet = player2Marbles;
+        const randomBet = Math.floor(Math.random() * Math.min(20, maxAiBet)) + 1;
         setLastGuess(randomGuess);
         setLastBet(randomBet);
         setShowRevealButton(true);
@@ -91,32 +99,56 @@ export default function GamePlay() {
       } else if (lastGuess === "jhota") {
         won = !isOdd;
         message = won ? "Jhota Hai! 🎉" : "Kali Hai! 😢";
-      } else if (lastGuess === "even") {
-        won = !isOdd;
-        message = won ? "Even Hai! 🎉" : "Odd Hai! 😢";
-      } else if (lastGuess === "odd") {
-        won = isOdd;
-        message = won ? "Odd Hai! 🎉" : "Even Hai! 😢";
       }
       
-      // Update marble counts - guesser wins means they stay guesser until they lose
-      // isHiderPlayer1 = true means Player 1 is hiding, AI (Player 2) is guessing
-      // If won = true, guesser (AI or Player 1) won
+      // Update marble counts
+      let newPlayer1Marbles = player1Marbles;
+      let newPlayer2Marbles = player2Marbles;
+
       if (isHiderPlayer1) {
         // Player 1 is hider, AI is guesser
-        setPlayer1Marbles(prev => won ? prev - lastBet : prev + lastBet);
-        setPlayer2Marbles(prev => won ? prev + lastBet : prev - lastBet);
+        if (won) {
+          // AI (guesser) won: AI gets marbles from Player 1
+          newPlayer1Marbles = player1Marbles - lastBet;
+          newPlayer2Marbles = player2Marbles + lastBet;
+        } else {
+          // Player 1 (hider) won: Player 1 gets marbles from AI
+          newPlayer1Marbles = player1Marbles + lastBet;
+          newPlayer2Marbles = player2Marbles - lastBet;
+        }
       } else {
         // AI is hider, Player 1 is guesser
-        setPlayer1Marbles(prev => won ? prev + lastBet : prev - lastBet);
-        setPlayer2Marbles(prev => won ? prev - lastBet : prev + lastBet);
+        if (won) {
+          // Player 1 (guesser) won: Player 1 gets marbles from AI
+          newPlayer1Marbles = player1Marbles + lastBet;
+          newPlayer2Marbles = player2Marbles - lastBet;
+        } else {
+          // AI (hider) won: AI gets marbles from Player 1
+          newPlayer1Marbles = player1Marbles - lastBet;
+          newPlayer2Marbles = player2Marbles + lastBet;
+        }
       }
-      
+
+      // Check for zero marbles and show ads
+      if (newPlayer1Marbles <= 0) {
+        setAdRewardPlayer("player1");
+        setShowAdReward(true);
+        newPlayer1Marbles = 0;
+      }
+      if (newPlayer2Marbles <= 0) {
+        setAdRewardPlayer("player2");
+        setShowAdReward(true);
+        newPlayer2Marbles = 0;
+      }
+
+      setPlayer1Marbles(newPlayer1Marbles);
+      setPlayer2Marbles(newPlayer2Marbles);
+
       setGameResult({
         won,
         change: lastBet,
         details: message,
-        roleSwitched: won,
+        roleSwitched: won, // If guesser won, they switch to hider
         aiChoice: `${actualCount} marbles (${isOdd ? "Odd/Kali" : "Even/Jhota"})`
       });
       setPhase("result");
@@ -124,7 +156,7 @@ export default function GamePlay() {
   };
 
   const handlePlayAgain = () => {
-    // If guesser won, switch roles for next round
+    // If guesser won, they BECOME the hider in next round
     if (gameResult?.roleSwitched) {
       setIsHiderPlayer1(!isHiderPlayer1);
     }
@@ -133,7 +165,15 @@ export default function GamePlay() {
     setFistOpen(false);
     setGameResult(null);
     setShowRevealButton(false);
-    console.log("Starting new game, hider is now:", !isHiderPlayer1 ? "Player 1" : "Player 2");
+    console.log("Starting new game, hider is now:", !isHiderPlayer1 ? "Player 1" : "AI");
+  };
+
+  const handleWatchAd = () => {
+    if (adRewardPlayer === "player1") {
+      setPlayer1Marbles(prev => prev + 25);
+    } else if (adRewardPlayer === "player2") {
+      setPlayer2Marbles(prev => prev + 25);
+    }
   };
 
   return (
@@ -181,7 +221,7 @@ export default function GamePlay() {
                         selectedMarbleIds={selectedMarbleIds}
                         onToggleMarble={handleToggleMarble}
                         onClearAll={handleClearAll}
-                        maxMarbles={20}
+                        maxMarbles={Math.min(20, player1Marbles)}
                       />
                       <Button
                         className="w-full mt-6 bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground py-6 text-xl font-bold"
@@ -202,7 +242,7 @@ export default function GamePlay() {
                       <Button
                         className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground py-6 text-xl font-bold"
                         onClick={() => {
-                          setAiHiddenCount(Math.floor(Math.random() * 21));
+                          setAiHiddenCount(Math.floor(Math.random() * Math.min(21, player2Marbles + 1)));
                           handleConfirmSelection();
                         }}
                         data-testid="button-ai-ready"
@@ -235,7 +275,7 @@ export default function GamePlay() {
                   </div>
                 ) : (
                   <>
-                    <GuessingPanel onGuess={handleGuess} />
+                    <GuessingPanel onGuess={handleGuess} maxBet={player1Marbles} />
                     {showRevealButton && (
                       <Button
                         className="w-full bg-gradient-to-r from-[#00FF88] to-[#00C853] hover:from-[#00FF88]/80 hover:to-[#00C853]/80 text-black py-6 text-2xl font-bold animate-pulse"
@@ -254,7 +294,7 @@ export default function GamePlay() {
               <FistDisplay
                 isOpen={fistOpen}
                 marbleCount={isHiderPlayer1 ? selectedMarbleIds.length : aiHiddenCount}
-                label="Revealing..."
+                label={isHiderPlayer1 ? "Your Hidden Marbles" : "AI's Hidden Marbles"}
               />
             )}
 
@@ -270,6 +310,57 @@ export default function GamePlay() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Ad Reward Modal */}
+      <Dialog open={showAdReward} onOpenChange={setShowAdReward}>
+        <DialogContent className="bg-card border-2 border-primary/30 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-bold text-primary text-center">
+              💔 Out of Marbles!
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <p className="text-center text-lg text-foreground">
+              You've run out of marbles! Watch an ad to earn <span className="text-[#00FF88] font-bold">25 marbles</span> to continue playing.
+            </p>
+            
+            <div className="bg-primary/10 border-2 border-primary/30 rounded-lg p-6 text-center">
+              <div className="text-6xl mb-4">📺</div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Ad would play here (in production)
+              </p>
+              <p className="text-lg font-bold text-[#00FF88]">
+                +25 Marbles
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                variant="outline"
+                className="py-3"
+                onClick={() => setShowAdReward(false)}
+                data-testid="button-skip-ad"
+              >
+                Skip
+              </Button>
+              <Button
+                className="bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground font-bold py-3"
+                onClick={() => {
+                  handleWatchAd();
+                  setShowAdReward(false);
+                }}
+                data-testid="button-watch-ad"
+              >
+                Watch Ad
+              </Button>
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center">
+              You can watch ads multiple times to earn more marbles!
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
