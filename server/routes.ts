@@ -1,10 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { WebSocketServer } from "ws";
-import type { WebSocket } from "ws";
-
-const connectedClients = new Map<string, WebSocket>();
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/catalog", async (req, res) => {
@@ -51,11 +47,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transactionId: transactionId || null,
       });
 
-      const ws = connectedClients.get(userId);
-      if (ws && ws.readyState === 1) {
-        ws.send(JSON.stringify({ type: "marbles_updated", marbles: newMarbles }));
-      }
-
       res.json({ marbles: newMarbles, success: true });
     } catch (error) {
       res.status(500).json({ error: "Purchase failed" });
@@ -87,15 +78,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transactionId: null,
       });
 
-      const referrerWs = connectedClients.get(referrer.id);
-      if (referrerWs && referrerWs.readyState === 1) {
-        referrerWs.send(JSON.stringify({ 
-          type: "marbles_updated", 
-          marbles: referrerNewMarbles,
-          message: "Got 50 marbles from referral!" 
-        }));
-      }
-
       res.json({ success: true, message: "Referral validated" });
     } catch (error) {
       res.status(500).json({ error: "Referral validation failed" });
@@ -125,16 +107,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         opponent: opponent || null,
         won,
       });
-
-      const ws = connectedClients.get(userId);
-      if (ws && ws.readyState === 1) {
-        ws.send(JSON.stringify({ 
-          type: "points_updated", 
-          points: newPoints,
-          gamesWon: newGamesWon,
-          gamesPlayed: newGamesPlayed,
-        }));
-      }
 
       res.json({ points: newPoints, success: true });
     } catch (error) {
@@ -188,31 +160,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
-  
-  const wss = new WebSocketServer({ server: httpServer });
-
-  wss.on("connection", (ws: WebSocket) => {
-    ws.on("message", (data: string) => {
-      try {
-        const message = JSON.parse(data);
-        if (message.type === "subscribe" && message.userId) {
-          connectedClients.set(message.userId, ws);
-        }
-      } catch (error) {
-        console.error("WebSocket message error:", error);
-      }
-    });
-
-    ws.on("close", () => {
-      const keysToDelete: string[] = [];
-      connectedClients.forEach((client, userId) => {
-        if (client === ws) {
-          keysToDelete.push(userId);
-        }
-      });
-      keysToDelete.forEach(key => connectedClients.delete(key));
-    });
-  });
-
   return httpServer;
 }
