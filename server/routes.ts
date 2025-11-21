@@ -7,7 +7,6 @@ import type { WebSocket } from "ws";
 const connectedClients = new Map<string, WebSocket>();
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Catalog endpoints
   app.get("/api/catalog", async (req, res) => {
     try {
       const items = await storage.getCatalogItems();
@@ -32,7 +31,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Marble purchase endpoints
   app.post("/api/marbles/purchase", async (req, res) => {
     try {
       const { userId, marblesAmount, transactionId } = req.body;
@@ -50,10 +48,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         amount: marblesAmount,
         type: "purchase",
         description: `Purchased ${marblesAmount} marbles`,
-        transactionId,
+        transactionId: transactionId || null,
       });
 
-      // Notify user via WebSocket
       const ws = connectedClients.get(userId);
       if (ws && ws.readyState === 1) {
         ws.send(JSON.stringify({ type: "marbles_updated", marbles: newMarbles }));
@@ -65,7 +62,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Referral endpoints
   app.post("/api/referral/validate", async (req, res) => {
     try {
       const { referralCode, userId } = req.body;
@@ -80,7 +76,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Award 50 marbles to referrer
       const referrerNewMarbles = referrer.marbles + 50;
       await storage.updateUserMarbles(referrer.id, referrerNewMarbles);
       
@@ -89,9 +84,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         amount: 50,
         type: "referral",
         description: `Referral bonus from ${user.username}`,
+        transactionId: null,
       });
 
-      // Notify referrer
       const referrerWs = connectedClients.get(referrer.id);
       if (referrerWs && referrerWs.readyState === 1) {
         referrerWs.send(JSON.stringify({ 
@@ -107,7 +102,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Game points endpoints
   app.post("/api/game-points", async (req, res) => {
     try {
       const { userId, points, gameType, opponent, won } = req.body;
@@ -122,22 +116,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newGamesWon = won ? user.gamesWon + 1 : user.gamesWon;
 
       await storage.updateUserPoints(userId, newPoints);
-      await storage.getUser(userId).then(u => {
-        if (u) {
-          u.gamesWon = newGamesWon;
-          u.gamesPlayed = newGamesPlayed;
-        }
-      });
+      await storage.updateUserStats(userId, { gamesWon: newGamesWon, gamesPlayed: newGamesPlayed });
 
       await storage.addGamePoints({
         userId,
         points,
         gameType,
-        opponent,
+        opponent: opponent || null,
         won,
       });
 
-      // Notify user
       const ws = connectedClients.get(userId);
       if (ws && ws.readyState === 1) {
         ws.send(JSON.stringify({ 
@@ -154,7 +142,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Tournament endpoints
   app.get("/api/tournament/windows", async (req, res) => {
     try {
       const windows = await storage.getTournamentWindows();
@@ -177,7 +164,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Insufficient marbles" });
       }
 
-      // Deduct entry fee
       const newMarbles = user.marbles - 2500;
       await storage.updateUserMarbles(userId, newMarbles);
 
@@ -186,9 +172,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         amount: -2500,
         type: "game_loss",
         description: "Tournament entry fee",
+        transactionId: null,
       });
 
-      // Update window player count
       const windows = await storage.getTournamentWindows();
       const window = windows.find(w => w.id === windowId);
       if (window) {
@@ -203,7 +189,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
   
-  // WebSocket setup for real-time updates
   const wss = new WebSocketServer({ server: httpServer });
 
   wss.on("connection", (ws: WebSocket) => {
@@ -219,11 +204,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
 
     ws.on("close", () => {
-      for (const [userId, client] of connectedClients.entries()) {
+      const keysToDelete: string[] = [];
+      connectedClients.forEach((client, userId) => {
         if (client === ws) {
-          connectedClients.delete(userId);
+          keysToDelete.push(userId);
         }
-      }
+      });
+      keysToDelete.forEach(key => connectedClients.delete(key));
     });
   });
 

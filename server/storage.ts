@@ -8,21 +8,18 @@ export interface IStorage {
   createUser(user: InsertUser, referralCode?: string): Promise<User>;
   updateUserMarbles(userId: string, marbles: number): Promise<User | undefined>;
   updateUserPoints(userId: string, points: number): Promise<User | undefined>;
+  updateUserStats(userId: string, stats: { gamesWon?: number; gamesPlayed?: number }): Promise<User | undefined>;
   
-  // Catalog
   getCatalogItems(): Promise<CatalogItem[]>;
   addCatalogItem(item: Omit<CatalogItem, 'id' | 'createdAt'>): Promise<CatalogItem>;
   deleteCatalogItem(id: string): Promise<void>;
   
-  // Transactions
   recordTransaction(tx: Omit<MarbleTransaction, 'id' | 'createdAt'>): Promise<MarbleTransaction>;
   getUserTransactions(userId: string): Promise<MarbleTransaction[]>;
   
-  // Game Points
   addGamePoints(points: Omit<GamePoint, 'id' | 'createdAt'>): Promise<GamePoint>;
   getUserGamePoints(userId: string): Promise<GamePoint[]>;
   
-  // Tournament
   getTournamentWindows(): Promise<TournamentWindow[]>;
   getActiveTournamentWindow(): Promise<TournamentWindow | undefined>;
   addTournamentWindow(window: Omit<TournamentWindow, 'id' | 'createdAt'>): Promise<TournamentWindow>;
@@ -43,7 +40,6 @@ export class MemStorage implements IStorage {
     this.gamePoints = [];
     this.tournamentWindows = new Map();
     
-    // Initialize first tournament window
     const window: TournamentWindow = {
       id: randomUUID(),
       windowNumber: 1,
@@ -84,7 +80,7 @@ export class MemStorage implements IStorage {
       gamesWon: 0,
       gamesPlayed: 0,
       referralCode: code,
-      referredBy: referralCode,
+      referredBy: referralCode || null,
       createdAt: new Date(),
     };
     this.users.set(id, user);
@@ -105,6 +101,17 @@ export class MemStorage implements IStorage {
     const user = this.users.get(userId);
     if (user) {
       user.points = points;
+      this.users.set(userId, user);
+      return user;
+    }
+    return undefined;
+  }
+
+  async updateUserStats(userId: string, stats: { gamesWon?: number; gamesPlayed?: number }): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (user) {
+      if (stats.gamesWon !== undefined) user.gamesWon = stats.gamesWon;
+      if (stats.gamesPlayed !== undefined) user.gamesPlayed = stats.gamesPlayed;
       this.users.set(userId, user);
       return user;
     }
@@ -182,7 +189,6 @@ export class MemStorage implements IStorage {
       window.playerCount = count;
       if (count >= 100) {
         window.status = "active";
-        // Auto-create next window
         await this.addTournamentWindow({
           windowNumber: window.windowNumber + 1,
           playerCount: 0,
