@@ -283,11 +283,11 @@ export default function GameHeader() {
               <ul className="space-y-2 text-foreground">
                 <li className="flex gap-3">
                   <span className="text-primary font-bold">→</span>
-                  <span>If Guesser wins: They remain Guesser, opponent becomes Hider for next round</span>
+                  <span><strong>If Guesser wins:</strong> Guesser becomes Hider for next round</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="text-primary font-bold">→</span>
-                  <span>If Hider wins: Roles switch - former Guesser becomes Hider</span>
+                  <span><strong>If Hider wins:</strong> Hider stays as Hider, Guesser remains Guesser</span>
                 </li>
               </ul>
             </div>
