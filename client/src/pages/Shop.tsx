@@ -1,13 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import type { CatalogItem } from "@shared/schema";
 
 export default function Shop() {
   const [copiedCode, setCopiedCode] = useState(false);
+  const [marbleCount, setMarbleCount] = useState(1000);
+  const [pointCount, setPointCount] = useState(250);
   const referralCode = "RAJESH123";
-  const marbleCount = 1000;
-  const pointCount = 250;
+
+  // Fetch catalog items from backend
+  const { data: catalogItems = [], isLoading } = useQuery<CatalogItem[]>({
+    queryKey: ["/api/catalog"],
+  });
 
   const marblePacks = [
     { price: 10, marbles: 100, savings: 0 },
@@ -119,29 +126,39 @@ export default function Shop() {
 
         {/* Catalog */}
         <div>
-          <h3 className="text-2xl font-bold mb-6">🎪 Points Catalog (Updated every 6 months)</h3>
+          <h3 className="text-2xl font-bold mb-6">🎪 Points Catalog (Updated every 6 months by admin)</h3>
           <Card>
             <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { name: "Gold Badge", points: 100 },
-                  { name: "Premium Avatar", points: 150 },
-                  { name: "Special Marble Skin", points: 200 },
-                  { name: "Tournament Pass", points: 300 },
-                  { name: "Elite Title", points: 250 },
-                  { name: "Exclusive Theme", points: 400 },
-                ].map((item) => (
-                  <div key={item.name} className="border border-primary/20 rounded-lg p-4 flex justify-between items-center">
-                    <div>
-                      <p className="font-semibold">{item.name}</p>
-                      <p className="text-sm text-muted-foreground">{item.points} points</p>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                </div>
+              ) : catalogItems.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No catalog items available yet.</p>
+                  <p className="text-sm">Admin will add items every 6 months.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {catalogItems.map((item) => (
+                    <div key={item.id} className="border border-primary/20 rounded-lg p-4 flex justify-between items-center">
+                      <div>
+                        <p className="font-semibold">{item.name}</p>
+                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                        <p className="text-sm text-purple-500 font-bold">{item.pointsCost} points</p>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        disabled={pointCount < item.pointsCost}
+                        data-testid={`button-redeem-${item.id}`}
+                      >
+                        {pointCount < item.pointsCost ? "Not enough" : "Redeem"}
+                      </Button>
                     </div>
-                    <Button size="sm" variant="outline" data-testid={`button-redeem-${item.name}`}>
-                      Redeem
-                    </Button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
