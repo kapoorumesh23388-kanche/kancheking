@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import PlayerBox from "@/components/PlayerBox";
 import FistDisplay from "@/components/FistDisplay";
 import GuessingPanel from "@/components/GuessingPanel";
 import ResultDisplay from "@/components/ResultDisplay";
 import MarbleSelector from "@/components/MarbleSelector";
+import GameChat from "@/components/GameChat";
 import { Button } from "@/components/ui/button";
+import { MessageCircle, Volume2, VolumeX } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -45,6 +47,42 @@ export default function GamePlay() {
   } | null>(null);
   const [showAdReward, setShowAdReward] = useState(false);
   const [adRewardPlayer, setAdRewardPlayer] = useState<"player1" | "player2" | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isMusicEnabled, setIsMusicEnabled] = useState(true);
+  
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize background music
+  useEffect(() => {
+    // Create audio element for background music
+    const audio = new Audio();
+    audio.loop = true;
+    audio.volume = 0.3;
+    
+    // Use a royalty-free game music URL (Incompetech)
+    audio.src = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+    
+    audioRef.current = audio;
+    if (isMusicEnabled) {
+      audio.play().catch(err => console.log("Audio autoplay prevented:", err));
+    }
+
+    return () => {
+      audio.pause();
+      audio.currentTime = 0;
+    };
+  }, []);
+
+  // Toggle music
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isMusicEnabled) {
+        audioRef.current.play().catch(err => console.log("Audio play error:", err));
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [isMusicEnabled]);
 
   // Sync marbles to localStorage and trigger header update
   useEffect(() => {
@@ -187,6 +225,34 @@ export default function GamePlay() {
 
   return (
     <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black">
+      {/* Music Toggle Button */}
+      <div className="fixed top-24 right-5 z-30 flex gap-2">
+        <Button
+          size="icon"
+          variant="outline"
+          className="rounded-full bg-primary/20 text-primary hover:bg-primary/40 border-primary/50"
+          onClick={() => setIsMusicEnabled(!isMusicEnabled)}
+          title={isMusicEnabled ? "Mute Music" : "Unmute Music"}
+          data-testid="button-music-toggle"
+        >
+          {isMusicEnabled ? (
+            <Volume2 className="w-5 h-5" />
+          ) : (
+            <VolumeX className="w-5 h-5" />
+          )}
+        </Button>
+        
+        <Button
+          size="icon"
+          variant="outline"
+          className="rounded-full bg-primary/20 text-primary hover:bg-primary/40 border-primary/50"
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          data-testid="button-open-chat"
+        >
+          <MessageCircle className="w-5 h-5" />
+        </Button>
+      </div>
+
       <div className="container max-w-7xl mx-auto px-5">
         <div className="mb-8">
           <div className="grid grid-cols-3 gap-4 items-center">
@@ -370,6 +436,9 @@ export default function GamePlay() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Chat Component */}
+      <GameChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 }
