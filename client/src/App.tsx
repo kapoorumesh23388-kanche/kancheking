@@ -8,6 +8,8 @@ import Home from "@/pages/Home";
 import ModeSelection from "@/pages/ModeSelection";
 import GamePlay from "@/pages/GamePlay";
 import LeaderboardPage from "@/pages/LeaderboardPage";
+import Shop from "@/pages/Shop";
+import Tournament from "@/pages/Tournament";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -17,6 +19,8 @@ function Router() {
       <Route path="/modes" component={ModeSelection} />
       <Route path="/game/:mode" component={GamePlay} />
       <Route path="/leaderboard" component={LeaderboardPage} />
+      <Route path="/shop" component={Shop} />
+      <Route path="/tournament" component={Tournament} />
       <Route component={NotFound} />
     </Switch>
   );

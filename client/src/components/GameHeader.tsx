@@ -1,4 +1,4 @@
-import { Settings, User, ArrowLeft, Upload } from "lucide-react";
+import { Settings, User, ArrowLeft, Upload, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useState, useRef } from "react";
@@ -17,6 +17,7 @@ export default function GameHeader() {
   const [showSettings, setShowSettings] = useState(false);
   const [playerName, setPlayerName] = useState("Rajesh Kumar");
   const [profilePic, setProfilePic] = useState<string | null>(null);
+  const [language, setLanguage] = useState<"en" | "hi">("en");
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const showBackButton = location !== "/";
@@ -191,9 +192,17 @@ export default function GameHeader() {
               </Button>
             </div>
             <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
-              <span className="text-foreground">Language</span>
-              <Button variant="outline" size="sm">
-                English
+              <span className="text-foreground flex items-center gap-2">
+                <Globe className="w-4 h-4" />
+                Language
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLanguage(language === "en" ? "hi" : "en")}
+                data-testid="button-language-toggle"
+              >
+                {language === "en" ? "हिंदी" : "English"}
               </Button>
             </div>
             <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">

@@ -29,24 +29,35 @@ export default function ModeSelection() {
           <Link href="/game/friend">
             <ModeCard
               icon="👥"
-              title="Play with Friend"
+              title="Challenge Friend"
               description="Invite your friend with a room code or link. Play together in real-time!"
             />
           </Link>
 
-          <ModeCard
-            icon="🌐"
-            title="Play Random Online"
-            description="Challenge a random player from around the world in real-time matches."
-            requirement="100 Marbles Required"
-          />
+          <Link href="/game/random">
+            <ModeCard
+              icon="🌐"
+              title="Challenge Random Player"
+              description="Challenge a random player from around the world. No marble limit required!"
+            />
+          </Link>
 
-          <ModeCard
-            icon="🏆"
-            title="Tournament"
-            description="Compete in brackets against multiple players for big prizes!"
-            requirement="500 Marbles Entry"
-          />
+          <Link href="/tournament">
+            <ModeCard
+              icon="🏆"
+              title="Tournament"
+              description="100-player tournament bracket. 2500 marble entry fee. Win big prizes!"
+              requirement="2500 Marbles Entry"
+            />
+          </Link>
+
+          <Link href="/shop">
+            <ModeCard
+              icon="💎"
+              title="Shop"
+              description="Purchase marbles, view points catalog, and manage referrals."
+            />
+          </Link>
 
           <Link href="/leaderboard">
             <ModeCard
