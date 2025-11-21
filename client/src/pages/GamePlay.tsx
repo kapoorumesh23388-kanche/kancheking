@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import PlayerBox from "@/components/PlayerBox";
 import FistDisplay from "@/components/FistDisplay";
@@ -27,7 +27,10 @@ export default function GamePlay() {
   const [selectedMarbleIds, setSelectedMarbleIds] = useState<number[]>([]);
   const [fistOpen, setFistOpen] = useState(false);
   const [isHiderPlayer1, setIsHiderPlayer1] = useState(true);
-  const [player1Marbles, setPlayer1Marbles] = useState(150);
+  const [player1Marbles, setPlayer1Marbles] = useState(() => {
+    const saved = localStorage.getItem("playerMarbles");
+    return saved ? parseInt(saved) : 150;
+  });
   const [player2Marbles, setPlayer2Marbles] = useState(120);
   const [aiHiddenCount, setAiHiddenCount] = useState(0);
   const [showRevealButton, setShowRevealButton] = useState(false);
@@ -42,6 +45,12 @@ export default function GamePlay() {
   } | null>(null);
   const [showAdReward, setShowAdReward] = useState(false);
   const [adRewardPlayer, setAdRewardPlayer] = useState<"player1" | "player2" | null>(null);
+
+  // Sync marbles to localStorage and trigger header update
+  useEffect(() => {
+    localStorage.setItem("playerMarbles", player1Marbles.toString());
+    window.dispatchEvent(new Event("marbleUpdate"));
+  }, [player1Marbles]);
 
   const handleToggleMarble = (id: number) => {
     setSelectedMarbleIds(prev => {

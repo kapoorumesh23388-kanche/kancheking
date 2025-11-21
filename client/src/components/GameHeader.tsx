@@ -1,7 +1,7 @@
 import { Settings, User, ArrowLeft, Upload, Globe, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,31 @@ export default function GameHeader() {
   const [playerName, setPlayerName] = useState("Rajesh Kumar");
   const [profilePic, setProfilePic] = useState<string | null>(null);
   const [language, setLanguage] = useState<"en" | "hi">("en");
+  const [totalMarbles, setTotalMarbles] = useState(150);
+  const [gamesPlayed, setGamesPlayed] = useState(0);
+  const [gamesWon, setGamesWon] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const savedMarbles = localStorage.getItem("playerMarbles");
+      const savedGamesPlayed = localStorage.getItem("gamesPlayed");
+      const savedGamesWon = localStorage.getItem("gamesWon");
+      
+      if (savedMarbles) setTotalMarbles(parseInt(savedMarbles));
+      if (savedGamesPlayed) setGamesPlayed(parseInt(savedGamesPlayed));
+      if (savedGamesWon) setGamesWon(parseInt(savedGamesWon));
+    };
+
+    handleStorageChange();
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("marbleUpdate", handleStorageChange);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("marbleUpdate", handleStorageChange);
+    };
+  }, []);
   
   const showBackButton = location !== "/";
 
@@ -153,19 +177,19 @@ export default function GameHeader() {
             <div className="grid grid-cols-2 gap-4 p-4 bg-primary/10 rounded-lg">
               <div>
                 <p className="text-sm text-muted-foreground">Total Marbles</p>
-                <p className="text-2xl font-bold text-[#00FF88]">1000</p>
+                <p className="text-2xl font-bold text-[#00FF88]">{totalMarbles}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Games Played</p>
-                <p className="text-2xl font-bold text-primary">45</p>
+                <p className="text-2xl font-bold text-primary">{gamesPlayed}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Games Won</p>
-                <p className="text-2xl font-bold text-[#00FF88]">32</p>
+                <p className="text-2xl font-bold text-[#00FF88]">{gamesWon}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Win Rate</p>
-                <p className="text-2xl font-bold text-primary">71%</p>
+                <p className="text-2xl font-bold text-primary">{gamesPlayed > 0 ? Math.round((gamesWon / gamesPlayed) * 100) : 0}%</p>
               </div>
             </div>
             
