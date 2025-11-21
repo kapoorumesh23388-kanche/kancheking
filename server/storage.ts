@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow } from "@shared/schema";
+import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type GameRoom } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -24,6 +24,13 @@ export interface IStorage {
   getActiveTournamentWindow(): Promise<TournamentWindow | undefined>;
   addTournamentWindow(window: Omit<TournamentWindow, 'id' | 'createdAt'>): Promise<TournamentWindow>;
   updateTournamentPlayerCount(windowId: string, count: number): Promise<void>;
+  
+  createGameRoom(creatorId: string, gameMode: string): Promise<GameRoom>;
+  getGameRoom(roomCode: string): Promise<GameRoom | undefined>;
+  joinGameRoom(roomCode: string, playerId: string): Promise<GameRoom | undefined>;
+  findMatchingPlayer(userId: string): Promise<{ roomCode: string; player: User } | null>;
+  addToMatchQueue(userId: string, username: string, marbles: number): Promise<void>;
+  removeFromMatchQueue(userId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -32,6 +39,8 @@ export class MemStorage implements IStorage {
   private transactions: MarbleTransaction[];
   private gamePoints: GamePoint[];
   private tournamentWindows: Map<string, TournamentWindow>;
+  private gameRooms: Map<string, GameRoom>;
+  private matchQueue: Map<string, { userId: string; username: string; marbles: number }>;
 
   constructor() {
     this.users = new Map();
@@ -39,6 +48,8 @@ export class MemStorage implements IStorage {
     this.transactions = [];
     this.gamePoints = [];
     this.tournamentWindows = new Map();
+    this.gameRooms = new Map();
+    this.matchQueue = new Map();
     
     const window: TournamentWindow = {
       id: randomUUID(),
@@ -200,6 +211,66 @@ export class MemStorage implements IStorage {
       }
       this.tournamentWindows.set(windowId, window);
     }
+  }
+
+  async createGameRoom(creatorId: string, gameMode: string): Promise<GameRoom> {
+    const roomCode = `ROOM${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const creator = this.users.get(creatorId);
+    const room: GameRoom = {
+      id: randomUUID(),
+      roomCode,
+      player1Id: creatorId,
+      player2Id: null,
+      creatorId,
+      status: "waiting",
+      gameMode,
+      player1Marbles: creator?.marbles || 0,
+      player2Marbles: 0,
+      winner: null,
+      createdAt: new Date(),
+    };
+    this.gameRooms.set(roomCode, room);
+    return room;
+  }
+
+  async getGameRoom(roomCode: string): Promise<GameRoom | undefined> {
+    return this.gameRooms.get(roomCode);
+  }
+
+  async joinGameRoom(roomCode: string, playerId: string): Promise<GameRoom | undefined> {
+    const room = this.gameRooms.get(roomCode);
+    if (room && room.status === "waiting" && !room.player2Id) {
+      const player = this.users.get(playerId);
+      room.player2Id = playerId;
+      room.player2Marbles = player?.marbles || 0;
+      room.status = "active";
+      this.gameRooms.set(roomCode, room);
+      return room;
+    }
+    return undefined;
+  }
+
+  async findMatchingPlayer(userId: string): Promise<{ roomCode: string; player: User } | null> {
+    const queueArray = Array.from(this.matchQueue.values());
+    if (queueArray.length > 0) {
+      const match = queueArray[0];
+      const player = this.users.get(match.userId);
+      if (player && player.id !== userId) {
+        const room = await this.createGameRoom(userId, "random");
+        await this.joinGameRoom(room.roomCode, match.userId);
+        this.matchQueue.delete(match.userId);
+        return { roomCode: room.roomCode, player };
+      }
+    }
+    return null;
+  }
+
+  async addToMatchQueue(userId: string, username: string, marbles: number): Promise<void> {
+    this.matchQueue.set(userId, { userId, username, marbles });
+  }
+
+  async removeFromMatchQueue(userId: string): Promise<void> {
+    this.matchQueue.delete(userId);
   }
 }
 

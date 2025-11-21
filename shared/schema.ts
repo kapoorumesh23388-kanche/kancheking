@@ -56,6 +56,28 @@ export const tournamentWindows = pgTable("tournament_windows", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const gameRooms = pgTable("game_rooms", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  roomCode: varchar("room_code").unique().notNull(),
+  player1Id: varchar("player1_id"),
+  player2Id: varchar("player2_id"),
+  creatorId: varchar("creator_id").notNull(),
+  status: varchar("status").notNull().default("waiting"),
+  gameMode: varchar("game_mode").notNull(),
+  player1Marbles: integer("player1_marbles").notNull().default(0),
+  player2Marbles: integer("player2_marbles").notNull().default(0),
+  winner: varchar("winner"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const matchQueue = pgTable("match_queue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  username: varchar("username").notNull(),
+  marbles: integer("marbles").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -67,3 +89,4 @@ export type CatalogItem = typeof catalogItems.$inferSelect;
 export type MarbleTransaction = typeof marbleTransactions.$inferSelect;
 export type GamePoint = typeof gamePoints.$inferSelect;
 export type TournamentWindow = typeof tournamentWindows.$inferSelect;
+export type GameRoom = typeof gameRooms.$inferSelect;
