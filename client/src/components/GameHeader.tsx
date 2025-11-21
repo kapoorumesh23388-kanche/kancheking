@@ -1,4 +1,4 @@
-import { Settings, User, ArrowLeft, Upload, Globe } from "lucide-react";
+import { Settings, User, ArrowLeft, Upload, Globe, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useState, useRef } from "react";
@@ -15,6 +15,7 @@ export default function GameHeader() {
   const [location, setLocation] = useLocation();
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showGameInfo, setShowGameInfo] = useState(false);
   const [playerName, setPlayerName] = useState("Rajesh Kumar");
   const [profilePic, setProfilePic] = useState<string | null>(null);
   const [language, setLanguage] = useState<"en" | "hi">("en");
@@ -61,6 +62,15 @@ export default function GameHeader() {
           </div>
           
           <div className="flex gap-2">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="rounded-full bg-primary/20 text-primary hover:bg-primary/40 hover:scale-110 transition-all shadow-[0_0_20px_rgba(255,215,0,0.5)]"
+              onClick={() => setShowGameInfo(true)}
+              data-testid="button-game-info"
+            >
+              <HelpCircle className="w-5 h-5" />
+            </Button>
             <Button
               size="icon"
               variant="ghost"
@@ -210,6 +220,138 @@ export default function GameHeader() {
               <Button variant="outline" size="sm">
                 On
               </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Game Info Dialog */}
+      <Dialog open={showGameInfo} onOpenChange={setShowGameInfo}>
+        <DialogContent className="bg-card border-2 border-primary/30 max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-bold text-primary">
+              How to Play - Kali Jhota
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            
+            <div className="space-y-3">
+              <h3 className="text-xl font-bold text-[#00FF88]">Game Overview</h3>
+              <p className="text-foreground leading-relaxed">
+                Kali Jhota is an ancient Indian marble guessing game. Players hide marbles in their fist while the opponent guesses whether the number is Odd (Kali) or Even (Jhota).
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-xl font-bold text-[#00FF88]">Basic Rules</h3>
+              <ul className="space-y-2 text-foreground">
+                <li className="flex gap-3">
+                  <span className="text-primary font-bold">1.</span>
+                  <span><strong>Hider:</strong> Secretly hides 0-20 marbles in their closed fist</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-primary font-bold">2.</span>
+                  <span><strong>Guesser:</strong> Guesses if the hidden marbles are Odd (Kali) or Even (Jhota)</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-primary font-bold">3.</span>
+                  <span><strong>Bet:</strong> Guesser also bets how many marbles are hidden (5-20 marbles)</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-primary font-bold">4.</span>
+                  <span><strong>Reveal:</strong> Hider opens their fist to reveal the actual count</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-xl font-bold text-[#00FF88]">Winning & Marble Exchange</h3>
+              <ul className="space-y-2 text-foreground">
+                <li className="flex gap-3">
+                  <span className="text-primary font-bold">✓</span>
+                  <span><strong>Guesser Wins:</strong> Gets marbles equal to their bet from the Hider</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-primary font-bold">✗</span>
+                  <span><strong>Guesser Loses:</strong> Gives marbles equal to their bet to the Hider</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-xl font-bold text-[#00FF88]">Role Switching</h3>
+              <ul className="space-y-2 text-foreground">
+                <li className="flex gap-3">
+                  <span className="text-primary font-bold">→</span>
+                  <span>If Guesser wins: They remain Guesser, opponent becomes Hider for next round</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-primary font-bold">→</span>
+                  <span>If Hider wins: Roles switch - former Guesser becomes Hider</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-xl font-bold text-[#00FF88]">Odd vs Even</h3>
+              <div className="grid grid-cols-2 gap-4 p-4 bg-primary/10 rounded-lg">
+                <div>
+                  <p className="font-bold text-primary">ODD = KALI</p>
+                  <p className="text-sm text-muted-foreground">1, 3, 5, 7, 9, 11, 13, 15, 17, 19</p>
+                </div>
+                <div>
+                  <p className="font-bold text-[#00FF88]">EVEN = JHOTA</p>
+                  <p className="text-sm text-muted-foreground">0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-xl font-bold text-[#00FF88]">Game Modes</h3>
+              <ul className="space-y-2 text-foreground">
+                <li className="flex gap-3">
+                  <span className="text-primary font-bold">🤖</span>
+                  <span><strong>Play with AI:</strong> Challenge an AI opponent with auto-play features</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-primary font-bold">👥</span>
+                  <span><strong>Challenge Random Player:</strong> Play against any online player, no marble limits</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-primary font-bold">🎁</span>
+                  <span><strong>Challenge Friend:</strong> Share room code or link to play with friends</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-primary font-bold">🏆</span>
+                  <span><strong>Tournament:</strong> Compete in 100-player windows with entry fees and prizes</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-xl font-bold text-[#00FF88]">Marble System</h3>
+              <ul className="space-y-2 text-foreground">
+                <li className="flex gap-3">
+                  <span className="text-primary font-bold">💎</span>
+                  <span>Start with <strong>150 marbles</strong> free</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-primary font-bold">🛒</span>
+                  <span>Buy marbles from Shop: 10/- = 100 marbles (scaling available)</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-primary font-bold">🎯</span>
+                  <span>Earn game points and redeem for catalog items</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-primary font-bold">👫</span>
+                  <span>Get 50 marbles bonus per successful referral</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="p-4 bg-primary/10 rounded-lg border-l-4 border-primary">
+              <p className="text-foreground"><strong>Pro Tip:</strong> Watch your marble count carefully! Manage your bets wisely to build your marble collection and dominate the leaderboard.</p>
             </div>
           </div>
         </DialogContent>
