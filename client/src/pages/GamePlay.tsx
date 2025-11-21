@@ -14,11 +14,16 @@ export default function GamePlay() {
   const [selectedMarbleIds, setSelectedMarbleIds] = useState<number[]>([]);
   const [fistOpen, setFistOpen] = useState(false);
   const [isHolderPlayer1, setIsHolderPlayer1] = useState(true);
+  const [player1Marbles, setPlayer1Marbles] = useState(150);
+  const [player2Marbles, setPlayer2Marbles] = useState(120);
+  const [aiHiddenCount, setAiHiddenCount] = useState(0);
+  const [showRevealButton, setShowRevealButton] = useState(false);
   const [gameResult, setGameResult] = useState<{
     won: boolean;
     change: number;
     details: string;
     roleSwitched?: boolean;
+    aiChoice?: string;
   } | null>(null);
 
   const handleToggleMarble = (id: number) => {
@@ -42,35 +47,56 @@ export default function GamePlay() {
 
   const handleGuess = (guess: string, bet: number) => {
     console.log(`Guess: ${guess}, Bet: ${bet}`);
+    setShowRevealButton(true);
+  };
+
+  const handleReveal = () => {
     setPhase("revealing");
     setFistOpen(true);
+    setShowRevealButton(false);
     
     setTimeout(() => {
       const actualCount = selectedMarbleIds.length;
       const isOdd = actualCount % 2 === 1;
       let won = false;
       let message = "";
+      let actualGuess = "";
       
       // Logic: Odd marbles = Kali, Even marbles (0,2,4...) = Jhota
-      if (guess === "kali") {
+      if (window.lastGuess === "kali") {
         won = isOdd;
         message = won ? "Kali Hai! 🎉" : "Jhota Hai! 😢";
-      } else if (guess === "jhota") {
+        actualGuess = "Kali";
+      } else if (window.lastGuess === "jhota") {
         won = !isOdd;
         message = won ? "Jhota Hai! 🎉" : "Kali Hai! 😢";
-      } else if (guess === "even") {
+        actualGuess = "Jhota";
+      } else if (window.lastGuess === "even") {
         won = !isOdd;
         message = won ? "Even Hai! 🎉" : "Odd Hai! 😢";
-      } else if (guess === "odd") {
+        actualGuess = "Even";
+      } else if (window.lastGuess === "odd") {
         won = isOdd;
         message = won ? "Odd Hai! 🎉" : "Even Hai! 😢";
+        actualGuess = "Odd";
+      }
+      
+      // Update marble counts
+      const betAmount = window.lastBet || 10;
+      if (isHolderPlayer1) {
+        setPlayer1Marbles(prev => won ? prev - betAmount : prev + betAmount);
+        setPlayer2Marbles(prev => won ? prev + betAmount : prev - betAmount);
+      } else {
+        setPlayer1Marbles(prev => won ? prev + betAmount : prev - betAmount);
+        setPlayer2Marbles(prev => won ? prev - betAmount : prev + betAmount);
       }
       
       setGameResult({
         won,
-        change: bet,
+        change: betAmount,
         details: message,
-        roleSwitched: won
+        roleSwitched: won,
+        aiChoice: `${actualCount} marbles (${isOdd ? "Odd/Kali" : "Even/Jhota"})`
       });
       setPhase("result");
     }, 2000);
@@ -96,7 +122,7 @@ export default function GamePlay() {
             <div className="text-center">
               <PlayerBox
                 name="Player 1"
-                marbles={150}
+                marbles={player1Marbles}
                 role={isHolderPlayer1 ? "Holder" : "Guesser"}
                 isActive={isHolderPlayer1 ? phase === "selecting" : phase === "guessing"}
               />
@@ -109,8 +135,8 @@ export default function GamePlay() {
             </div>
             <div className="text-center">
               <PlayerBox
-                name="Player 2"
-                marbles={120}
+                name="Player 2 (AI)"
+                marbles={player2Marbles}
                 role={!isHolderPlayer1 ? "Holder" : "Guesser"}
                 isActive={!isHolderPlayer1 ? phase === "selecting" : phase === "guessing"}
               />
@@ -123,37 +149,70 @@ export default function GamePlay() {
 
             {phase === "selecting" && (
               <div className="space-y-6">
-                <Card className="bg-white/5 border-2 border-primary/20">
-                  <CardContent className="p-6">
-                    <MarbleSelector
-                      selectedMarbleIds={selectedMarbleIds}
-                      onToggleMarble={handleToggleMarble}
-                      onClearAll={handleClearAll}
-                      maxMarbles={20}
-                    />
-                    <Button
-                      className="w-full mt-6 bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground py-6 text-xl font-bold"
-                      onClick={handleConfirmSelection}
-                      data-testid="button-confirm-selection"
-                    >
-                      Confirm Selection ({selectedMarbleIds.length} marbles)
-                    </Button>
-                  </CardContent>
-                </Card>
+                {isHolderPlayer1 ? (
+                  <Card className="bg-white/5 border-2 border-primary/20">
+                    <CardContent className="p-6">
+                      <h3 className="text-2xl font-bold text-primary mb-4 text-center">
+                        🎯 Select Marbles to Hide
+                      </h3>
+                      <MarbleSelector
+                        selectedMarbleIds={selectedMarbleIds}
+                        onToggleMarble={handleToggleMarble}
+                        onClearAll={handleClearAll}
+                        maxMarbles={20}
+                      />
+                      <Button
+                        className="w-full mt-6 bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground py-6 text-xl font-bold"
+                        onClick={handleConfirmSelection}
+                        data-testid="button-confirm-selection"
+                      >
+                        ✊ Hide Marbles ({selectedMarbleIds.length} selected)
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className="bg-white/5 border-2 border-primary/20">
+                    <CardContent className="p-8 text-center">
+                      <h3 className="text-3xl font-bold text-primary mb-6">
+                        🤖 AI is hiding marbles...
+                      </h3>
+                      <div className="text-6xl animate-bounce mb-6">✊</div>
+                      <Button
+                        className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground py-6 text-xl font-bold"
+                        onClick={() => {
+                          setAiHiddenCount(Math.floor(Math.random() * 21));
+                          setPhase("guessing");
+                        }}
+                        data-testid="button-ai-ready"
+                      >
+                        AI Ready! Click to Continue
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             )}
 
             {phase === "guessing" && (
               <div className="space-y-6">
-                <FistDisplay isOpen={false} label="Opponent's Hidden Marbles" />
+                <FistDisplay isOpen={false} label={isHolderPlayer1 ? "AI's Hidden Marbles" : "Player 1's Hidden Marbles"} />
                 <GuessingPanel onGuess={handleGuess} />
+                {showRevealButton && (
+                  <Button
+                    className="w-full bg-gradient-to-r from-[#00FF88] to-[#00C853] hover:from-[#00FF88]/80 hover:to-[#00C853]/80 text-black py-6 text-2xl font-bold animate-pulse"
+                    onClick={handleReveal}
+                    data-testid="button-reveal"
+                  >
+                    🖐️ Reveal Hand
+                  </Button>
+                )}
               </div>
             )}
 
             {phase === "revealing" && (
               <FistDisplay
                 isOpen={fistOpen}
-                marbleCount={selectedMarbleIds.length}
+                marbleCount={isHolderPlayer1 ? selectedMarbleIds.length : aiHiddenCount}
                 label="Revealing..."
               />
             )}
@@ -163,6 +222,7 @@ export default function GamePlay() {
                 won={gameResult.won}
                 marbleChange={gameResult.change}
                 details={gameResult.details}
+                aiChoice={gameResult.aiChoice}
                 onPlayAgain={handlePlayAgain}
               />
             )}

@@ -5,6 +5,7 @@ interface ResultDisplayProps {
   won: boolean;
   marbleChange: number;
   details: string;
+  aiChoice?: string;
   onPlayAgain?: () => void;
 }
 
@@ -12,6 +13,7 @@ export default function ResultDisplay({
   won,
   marbleChange,
   details,
+  aiChoice,
   onPlayAgain
 }: ResultDisplayProps) {
   return (
@@ -47,9 +49,15 @@ export default function ResultDisplay({
           {won ? "+" : "-"}{Math.abs(marbleChange)} 💎
         </div>
         
-        <p className="text-xl text-muted-foreground mb-6" data-testid="text-details">
+        <p className="text-2xl text-muted-foreground mb-4 font-bold" data-testid="text-details">
           {details}
         </p>
+
+        {aiChoice && (
+          <p className="text-lg text-primary mb-6 bg-primary/20 px-6 py-3 rounded-lg" data-testid="text-ai-choice">
+            🤖 AI had: {aiChoice}
+          </p>
+        )}
         
         <Button
           className="bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground px-12 py-6 text-xl font-bold shadow-lg transition-all hover:-translate-y-1"

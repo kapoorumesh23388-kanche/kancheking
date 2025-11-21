@@ -12,6 +12,8 @@ export default function GuessingPanel({ onGuess }: GuessingPanelProps) {
   const [bet, setBet] = useState(10);
 
   const handleGuess = (guessType: string) => {
+    window.lastGuess = guessType;
+    window.lastBet = bet;
     onGuess?.(guessType, bet);
     console.log(`Guessed: ${guessType}, Bet: ${bet} marbles`);
   };
