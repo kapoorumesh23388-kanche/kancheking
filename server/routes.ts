@@ -159,6 +159,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Multiplayer Routes
+  app.post("/api/room/create", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      const room = await storage.createGameRoom(userId, "friend");
+      res.json(room);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create room" });
+    }
+  });
+
+  app.get("/api/room/:roomCode", async (req, res) => {
+    try {
+      const { roomCode } = req.params;
+      const room = await storage.getGameRoom(roomCode);
+      if (!room) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+      res.json(room);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch room" });
+    }
+  });
+
+  app.post("/api/room/join", async (req, res) => {
+    try {
+      const { roomCode, userId } = req.body;
+      const room = await storage.joinGameRoom(roomCode, userId);
+      if (!room) {
+        return res.status(404).json({ error: "Room not available" });
+      }
+      res.json(room);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to join room" });
+    }
+  });
+
+  app.post("/api/match/queue", async (req, res) => {
+    try {
+      const { userId, username, marbles } = req.body;
+      await storage.addToMatchQueue(userId, username, marbles);
+      res.json({ success: true, message: "Added to match queue" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to join match queue" });
+    }
+  });
+
+  app.post("/api/match/find", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      const match = await storage.findMatchingPlayer(userId);
+      if (match) {
+        res.json(match);
+      } else {
+        res.json({ roomCode: null, waiting: true });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to find match" });
+    }
+  });
+
+  app.post("/api/match/leave", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      await storage.removeFromMatchQueue(userId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to leave match queue" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
