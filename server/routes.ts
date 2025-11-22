@@ -504,14 +504,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Initialize or Get User
+  app.post("/api/user/init", async (req, res) => {
+    try {
+      const { userId, username } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "User ID required" });
+      }
+
+      let user = await storage.getUser(userId);
+      
+      // Create user if doesn't exist
+      if (!user) {
+        user = await storage.createUser(
+          { username: username || userId, password: "guest" },
+          undefined
+        );
+        // Update ID to match the provided userId
+        user.id = userId;
+      }
+
+      res.json(user);
+    } catch (error) {
+      console.error("User init error:", error);
+      res.status(500).json({ error: "Failed to initialize user" });
+    }
+  });
+
   // Get User by ID
   app.get("/api/user/:userId", async (req, res) => {
     try {
       const { userId } = req.params;
-      const user = await storage.getUser(userId);
+      let user = await storage.getUser(userId);
       
+      // Create user if doesn't exist
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        user = await storage.createUser(
+          { username: userId, password: "guest" },
+          undefined
+        );
+        // Update ID to match the provided userId
+        user.id = userId;
       }
 
       res.json(user);

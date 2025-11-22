@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -40,6 +41,24 @@ function Router() {
 }
 
 function App() {
+  useEffect(() => {
+    // Initialize userId if not present
+    let userId = localStorage.getItem("userId");
+    if (!userId) {
+      userId = `player-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      localStorage.setItem("userId", userId);
+      
+      // Create user in backend
+      fetch("/api/user/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, username: userId }),
+      }).catch(() => {
+        // Silently fail if backend not ready
+      });
+    }
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
