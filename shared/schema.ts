@@ -8,6 +8,8 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   marbles: integer("marbles").notNull().default(150),
+  purchasedMarbles: integer("purchased_marbles").notNull().default(0),
+  tournamentWinnings: integer("tournament_winnings").notNull().default(0),
   points: integer("points").notNull().default(0),
   gamesWon: integer("games_won").notNull().default(0),
   gamesPlayed: integer("games_played").notNull().default(0),
@@ -49,11 +51,14 @@ export const tournamentWindows = pgTable("tournament_windows", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   windowNumber: integer("window_number").notNull(),
   playerCount: integer("player_count").notNull().default(0),
-  status: varchar("status").notNull().default("waiting"),
+  status: varchar("status").notNull().default("waiting"), // waiting, active, completed, converted
   maxPlayers: integer("max_players").notNull().default(100),
   entryFee: integer("entry_fee").notNull().default(2500),
   prizePool: integer("prize_pool").notNull().default(0),
+  winnerId: varchar("winner_id"),
+  winnerMarblesAwarded: integer("winner_marbles_awarded").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
+  endedAt: timestamp("ended_at"),
 });
 
 export const gameRooms = pgTable("game_rooms", {
@@ -97,6 +102,17 @@ export const playerRevenueShare = pgTable("player_revenue_share", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const tournamentConversions = pgTable("tournament_conversions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  tournamentWindowId: varchar("tournament_window_id").notNull(),
+  marblesWon: integer("marbles_won").notNull(),
+  pointsAwarded: integer("points_awarded").notNull(),
+  status: varchar("status").notNull().default("pending"), // pending, completed
+  createdAt: timestamp("created_at").defaultNow(),
+  convertedAt: timestamp("converted_at"),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -111,3 +127,4 @@ export type TournamentWindow = typeof tournamentWindows.$inferSelect;
 export type GameRoom = typeof gameRooms.$inferSelect;
 export type PlayerAdRevenue = typeof playerAdRevenue.$inferSelect;
 export type PlayerRevenueShare = typeof playerRevenueShare.$inferSelect;
+export type TournamentConversion = typeof tournamentConversions.$inferSelect;
