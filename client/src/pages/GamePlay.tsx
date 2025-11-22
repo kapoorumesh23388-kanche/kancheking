@@ -51,6 +51,7 @@ export default function GamePlay() {
   const [isMusicEnabled, setIsMusicEnabled] = useState(true);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const guessingAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Initialize background music
   useEffect(() => {
@@ -89,6 +90,29 @@ export default function GamePlay() {
     localStorage.setItem("playerMarbles", player1Marbles.toString());
     window.dispatchEvent(new Event("marbleUpdate"));
   }, [player1Marbles]);
+
+  // Play guessing sound when in guessing phase
+  useEffect(() => {
+    if (phase === "guessing") {
+      // Create guessing audio if it doesn't exist
+      if (!guessingAudioRef.current) {
+        const guessingAudio = new Audio();
+        guessingAudio.src = "/guessing-sound.mp3";
+        guessingAudio.loop = true;
+        guessingAudio.volume = 0.5;
+        guessingAudioRef.current = guessingAudio;
+      }
+      // Play the guessing sound
+      guessingAudioRef.current.currentTime = 0;
+      guessingAudioRef.current.play().catch(err => console.log("Guessing sound play error:", err));
+    } else if (phase === "revealing" || phase === "result" || phase === "selecting") {
+      // Stop the guessing sound when phase changes
+      if (guessingAudioRef.current) {
+        guessingAudioRef.current.pause();
+        guessingAudioRef.current.currentTime = 0;
+      }
+    }
+  }, [phase]);
 
   const handleToggleMarble = (id: number) => {
     setSelectedMarbleIds(prev => {
