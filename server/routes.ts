@@ -202,8 +202,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true, 
         marbles: newMarbles,
         tournamentWinnings: newTournamentWinnings,
-        message: "🏆 Tournament Win! 250,000 marbles awarded. Will convert to 250,000 redeemable points when tournament ends.",
-        note: "These marbles will disappear after tournament conversion - you'll receive points instead"
+        message: "🏆 Tournament Win! 250,000 marbles awarded. Will convert to 1 lakh (100,000) redeemable points when tournament ends.",
+        conversionRate: "250,000 winning marbles = 1 lakh (100,000) points",
+        note: "These marbles will disappear after tournament conversion - you'll receive 1 lakh points instead"
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to record tournament win" });
@@ -228,7 +229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const marblesWonAmount = user.tournamentWinnings;
-      const pointsToAward = marblesWonAmount; // 1 marble = 1 point conversion
+      const pointsToAward = 100000; // 250,000 marbles = 1 lakh (100,000) points
       
       // Remove temporary marbles from account
       const newMarbles = user.marbles - marblesWonAmount;
@@ -258,11 +259,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true, 
         message: "✅ Tournament winnings converted to redeemable points!",
         marblesConverted: marblesWonAmount,
+        conversionRate: "250,000 marbles = 1 lakh (100,000) points",
         pointsAwarded: pointsToAward,
         marbles: newMarbles,
         tournamentWinnings: newTournamentWinnings,
         points: newPoints,
-        details: "You can now redeem these points in the Shop for exclusive items"
+        details: "You can now redeem 1 lakh points in the Shop for exclusive items"
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to convert tournament winnings" });

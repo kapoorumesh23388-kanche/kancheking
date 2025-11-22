@@ -4,8 +4,8 @@
 
 Tournament system with strict marble type separation:
 - **Entry**: Requires 2500 **PURCHASED** marbles only (not earned/free marbles)
-- **During Tournament**: Winning marbles show temporarily in player account
-- **After Tournament**: Winnings convert to redeemable **POINTS** for shop items
+- **During Tournament**: Winning marbles show temporarily in player account (250,000 marbles)
+- **After Tournament**: 250,000 marbles disappear → 1 lakh (100,000) redeemable **POINTS** awarded
 
 ---
 
@@ -126,7 +126,7 @@ Player wins games, advances in bracket
   ↓
 User.tournamentWinnings visible in account
 Shows: "🏆 250,000 Winning Marbles - Temp Display"
-Message: "Will convert to points when tournament ends"
+Message: "Will convert to 1 lakh (100,000) points when tournament ends"
 
 ═══════════════════════════════════════════════
 
@@ -136,13 +136,14 @@ Admin/System calls: POST /api/tournament/convert-winnings
   ↓
 System checks: user.tournamentWinnings = 250,000
   ↓
-  1. Remove 250,000 from user.marbles
+  1. Remove 250,000 from user.marbles (DISAPPEAR)
   2. Set user.tournamentWinnings = 0
-  3. Add 250,000 to user.points
+  3. Add 100,000 to user.points (1 lakh points awarded)
   ↓
-Transaction recorded: "Tournament conversion: 250,000 marbles → 250,000 points"
+Conversion: 250,000 marbles → 100,000 points
+Transaction recorded: "Tournament conversion: 250,000 marbles → 100,000 points"
   ↓
-User notification: "✅ Winnings converted! 250,000 points ready to redeem!"
+User notification: "✅ Winnings converted! 1 lakh (100,000) points ready to redeem!"
 
 ═══════════════════════════════════════════════
 
@@ -218,8 +219,9 @@ Response:
   "success": true,
   "marbles": 250000,
   "tournamentWinnings": 250000,
-  "message": "🏆 Tournament Win! 250,000 marbles awarded. Will convert to 250,000 redeemable points when tournament ends.",
-  "note": "These marbles will disappear after tournament conversion - you'll receive points instead"
+  "message": "🏆 Tournament Win! 250,000 marbles awarded. Will convert to 1 lakh (100,000) redeemable points when tournament ends.",
+  "conversionRate": "250,000 winning marbles = 1 lakh (100,000) points",
+  "note": "These marbles will disappear after tournament conversion - you'll receive 1 lakh points instead"
 }
 ```
 
@@ -238,11 +240,12 @@ Response SUCCESS:
   "success": true,
   "message": "✅ Tournament winnings converted to redeemable points!",
   "marblesConverted": 250000,
-  "pointsAwarded": 250000,
+  "conversionRate": "250,000 marbles = 1 lakh (100,000) points",
+  "pointsAwarded": 100000,
   "marbles": 0,
   "tournamentWinnings": 0,
-  "points": 250000,
-  "details": "You can now redeem these points in the Shop for exclusive items"
+  "points": 100000,
+  "details": "You can now redeem 1 lakh points in the Shop for exclusive items"
 }
 
 Response ERROR (No Winnings):
@@ -279,6 +282,8 @@ Response ERROR (No Winnings):
 ```
 November 15, 2025 - Player: Rajesh Kumar
 
+CONVERSION RATE: 250,000 winning marbles = 1 lakh (100,000) points
+
 Initial Account:
   Marbles: 150 (earned from gameplay)
   Purchased Marbles: 0
@@ -305,7 +310,7 @@ Updated Account:
   Status: "In Tournament"
 
 ACTION 3: Wins Tournament (November 18)
-  System records winner
+  System records winner: +250,000 winning marbles
   ↓
 Updated Account:
   Marbles: 250150 (150 earned + 250000 temporary winnings)
@@ -314,25 +319,27 @@ Updated Account:
   Tournament Winnings: 250000
   Status: "Won Tournament - Waiting for conversion"
   Display: "🏆 250,000 Winning Marbles (Temporary)"
+  Message: "Will convert to 1 lakh (100,000) points when tournament ends"
 
 ACTION 4: Tournament Ends (November 20)
   Admin calls: POST /api/tournament/convert-winnings
+  Conversion: 250,000 marbles → 1 lakh (100,000) points
   ↓
 Updated Account:
   Marbles: 150 (back to earned only)
   Purchased Marbles: 0
-  Points: 250000 (NEW - converted from winnings)
-  Tournament Winnings: 0 (cleared)
+  Points: 100000 (NEW - 1 lakh points awarded!)
+  Tournament Winnings: 0 (cleared, marbles disappeared)
   Status: "Ready to Redeem"
-  Display: "✅ 250,000 Points Available to Redeem!"
+  Display: "✅ 1 Lakh (100,000) Points Available to Redeem!"
 
 ACTION 5: Redeems Points in Shop
-  Buys: "Premium Weapon Set" (₹10000 = 100000 points)
+  Buys: "Premium Weapon Set" (50,000 points)
   ↓
 Updated Account:
   Marbles: 150
   Purchased Marbles: 0
-  Points: 150000 (250000 - 100000)
+  Points: 50000 (100000 - 50000)
   Tournament Winnings: 0
   Inventory: +Premium Weapon Set
 ```
@@ -385,16 +392,18 @@ Congratulations!
 
 ```
 Player Journey:
-1. Buys ₹250 marbles
-2. Enters tournament for free (uses purchased marbles)
-3. Wins tournament, gets 250,000 points
-4. Redeems points for items/boosts
-5. Repeat: Buy more marbles → enter tournaments → redeem
+1. Buys ₹250 marbles → Gets 2500 marbles
+2. Enters tournament → Pays 2500 marbles (purchased only)
+3. Wins tournament → Gets 250,000 temporary winning marbles
+4. Tournament ends → 250,000 marbles convert to 1 lakh (100,000) points
+5. Redeems 100,000 points → Buys items from shop
+6. Repeat: Buy more marbles → enter tournaments → redeem
 
 Your Revenue:
 - ₹250 marble purchase = ₹180 (after Stripe 28% cut)
-- Tournament entry fee = 2500 marbles (no extra cost)
-- Player spend on redemptions = Additional revenue potential
+- Tournament entry fee = 2500 marbles (tracked separately from earned)
+- Premium items in shop = Additional revenue when players redeem points
+- Clear monetization: Players must BUY marbles to enter tournaments
 ```
 
 ---
