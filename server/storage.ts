@@ -9,6 +9,7 @@ export interface IStorage {
   updateUserMarbles(userId: string, marbles: number): Promise<User | undefined>;
   updateUserPoints(userId: string, points: number): Promise<User | undefined>;
   updateUserStats(userId: string, stats: { gamesWon?: number; gamesPlayed?: number }): Promise<User | undefined>;
+  updateUserProfile(userId: string, profile: { displayName?: string; profileImage?: string }): Promise<User | undefined>;
   
   getCatalogItems(): Promise<CatalogItem[]>;
   addCatalogItem(item: Omit<CatalogItem, 'id' | 'createdAt'>): Promise<CatalogItem>;
@@ -59,7 +60,10 @@ export class MemStorage implements IStorage {
       maxPlayers: 100,
       entryFee: 2500,
       prizePool: 0,
+      winnerId: null,
+      winnerMarblesAwarded: 0,
       createdAt: new Date(),
+      endedAt: null,
     };
     this.tournamentWindows.set(window.id, window);
   }
@@ -86,7 +90,11 @@ export class MemStorage implements IStorage {
     const user: User = { 
       ...insertUser, 
       id,
+      displayName: null,
+      profileImage: null,
       marbles: 150,
+      purchasedMarbles: 0,
+      tournamentWinnings: 0,
       points: 0,
       gamesWon: 0,
       gamesPlayed: 0,
@@ -123,6 +131,17 @@ export class MemStorage implements IStorage {
     if (user) {
       if (stats.gamesWon !== undefined) user.gamesWon = stats.gamesWon;
       if (stats.gamesPlayed !== undefined) user.gamesPlayed = stats.gamesPlayed;
+      this.users.set(userId, user);
+      return user;
+    }
+    return undefined;
+  }
+
+  async updateUserProfile(userId: string, profile: { displayName?: string; profileImage?: string }): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (user) {
+      if (profile.displayName !== undefined) user.displayName = profile.displayName;
+      if (profile.profileImage !== undefined) user.profileImage = profile.profileImage;
       this.users.set(userId, user);
       return user;
     }
@@ -188,6 +207,9 @@ export class MemStorage implements IStorage {
     const newWindow: TournamentWindow = {
       ...window,
       id: randomUUID(),
+      winnerId: null,
+      winnerMarblesAwarded: 0,
+      endedAt: null,
       createdAt: new Date(),
     };
     this.tournamentWindows.set(newWindow.id, newWindow);

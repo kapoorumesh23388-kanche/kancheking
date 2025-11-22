@@ -99,7 +99,7 @@ export default function GameHeader() {
               size="icon"
               variant="ghost"
               className="rounded-full bg-primary/20 text-primary hover:bg-primary/40 hover:scale-110 transition-all shadow-[0_0_20px_rgba(255,215,0,0.5)]"
-              onClick={() => setShowProfile(true)}
+              onClick={() => setLocation("/profile")}
               data-testid="button-profile"
             >
               <User className="w-5 h-5" />

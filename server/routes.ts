@@ -504,6 +504,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get User by ID
+  app.get("/api/user/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
+  // Update User Profile
+  app.post("/api/profile/update", async (req, res) => {
+    try {
+      const { userId, displayName, profileImage } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ error: "User ID required" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const updatedUser = await storage.updateUserProfile(userId, {
+        displayName: displayName || undefined,
+        profileImage: profileImage || undefined,
+      });
+
+      res.json({
+        success: true,
+        message: "Profile updated successfully",
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error("Profile update error:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

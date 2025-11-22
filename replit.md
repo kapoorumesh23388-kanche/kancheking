@@ -122,3 +122,41 @@ Preferred communication style: Simple, everyday language.
 - WebSocket implementation for multiplayer games
 - Custom `useGameSocket` hook for game state synchronization
 - Message types: join, move, guess, result, chat, sync
+## Profile System (COMPLETED)
+
+### Features Added
+- **Profile Page**: Dedicated `/profile` page for editing user profile
+- **Display Name**: Edit personalized display name (shown to other players)
+- **Profile Image**: Upload custom profile picture (stored as base64 data URL)
+- **Stats Display**: View marbles, points, games played/won, purchased marbles, and tournament winnings
+- **API Endpoints**:
+  - `GET /api/user/:userId` - Fetch user profile data
+  - `POST /api/profile/update` - Save profile changes (name + image)
+
+### Database Fields
+- `displayName` - Player's display name (optional)
+- `profileImage` - Player's profile picture URL (optional, supports data URLs)
+- `purchasedMarbles` - Tracks marbles from cash purchases (for tournament entry)
+- `tournamentWinnings` - Temporary marbles shown during tournament
+
+### How It Works
+1. User clicks profile icon in header → navigates to `/profile`
+2. Profile page loads user data via `/api/user/:userId`
+3. Player can edit:
+   - Display name (visible to other players)
+   - Upload profile image (as JPG/PNG)
+4. Click "Save Changes" → API calls `/api/profile/update`
+5. Changes saved to backend and displayed immediately
+
+### Frontend Components
+- `client/src/pages/Profile.tsx` - Full profile management page
+- Image upload with preview
+- Real-time character counter for display name
+- All user stats displayed in cards
+- Proper error handling and loading states
+
+### Storage/Backend
+- `server/storage.ts` - Added `updateUserProfile()` method
+- `server/routes.ts` - Added two new API endpoints
+- Data persisted to database (using MemStorage for dev)
+
