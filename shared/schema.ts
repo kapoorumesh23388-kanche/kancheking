@@ -78,6 +78,25 @@ export const matchQueue = pgTable("match_queue", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const playerAdRevenue = pgTable("player_ad_revenue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  adType: varchar("ad_type").notNull(), // "banner", "rewarded", "interstitial"
+  revenueGenerated: integer("revenue_generated").notNull(), // in paise (1 rupee = 100 paise)
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const playerRevenueShare = pgTable("player_revenue_share", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  month: varchar("month").notNull(), // "2025-11" format
+  totalAdRevenue: integer("total_ad_revenue").notNull(),
+  sharePercentage: integer("share_percentage").notNull().default(20),
+  pointsAwarded: integer("points_awarded").notNull(),
+  status: varchar("status").notNull().default("pending"), // pending, awarded
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -90,3 +109,5 @@ export type MarbleTransaction = typeof marbleTransactions.$inferSelect;
 export type GamePoint = typeof gamePoints.$inferSelect;
 export type TournamentWindow = typeof tournamentWindows.$inferSelect;
 export type GameRoom = typeof gameRooms.$inferSelect;
+export type PlayerAdRevenue = typeof playerAdRevenue.$inferSelect;
+export type PlayerRevenueShare = typeof playerRevenueShare.$inferSelect;

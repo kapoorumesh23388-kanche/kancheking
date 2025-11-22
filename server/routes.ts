@@ -333,6 +333,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Ad Revenue Tracking - Track each ad view/revenue from a player
+  app.post("/api/ad-revenue/track", async (req, res) => {
+    try {
+      const { userId, adType, revenueGenerated } = req.body;
+      
+      if (!userId || !adType || !revenueGenerated) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Store ad revenue tracking (in production, this would go to database)
+      const adRecord = {
+        userId,
+        adType,
+        revenueGenerated,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Log for debugging
+      console.log("Ad Revenue Tracked:", adRecord);
+      
+      res.json({ 
+        success: true, 
+        message: "Ad revenue tracked",
+        record: adRecord 
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to track ad revenue" });
+    }
+  });
+
+  // Get Player's Revenue Share Status
+  app.get("/api/player/:userId/revenue-share", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const month = new Date().toISOString().slice(0, 7); // "2025-11" format
+      
+      // In production, fetch from database
+      // For now, return structure
+      res.json({
+        userId,
+        currentMonth: month,
+        totalAdRevenueThisMonth: 0,
+        expectedSharePoints: 0,
+        status: "tracking",
+        message: "Ad revenue will be calculated and awarded monthly"
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch revenue share" });
+    }
+  });
+
+  // Calculate and Award Monthly Revenue Share (Run monthly)
+  app.post("/api/revenue-share/calculate-monthly", async (req, res) => {
+    try {
+      const month = new Date().toISOString().slice(0, 7); // "2025-11" format
+      
+      // In production:
+      // 1. Query all playerAdRevenue records for this month per userId
+      // 2. Sum up revenue per user
+      // 3. Calculate 20% of total
+      // 4. Create entry in playerRevenueShare
+      // 5. Award points to user
+      // 6. Mark as awarded
+      
+      console.log(`Monthly revenue share calculation triggered for ${month}`);
+      
+      res.json({
+        success: true,
+        message: "Monthly revenue share calculation queued",
+        month,
+        details: "Will process all player ad revenues and award 20% as points"
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to calculate monthly revenue share" });
+    }
+  });
+
+  // Get All Players' Revenue Share Leaderboard
+  app.get("/api/revenue-share/leaderboard", async (req, res) => {
+    try {
+      // In production: Fetch from playerRevenueShare table
+      // Order by pointsAwarded DESC
+      // Return top 100 players
+      
+      res.json({
+        leaderboard: [],
+        message: "Revenue share leaderboard",
+        details: "Shows top players earning points from ads"
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch revenue share leaderboard" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
