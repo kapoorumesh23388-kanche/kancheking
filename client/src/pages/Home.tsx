@@ -11,7 +11,7 @@ export default function Home() {
             className="text-6xl font-bold mb-3 bg-gradient-to-r from-primary via-[#FFA500] to-primary bg-clip-text text-transparent"
             style={{ textShadow: '0 0 30px #FFD700' }}
           >
-            Kanchey King
+            Kanche King
           </h1>
           <p className="text-2xl text-primary/90 mb-5">
             Traditional Indian Marble Game
