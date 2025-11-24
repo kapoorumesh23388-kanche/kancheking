@@ -25,24 +25,26 @@ export default function Home() {
           </Button>
         </div>
 
-        <div className="mb-10">
-          <PlayerProfile
-            name="Rajesh Kumar"
-            marbles={1000}
-            gamesPlayed={45}
-            gamesWon={32}
-          />
-        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+          <div className="mb-0">
+            <PlayerProfile
+              name="Rajesh Kumar"
+              marbles={1000}
+              gamesPlayed={45}
+              gamesWon={32}
+            />
+          </div>
 
-        <div className="flex justify-center items-center w-full">
-          <Link href="/kanchey-king" className="w-full flex justify-center">
-            <Button
-              className="bg-gradient-to-r from-[#FF6B6B] to-[#FF8E53] hover:from-[#FF6B6B]/80 hover:to-[#FF8E53]/80 text-white px-15 py-8 text-3xl font-bold rounded-full shadow-[0_10px_30px_rgba(255,107,107,0.4)] hover:shadow-[0_15px_40px_rgba(255,107,107,0.6)] hover:-translate-y-1 transition-all uppercase tracking-wider flex items-center justify-center gap-3 leading-none h-24"
-              data-testid="button-start-game"
-            >
-              <span className="text-4xl leading-none">🎮</span> <span className="leading-none">Start Game</span>
-            </Button>
-          </Link>
+          <div className="flex flex-col items-center justify-center h-full">
+            <Link href="/kanchey-king" className="w-full flex justify-center">
+              <Button
+                className="bg-gradient-to-r from-[#FF6B6B] to-[#FF8E53] hover:from-[#FF6B6B]/80 hover:to-[#FF8E53]/80 text-white px-15 py-8 text-3xl font-bold rounded-full shadow-[0_10px_30px_rgba(255,107,107,0.4)] hover:shadow-[0_15px_40px_rgba(255,107,107,0.6)] hover:-translate-y-1 transition-all uppercase tracking-wider flex items-center justify-center gap-3 leading-none h-24"
+                data-testid="button-start-game"
+              >
+                <span className="text-4xl leading-none">🎮</span> <span className="leading-none">Start Game</span>
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>
