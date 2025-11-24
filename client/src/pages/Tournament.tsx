@@ -55,7 +55,7 @@ export default function Tournament() {
       <div className="container max-w-6xl mx-auto px-5">
         <div className="text-center mb-8">
           <h2 className="text-5xl font-bold text-primary mb-3" style={{ textShadow: '0 0 20px rgba(255,215,0,0.5)' }}>
-            🏆 Kali Jhota Tournament
+            🏆 Kali Jotta Tournament
           </h2>
           <p className="text-xl text-muted-foreground">100-Player Battles | 2500 Marble Entry | 250,000 Points for Winner</p>
         </div>

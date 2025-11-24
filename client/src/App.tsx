@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import GameHeader from "@/components/GameHeader";
 import Home from "@/pages/Home";
+import KancheyKing from "@/pages/KancheyKing";
 import ModeSelection from "@/pages/ModeSelection";
 import GameModes from "@/pages/GameModes";
 import GamePlay from "@/pages/GamePlay";
@@ -23,6 +24,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/kanchey-king" component={KancheyKing} />
       <Route path="/modes" component={ModeSelection} />
       <Route path="/game-modes" component={GameModes} />
       <Route path="/game/:mode" component={GamePlay} />

@@ -254,7 +254,7 @@ export default function GameHeader() {
         <DialogContent className="bg-card border-2 border-primary/30 max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-3xl font-bold text-primary">
-              How to Play - Kali Jhota
+              How to Play - Kali Jotta
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4">
@@ -262,7 +262,7 @@ export default function GameHeader() {
             <div className="space-y-3">
               <h3 className="text-xl font-bold text-[#00FF88]">Game Overview</h3>
               <p className="text-foreground leading-relaxed">
-                Kali Jhota is an ancient Indian marble guessing game. Players hide marbles in their fist while the opponent guesses whether the number is Odd (Kali) or Even (Jhota).
+                Kali Jotta is an ancient Indian marble guessing game. Players hide marbles in their fist while the opponent guesses whether the number is Odd (Kali) or Even (Jotta).
               </p>
             </div>
 
@@ -275,7 +275,7 @@ export default function GameHeader() {
                 </li>
                 <li className="flex gap-3">
                   <span className="text-primary font-bold">2.</span>
-                  <span><strong>Guesser:</strong> Guesses if the hidden marbles are Odd (Kali) or Even (Jhota)</span>
+                  <span><strong>Guesser:</strong> Guesses if the hidden marbles are Odd (Kali) or Even (Jotta)</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="text-primary font-bold">3.</span>
@@ -324,7 +324,7 @@ export default function GameHeader() {
                   <p className="text-sm text-muted-foreground">1, 3, 5, 7, 9, 11, 13, 15, 17, 19</p>
                 </div>
                 <div>
-                  <p className="font-bold text-[#00FF88]">EVEN = JHOTA</p>
+                  <p className="font-bold text-[#00FF88]">EVEN = JOTTA</p>
                   <p className="text-sm text-muted-foreground">0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20</p>
                 </div>
               </div>

@@ -63,10 +63,10 @@ export default function GuessingPanel({ onGuess, maxBet = 100 }: GuessingPanelPr
           </Button>
           <Button
             className="h-auto py-5 text-2xl font-bold bg-gradient-to-r from-[#2196F3] to-[#00BCD4] hover:from-[#2196F3]/80 hover:to-[#00BCD4]/80 text-white shadow-lg transition-all hover:-translate-y-1"
-            onClick={() => handleGuess("jhota")}
-            data-testid="button-guess-jhota"
+            onClick={() => handleGuess("jotta")}
+            data-testid="button-guess-jotta"
           >
-            Jhota
+            Jotta
           </Button>
         </div>
       </CardContent>

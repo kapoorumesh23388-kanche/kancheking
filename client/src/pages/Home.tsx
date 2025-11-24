@@ -11,7 +11,7 @@ export default function Home() {
             className="text-6xl font-bold mb-3 bg-gradient-to-r from-primary via-[#FFA500] to-primary bg-clip-text text-transparent"
             style={{ textShadow: '0 0 30px #FFD700' }}
           >
-            Kali Jhota
+            Kali Jotta
           </h1>
           <p className="text-2xl text-primary/90 mb-5">
             Traditional Indian Marble Game
@@ -35,7 +35,7 @@ export default function Home() {
         </div>
 
         <div className="flex justify-center items-center w-full">
-          <Link href="/modes" className="w-full flex justify-center">
+          <Link href="/kanchey-king" className="w-full flex justify-center">
             <Button
               className="bg-gradient-to-r from-[#FF6B6B] to-[#FF8E53] hover:from-[#FF6B6B]/80 hover:to-[#FF8E53]/80 text-white px-15 py-8 text-3xl font-bold rounded-full shadow-[0_10px_30px_rgba(255,107,107,0.4)] hover:shadow-[0_15px_40px_rgba(255,107,107,0.6)] hover:-translate-y-1 transition-all uppercase tracking-wider flex items-center justify-center gap-3 leading-none h-24"
               data-testid="button-start-game"

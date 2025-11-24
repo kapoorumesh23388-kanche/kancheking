@@ -58,8 +58,8 @@ export default function ChallengeFriend() {
     const shareUrl = `${window.location.origin}/game/friend-join?code=${roomCode}`;
     if (navigator.share) {
       await navigator.share({
-        title: "Kali Jhota Challenge",
-        text: "Join me in Kali Jhota!",
+        title: "Kali Jotta Challenge",
+        text: "Join me in Kali Jotta!",
         url: shareUrl,
       });
     } else {

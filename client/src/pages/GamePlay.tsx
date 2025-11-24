@@ -132,7 +132,7 @@ export default function GamePlay() {
     setPhase("guessing");
     if (isHiderPlayer1) {
       setTimeout(() => {
-        const guesses = ["kali", "jhota"];
+        const guesses = ["kali", "jotta"];
         const randomGuess = guesses[Math.floor(Math.random() * guesses.length)];
         const maxAiBet = player2Marbles;
         const randomBet = Math.floor(Math.random() * Math.min(20, maxAiBet)) + 1;
@@ -163,13 +163,13 @@ export default function GamePlay() {
       let won = false;
       let message = "";
       
-      // Logic: Odd marbles = Kali, Even marbles (0,2,4...) = Jhota
+      // Logic: Odd marbles = Kali, Even marbles (0,2,4...) = Jotta
       if (lastGuess === "kali") {
         won = isOdd;
-        message = won ? "Kali Hai! 🎉" : "Jhota Hai! 😢";
-      } else if (lastGuess === "jhota") {
+        message = won ? "Kali Hai! 🎉" : "Jotta Hai! 😢";
+      } else if (lastGuess === "jotta") {
         won = !isOdd;
-        message = won ? "Jhota Hai! 🎉" : "Kali Hai! 😢";
+        message = won ? "Jotta Hai! 🎉" : "Kali Hai! 😢";
       }
       
       // Update marble counts
@@ -220,7 +220,7 @@ export default function GamePlay() {
         change: lastBet,
         details: message,
         roleSwitched: won, // If guesser won, they switch to hider
-        aiChoice: `${actualCount} marbles (${isOdd ? "Odd/Kali" : "Even/Jhota"})`
+        aiChoice: `${actualCount} marbles (${isOdd ? "Odd/Kali" : "Even/Jotta"})`
       });
       setPhase("result");
     }, 2000);
