@@ -17,54 +17,69 @@ export default function ResultDisplay({
   onPlayAgain
 }: ResultDisplayProps) {
   return (
-    <Card className="bg-white/5 border-2 border-primary/20">
-      <CardContent className="p-10 text-center">
-        <div className="text-8xl mb-5">{won ? "🎉" : "😢"}</div>
+    <Card className={`border-4 shadow-2xl transition-all duration-500 ${
+      won
+        ? "bg-gradient-to-br from-[#00FF88]/20 via-primary/10 to-transparent border-[#00FF88]/60 shadow-[0_0_40px_rgba(0,255,136,0.4)]"
+        : "bg-gradient-to-br from-destructive/20 via-primary/5 to-transparent border-destructive/60 shadow-[0_0_40px_rgba(255,68,68,0.4)]"
+    }`}>
+      <CardContent className="p-12 text-center">
+        <div className={`text-9xl mb-8 animate-bounce ${won ? "animate-pulse" : ""}`}>
+          {won ? "🎉" : "😢"}
+        </div>
         
         <h2
-          className={`text-5xl font-bold mb-4 ${
+          className={`text-6xl font-bold mb-6 uppercase tracking-wider ${
             won ? "text-[#00FF88]" : "text-destructive"
           }`}
           style={{
             textShadow: won
-              ? '0 0 20px rgba(0,255,136,0.5)'
-              : '0 0 20px rgba(255,68,68,0.5)'
+              ? '0 0 30px rgba(0,255,136,0.7)'
+              : '0 0 30px rgba(255,68,68,0.7)'
           }}
           data-testid="text-result"
         >
-          {won ? "You Won!" : "You Lost!"}
+          {won ? "🏆 Victory! 🏆" : "Defeat"}
         </h2>
         
-        <div
-          className={`text-6xl font-bold mb-4 ${
-            won ? "text-[#00FF88]" : "text-destructive"
-          }`}
-          style={{
-            textShadow: won
-              ? '0 0 20px rgba(0,255,136,0.5)'
-              : '0 0 20px rgba(255,68,68,0.5)'
-          }}
-          data-testid="text-marble-change"
-        >
-          {won ? "+" : "-"}{Math.abs(marbleChange)} 💎
+        <div className={`inline-block px-8 py-6 rounded-2xl mb-8 border-3 ${
+          won
+            ? "bg-[#00FF88]/20 border-[#00FF88]/50"
+            : "bg-destructive/20 border-destructive/50"
+        }`}>
+          <div
+            className={`text-7xl font-bold mb-2 ${
+              won ? "text-[#00FF88]" : "text-destructive"
+            }`}
+            style={{
+              textShadow: won
+                ? '0 0 25px rgba(0,255,136,0.6)'
+                : '0 0 25px rgba(255,68,68,0.6)'
+            }}
+            data-testid="text-marble-change"
+          >
+            {won ? "+" : "-"}{Math.abs(marbleChange)} 💎
+          </div>
+          <p className="text-xl font-semibold text-muted-foreground">Marbles {won ? "gained" : "lost"}</p>
         </div>
         
-        <p className="text-2xl text-muted-foreground mb-4 font-bold" data-testid="text-details">
+        <p className="text-3xl text-primary mb-8 font-bold" style={{ textShadow: '0 0 15px rgba(255,215,0,0.5)' }} data-testid="text-details">
           {details}
         </p>
 
         {aiChoice && (
-          <p className="text-lg text-primary mb-6 bg-primary/20 px-6 py-3 rounded-lg" data-testid="text-ai-choice">
-            🤖 AI had: {aiChoice}
-          </p>
+          <div className="mb-8 p-6 bg-gradient-to-r from-primary/30 to-primary/10 px-8 py-5 rounded-2xl border-2 border-primary/40 inline-block" data-testid="text-ai-choice">
+            <p className="text-xl text-primary font-bold">
+              🤖 <span className="text-[#FFA500]">AI revealed:</span> {aiChoice}
+            </p>
+          </div>
         )}
         
         <Button
-          className="bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground px-12 py-6 text-xl font-bold shadow-lg transition-all hover:-translate-y-1"
+          className="bg-gradient-to-r from-primary via-[#FFA500] to-primary hover:from-primary/80 hover:via-[#FFA500]/80 hover:to-primary/80 text-primary-foreground px-16 py-8 text-2xl font-bold shadow-2xl transition-all hover:-translate-y-2 uppercase tracking-wider"
           onClick={onPlayAgain}
           data-testid="button-play-again"
         >
-          Play Again
+          Play Again 🎮
         </Button>
       </CardContent>
     </Card>
