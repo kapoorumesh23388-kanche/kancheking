@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import marbleImage from "@assets/image_1764004369433.png";
 
 interface MarbleSelectorProps {
   selectedMarbleIds: number[];
@@ -51,26 +52,26 @@ export default function MarbleSelector({
               <button
                 key={id}
                 onClick={() => onToggleMarble(id)}
-                className={`aspect-square rounded-full cursor-pointer transition-all duration-300 transform hover:scale-125 relative group ${
+                className={`aspect-square rounded-full cursor-pointer transition-all duration-300 transform hover:scale-125 relative group overflow-hidden ${
                   isSelected
                     ? "ring-4 ring-[#00FF88] shadow-[0_0_30px_rgba(0,255,136,0.8)] scale-110"
                     : "ring-2 ring-primary/50 hover:ring-primary hover:shadow-[0_0_20px_rgba(255,215,0,0.4)]"
                 }`}
                 style={{
-                  background: isSelected
-                    ? "radial-gradient(circle at 30% 30%, #ff1744, #d50000)"
-                    : "radial-gradient(circle at 30% 30%, #ff6b6b, #c92a2a)",
+                  backgroundImage: `url(${marbleImage})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
                   boxShadow: isSelected
-                    ? "0 8px 16px rgba(255, 23, 68, 0.4), inset -3px -3px 8px rgba(0,0,0,0.5), inset 3px 3px 8px rgba(255,255,255,0.3)"
+                    ? "0 8px 16px rgba(0, 255, 136, 0.4), inset -3px -3px 8px rgba(0,0,0,0.5), inset 3px 3px 8px rgba(255,255,255,0.3)"
                     : "0 4px 8px rgba(0,0,0,0.3), inset -2px -2px 6px rgba(0,0,0,0.3), inset 2px 2px 6px rgba(255,255,255,0.5)"
                 }}
                 data-testid={`marble-${id}`}
               >
                 <div
-                  className="absolute top-[15%] left-[25%] w-[30%] h-[30%] rounded-full group-hover:opacity-100 transition-opacity"
+                  className="absolute inset-0 rounded-full group-hover:opacity-100 transition-opacity"
                   style={{
-                    background: "radial-gradient(circle, rgba(255,255,255,0.9), transparent)",
-                    opacity: isSelected ? 1 : 0.8
+                    background: "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), transparent)",
+                    opacity: isSelected ? 0.6 : 0.3
                   }}
                 />
                 {isSelected && (
