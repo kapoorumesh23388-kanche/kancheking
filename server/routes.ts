@@ -380,23 +380,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Feedback Collection
-  const feedbackStore: Array<{ name: string; email: string; message: string; timestamp: string }> = [];
-
   app.post("/api/feedback", async (req, res) => {
     try {
-      const { name, email, message } = req.body;
-      const feedback = {
-        name: name || "Anonymous",
-        email: email || "Not provided",
+      const { userId, name, email, phone, subject, message, type = "feedback" } = req.body;
+      
+      if (!message) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      const submission = await storage.addFeedbackSubmission({
+        userId: userId || null,
+        name: name || null,
+        email: email || null,
+        phone: phone || null,
+        subject: subject || null,
         message,
-        timestamp: new Date().toISOString(),
-      };
-      feedbackStore.push(feedback);
-      
-      // Log feedback to console for debugging
-      console.log("New feedback received:", feedback);
-      
-      res.json({ success: true, message: "Feedback received!" });
+        type,
+        status: "pending"
+      });
+
+      console.log(`${type} received:`, submission);
+      res.json({ success: true, submission });
     } catch (error) {
       res.status(500).json({ error: "Failed to submit feedback" });
     }
@@ -404,7 +408,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/feedback", async (req, res) => {
     try {
-      res.json({ count: feedbackStore.length, feedbacks: feedbackStore });
+      const submissions = await storage.getFeedbackSubmissions();
+      res.json(submissions);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch feedback" });
     }

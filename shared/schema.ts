@@ -115,6 +115,19 @@ export const tournamentConversions = pgTable("tournament_conversions", {
   convertedAt: timestamp("converted_at"),
 });
 
+export const feedbackSubmissions = pgTable("feedback_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
+  name: text("name"),
+  email: text("email"),
+  phone: text("phone"),
+  type: varchar("type").notNull(), // "feedback" or "support"
+  subject: text("subject"),
+  message: text("message").notNull(),
+  status: varchar("status").notNull().default("pending"), // pending, responded, resolved
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -130,3 +143,4 @@ export type GameRoom = typeof gameRooms.$inferSelect;
 export type PlayerAdRevenue = typeof playerAdRevenue.$inferSelect;
 export type PlayerRevenueShare = typeof playerRevenueShare.$inferSelect;
 export type TournamentConversion = typeof tournamentConversions.$inferSelect;
+export type FeedbackSubmission = typeof feedbackSubmissions.$inferSelect;

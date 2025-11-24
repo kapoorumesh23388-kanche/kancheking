@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type GameRoom } from "@shared/schema";
+import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type GameRoom, type FeedbackSubmission } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -32,6 +32,9 @@ export interface IStorage {
   findMatchingPlayer(userId: string): Promise<{ roomCode: string; player: User } | null>;
   addToMatchQueue(userId: string, username: string, marbles: number): Promise<void>;
   removeFromMatchQueue(userId: string): Promise<void>;
+
+  addFeedbackSubmission(feedback: Omit<FeedbackSubmission, 'id' | 'createdAt'>): Promise<FeedbackSubmission>;
+  getFeedbackSubmissions(): Promise<FeedbackSubmission[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -42,6 +45,7 @@ export class MemStorage implements IStorage {
   private tournamentWindows: Map<string, TournamentWindow>;
   private gameRooms: Map<string, GameRoom>;
   private matchQueue: Map<string, { userId: string; username: string; marbles: number }>;
+  private feedbackSubmissions: FeedbackSubmission[];
 
   constructor() {
     this.users = new Map();
@@ -51,6 +55,7 @@ export class MemStorage implements IStorage {
     this.tournamentWindows = new Map();
     this.gameRooms = new Map();
     this.matchQueue = new Map();
+    this.feedbackSubmissions = [];
     
     const window: TournamentWindow = {
       id: randomUUID(),
@@ -293,6 +298,21 @@ export class MemStorage implements IStorage {
 
   async removeFromMatchQueue(userId: string): Promise<void> {
     this.matchQueue.delete(userId);
+  }
+
+  async addFeedbackSubmission(feedback: Omit<FeedbackSubmission, 'id' | 'createdAt'>): Promise<FeedbackSubmission> {
+    const id = randomUUID();
+    const submission: FeedbackSubmission = {
+      ...feedback,
+      id,
+      createdAt: new Date(),
+    };
+    this.feedbackSubmissions.push(submission);
+    return submission;
+  }
+
+  async getFeedbackSubmissions(): Promise<FeedbackSubmission[]> {
+    return this.feedbackSubmissions;
   }
 }
 

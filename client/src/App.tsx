@@ -14,6 +14,7 @@ import ChallengeFriend from "@/pages/ChallengeFriend";
 import ChallengeRandom from "@/pages/ChallengeRandom";
 import MultiplayerGame from "@/pages/MultiplayerGame";
 import Feedback from "@/pages/Feedback";
+import Support from "@/pages/Support";
 import LeaderboardPage from "@/pages/LeaderboardPage";
 import Shop from "@/pages/Shop";
 import Tournament from "@/pages/Tournament";
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/game/random" component={ChallengeRandom} />
       <Route path="/multiplayer-game/:roomCode" component={MultiplayerGame} />
       <Route path="/feedback" component={Feedback} />
+      <Route path="/support" component={Support} />
       <Route path="/leaderboard" component={LeaderboardPage} />
       <Route path="/shop" component={Shop} />
       <Route path="/tournament" component={Tournament} />
