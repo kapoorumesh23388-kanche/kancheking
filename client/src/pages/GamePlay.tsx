@@ -404,6 +404,7 @@ export default function GamePlay() {
                 details={gameResult.details}
                 aiChoice={gameResult.aiChoice}
                 onPlayAgain={handlePlayAgain}
+                isPlayer1Hider={isHiderPlayer1}
               />
             )}
           </CardContent>

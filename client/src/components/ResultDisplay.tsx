@@ -7,6 +7,7 @@ interface ResultDisplayProps {
   details: string;
   aiChoice?: string;
   onPlayAgain?: () => void;
+  isPlayer1Hider?: boolean;
 }
 
 export default function ResultDisplay({
@@ -14,8 +15,49 @@ export default function ResultDisplay({
   marbleChange,
   details,
   aiChoice,
-  onPlayAgain
+  onPlayAgain,
+  isPlayer1Hider = true
 }: ResultDisplayProps) {
+  // Determine winner and loser with their roles
+  const getWinnerInfo = () => {
+    if (isPlayer1Hider) {
+      // Player 1 is hider, AI is guesser
+      if (won) {
+        // Guesser (AI) won, hider (you) lost
+        return {
+          winner: "🤖 AI (Guesser)",
+          loser: "You (Hider)",
+          winnerLabel: "AI Guessed Correctly!"
+        };
+      } else {
+        // Hider (you) won, guesser (AI) lost
+        return {
+          winner: "You (Hider)",
+          loser: "🤖 AI (Guesser)",
+          winnerLabel: "Your Marbles Safe!"
+        };
+      }
+    } else {
+      // AI is hider, Player 1 is guesser
+      if (won) {
+        // Guesser (you) won, hider (AI) lost
+        return {
+          winner: "You (Guesser)",
+          loser: "🤖 AI (Hider)",
+          winnerLabel: "Perfect Guess!"
+        };
+      } else {
+        // Hider (AI) won, guesser (you) lost
+        return {
+          winner: "🤖 AI (Hider)",
+          loser: "You (Guesser)",
+          winnerLabel: "Better Luck Next Time!"
+        };
+      }
+    }
+  };
+
+  const info = getWinnerInfo();
   return (
     <Card className={`border-4 shadow-2xl transition-all duration-500 ${
       won
@@ -27,8 +69,39 @@ export default function ResultDisplay({
           {won ? "🎉" : "😢"}
         </div>
         
+        {/* Winner and Loser Display */}
+        <div className="mb-8 space-y-4">
+          <div className={`inline-block px-8 py-4 rounded-2xl border-3 mb-4 ${
+            won
+              ? "bg-[#00FF88]/20 border-[#00FF88]/50"
+              : "bg-destructive/20 border-destructive/50"
+          }`}>
+            <p className="text-sm text-muted-foreground mb-2">WINNER 👑</p>
+            <p className={`text-3xl font-bold ${
+              won ? "text-[#00FF88]" : "text-destructive"
+            }`}
+            style={{
+              textShadow: won
+                ? '0 0 20px rgba(0,255,136,0.6)'
+                : '0 0 20px rgba(255,68,68,0.6)'
+            }}
+            data-testid="text-winner">
+              {info.winner}
+            </p>
+          </div>
+
+          <p className="text-2xl text-primary font-bold">vs</p>
+
+          <div className="inline-block px-8 py-4 rounded-2xl border-3 bg-muted/20 border-muted/50">
+            <p className="text-sm text-muted-foreground mb-2">LOSER</p>
+            <p className="text-3xl font-bold text-muted-foreground" data-testid="text-loser">
+              {info.loser}
+            </p>
+          </div>
+        </div>
+        
         <h2
-          className={`text-6xl font-bold mb-6 uppercase tracking-wider ${
+          className={`text-5xl font-bold mb-6 uppercase tracking-wider ${
             won ? "text-[#00FF88]" : "text-destructive"
           }`}
           style={{
@@ -38,7 +111,7 @@ export default function ResultDisplay({
           }}
           data-testid="text-result"
         >
-          {won ? "🏆 Victory! 🏆" : "Defeat"}
+          {info.winnerLabel}
         </h2>
         
         <div className={`inline-block px-8 py-6 rounded-2xl mb-8 border-3 ${
