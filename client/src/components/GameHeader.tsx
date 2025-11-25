@@ -10,8 +10,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Toggle } from "@/components/ui/toggle";
-import { Slider } from "@/components/ui/slider";
 import gameIcon from "@assets/generated_images/kali_jotta_game_icon_with_marbles.png";
 
 export default function GameHeader() {
@@ -280,40 +278,43 @@ export default function GameHeader() {
             {/* Sound Effects Toggle */}
             <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
               <span className="text-foreground font-medium">Sound Effects</span>
-              <Toggle
-                pressed={soundEnabled}
-                onPressedChange={handleSoundToggle}
+              <Button
+                variant={soundEnabled ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleSoundToggle(!soundEnabled)}
                 data-testid="toggle-sound"
-                className="bg-primary/20 hover:bg-primary/30 data-[state=on]:bg-green-500/40"
+                className="min-w-20"
               >
                 {soundEnabled ? "On" : "Off"}
-              </Toggle>
+              </Button>
             </div>
 
             {/* Music Toggle */}
             <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
               <span className="text-foreground font-medium">Music</span>
-              <Toggle
-                pressed={musicEnabled}
-                onPressedChange={handleMusicToggle}
+              <Button
+                variant={musicEnabled ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleMusicToggle(!musicEnabled)}
                 data-testid="toggle-music"
-                className="bg-primary/20 hover:bg-primary/30 data-[state=on]:bg-green-500/40"
+                className="min-w-20"
               >
                 {musicEnabled ? "On" : "Off"}
-              </Toggle>
+              </Button>
             </div>
 
             {/* Notifications Toggle */}
             <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
               <span className="text-foreground font-medium">Notifications</span>
-              <Toggle
-                pressed={notificationsEnabled}
-                onPressedChange={handleNotificationsToggle}
+              <Button
+                variant={notificationsEnabled ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleNotificationsToggle(!notificationsEnabled)}
                 data-testid="toggle-notifications"
-                className="bg-primary/20 hover:bg-primary/30 data-[state=on]:bg-green-500/40"
+                className="min-w-20"
               >
                 {notificationsEnabled ? "On" : "Off"}
-              </Toggle>
+              </Button>
             </div>
 
             {/* Volume Control */}
@@ -325,14 +326,15 @@ export default function GameHeader() {
                 </span>
                 <span className="text-sm text-primary font-bold">{volume}%</span>
               </div>
-              <Slider
-                value={[volume]}
-                onValueChange={handleVolumeChange}
-                min={0}
-                max={100}
-                step={5}
-                className="w-full"
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={volume}
+                onChange={(e) => handleVolumeChange([parseInt(e.target.value)])}
                 data-testid="slider-volume"
+                className="w-full h-2 bg-primary/20 rounded-lg appearance-none cursor-pointer accent-primary"
               />
             </div>
 
