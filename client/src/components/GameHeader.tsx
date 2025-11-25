@@ -1,4 +1,4 @@
-import { Settings, User, ArrowLeft, Upload, Globe, HelpCircle, MessageCircle } from "lucide-react";
+import { Settings, User, ArrowLeft, Upload, Globe, HelpCircle, MessageCircle, Volume2, Volume1, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useState, useRef, useEffect } from "react";
@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Toggle } from "@/components/ui/toggle";
+import { Slider } from "@/components/ui/slider";
 import gameIcon from "@assets/generated_images/kali_jotta_game_icon_with_marbles.png";
 
 export default function GameHeader() {
@@ -23,9 +25,26 @@ export default function GameHeader() {
   const [totalMarbles, setTotalMarbles] = useState(150);
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const [gamesWon, setGamesWon] = useState(0);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [musicEnabled, setMusicEnabled] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [volume, setVolume] = useState(70);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // Load settings from localStorage
+    const savedLanguage = localStorage.getItem("language") as "en" | "hi" | null;
+    const savedSound = localStorage.getItem("soundEnabled");
+    const savedMusic = localStorage.getItem("musicEnabled");
+    const savedNotifications = localStorage.getItem("notificationsEnabled");
+    const savedVolume = localStorage.getItem("volume");
+
+    if (savedLanguage) setLanguage(savedLanguage);
+    if (savedSound !== null) setSoundEnabled(savedSound === "true");
+    if (savedMusic !== null) setMusicEnabled(savedMusic === "true");
+    if (savedNotifications !== null) setNotificationsEnabled(savedNotifications === "true");
+    if (savedVolume) setVolume(parseInt(savedVolume));
+
     const handleStorageChange = () => {
       const savedMarbles = localStorage.getItem("playerMarbles");
       const savedGamesPlayed = localStorage.getItem("gamesPlayed");
@@ -66,6 +85,31 @@ export default function GameHeader() {
   const handleSaveProfile = () => {
     console.log("Profile saved:", { playerName, profilePic });
     setShowProfile(false);
+  };
+
+  const handleLanguageChange = (newLang: "en" | "hi") => {
+    setLanguage(newLang);
+    localStorage.setItem("language", newLang);
+  };
+
+  const handleSoundToggle = (enabled: boolean) => {
+    setSoundEnabled(enabled);
+    localStorage.setItem("soundEnabled", String(enabled));
+  };
+
+  const handleMusicToggle = (enabled: boolean) => {
+    setMusicEnabled(enabled);
+    localStorage.setItem("musicEnabled", String(enabled));
+  };
+
+  const handleNotificationsToggle = (enabled: boolean) => {
+    setNotificationsEnabled(enabled);
+    localStorage.setItem("notificationsEnabled", String(enabled));
+  };
+
+  const handleVolumeChange = (value: number[]) => {
+    setVolume(value[0]);
+    localStorage.setItem("volume", String(value[0]));
   };
 
   return (
@@ -226,44 +270,100 @@ export default function GameHeader() {
 
       {/* Settings Dialog */}
       <Dialog open={showSettings} onOpenChange={setShowSettings}>
-        <DialogContent className="bg-card border-2 border-primary/30">
+        <DialogContent className="bg-card border-2 border-primary/30 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-primary">
               Settings
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Sound Effects Toggle */}
             <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
-              <span className="text-foreground">Sound Effects</span>
-              <Button variant="outline" size="sm">
-                On
-              </Button>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
-              <span className="text-foreground">Music</span>
-              <Button variant="outline" size="sm">
-                On
-              </Button>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
-              <span className="text-foreground flex items-center gap-2">
-                <Globe className="w-4 h-4" />
-                Language
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setLanguage(language === "en" ? "hi" : "en")}
-                data-testid="button-language-toggle"
+              <span className="text-foreground font-medium">Sound Effects</span>
+              <Toggle
+                pressed={soundEnabled}
+                onPressedChange={handleSoundToggle}
+                data-testid="toggle-sound"
+                className="bg-primary/20 hover:bg-primary/30 data-[state=on]:bg-green-500/40"
               >
-                {language === "en" ? "हिंदी" : "English"}
-              </Button>
+                {soundEnabled ? "On" : "Off"}
+              </Toggle>
             </div>
+
+            {/* Music Toggle */}
             <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
-              <span className="text-foreground">Notifications</span>
-              <Button variant="outline" size="sm">
-                On
-              </Button>
+              <span className="text-foreground font-medium">Music</span>
+              <Toggle
+                pressed={musicEnabled}
+                onPressedChange={handleMusicToggle}
+                data-testid="toggle-music"
+                className="bg-primary/20 hover:bg-primary/30 data-[state=on]:bg-green-500/40"
+              >
+                {musicEnabled ? "On" : "Off"}
+              </Toggle>
+            </div>
+
+            {/* Notifications Toggle */}
+            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
+              <span className="text-foreground font-medium">Notifications</span>
+              <Toggle
+                pressed={notificationsEnabled}
+                onPressedChange={handleNotificationsToggle}
+                data-testid="toggle-notifications"
+                className="bg-primary/20 hover:bg-primary/30 data-[state=on]:bg-green-500/40"
+              >
+                {notificationsEnabled ? "On" : "Off"}
+              </Toggle>
+            </div>
+
+            {/* Volume Control */}
+            <div className="p-4 bg-primary/10 rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-foreground font-medium flex items-center gap-2">
+                  {volume === 0 ? <VolumeX className="w-4 h-4" /> : volume < 50 ? <Volume1 className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                  Volume
+                </span>
+                <span className="text-sm text-primary font-bold">{volume}%</span>
+              </div>
+              <Slider
+                value={[volume]}
+                onValueChange={handleVolumeChange}
+                min={0}
+                max={100}
+                step={5}
+                className="w-full"
+                data-testid="slider-volume"
+              />
+            </div>
+
+            {/* Language Selection */}
+            <div className="p-4 bg-primary/10 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-foreground font-medium flex items-center gap-2">
+                  <Globe className="w-4 h-4" />
+                  Language
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant={language === "en" ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => handleLanguageChange("en")}
+                  data-testid="button-language-en"
+                >
+                  English
+                </Button>
+                <Button
+                  variant={language === "hi" ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => handleLanguageChange("hi")}
+                  data-testid="button-language-hi"
+                >
+                  हिंदी
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>
