@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import gameIcon from "@assets/generated_images/kali_jotta_game_icon_with_marbles.png";
 
 export default function GameHeader() {
   const [location, setLocation] = useLocation();
@@ -71,7 +72,17 @@ export default function GameHeader() {
     <>
       <header className="fixed top-0 left-0 right-0 bg-black/30 backdrop-blur-lg z-50 border-b border-primary/30">
         <div className="flex justify-between items-center px-5 py-3">
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="rounded-full bg-primary/20 hover:bg-primary/40 hover:scale-110 transition-all shadow-[0_0_20px_rgba(255,215,0,0.5)]"
+              onClick={() => setLocation("/")}
+              title="Kanche King"
+              data-testid="button-home-icon"
+            >
+              <img src={gameIcon} alt="Kanche King" className="w-5 h-5 rounded-full" />
+            </Button>
             {showBackButton && (
               <Button
                 size="icon"
