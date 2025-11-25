@@ -24,10 +24,12 @@ export default function FistDisplay({
     const marbles = [];
     const count = Math.min(marbleCount, 20);
     const colors = [
-      { grad: "from-red-500 to-red-700", glow: "rgba(239, 68, 68, 0.6)" },
-      { grad: "from-blue-500 to-blue-700", glow: "rgba(59, 130, 246, 0.6)" },
-      { grad: "from-purple-500 to-purple-700", glow: "rgba(168, 85, 247, 0.6)" },
-      { grad: "from-green-500 to-green-700", glow: "rgba(34, 197, 94, 0.6)" },
+      { grad: "from-green-600 via-green-500 to-green-700", glow: "rgba(34, 197, 94, 0.8)" },
+      { grad: "from-emerald-600 via-emerald-500 to-emerald-700", glow: "rgba(5, 150, 105, 0.8)" },
+      { grad: "from-teal-600 via-teal-500 to-teal-700", glow: "rgba(20, 184, 166, 0.8)" },
+      { grad: "from-cyan-600 via-cyan-500 to-cyan-700", glow: "rgba(34, 211, 238, 0.8)" },
+      { grad: "from-lime-600 via-lime-500 to-lime-700", glow: "rgba(132, 204, 22, 0.8)" },
+      { grad: "from-green-700 via-green-600 to-green-800", glow: "rgba(21, 128, 61, 0.8)" },
     ];
 
     for (let i = 0; i < count; i++) {
@@ -35,16 +37,22 @@ export default function FistDisplay({
       marbles.push(
         <div
           key={i}
-          className={`w-10 h-10 rounded-full inline-block mx-1 bg-gradient-to-br ${color.grad} transform transition-all animate-bounce`}
+          className={`w-12 h-12 rounded-full inline-block mx-1 bg-gradient-to-br ${color.grad} transform transition-all animate-bounce relative shadow-lg`}
           style={{
-            boxShadow: `0 0 20px ${color.glow}, 0 4px 8px rgba(0,0,0,0.3), inset -2px -2px 4px rgba(0,0,0,0.3), inset 2px 2px 4px rgba(255,255,255,0.5)`,
+            boxShadow: `0 0 30px ${color.glow}, 0 8px 16px rgba(0,0,0,0.4), inset -3px -3px 8px rgba(0,0,0,0.5), inset 3px 3px 8px rgba(255,255,255,0.3)`,
             animationDelay: `${i * 0.1}s`
           }}
         >
           <div
-            className="absolute top-[20%] left-[30%] w-[25%] h-[25%] rounded-full"
+            className="absolute top-[20%] left-[25%] w-[28%] h-[28%] rounded-full"
             style={{
-              background: "radial-gradient(circle, rgba(255,255,255,0.9), transparent)"
+              background: "radial-gradient(circle, rgba(255,255,255,0.8), transparent)"
+            }}
+          />
+          <div
+            className="absolute bottom-[15%] right-[20%] w-[18%] h-[18%] rounded-full"
+            style={{
+              background: "radial-gradient(circle, rgba(255,255,255,0.5), transparent)"
             }}
           />
         </div>

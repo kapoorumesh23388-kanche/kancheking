@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
-import marbleImage from "@assets/image_1764004369433.png";
+import greenMarbleImage from "@assets/image_1764089214310.png";
 
 interface MarbleSelectorProps {
   selectedMarbleIds: number[];
@@ -58,7 +58,7 @@ export default function MarbleSelector({
                     : "ring-2 ring-primary/50 hover:ring-primary hover:shadow-[0_0_20px_rgba(255,215,0,0.4)]"
                 }`}
                 style={{
-                  backgroundImage: `url(${marbleImage})`,
+                  backgroundImage: `url(${greenMarbleImage})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   boxShadow: isSelected
