@@ -9,6 +9,16 @@ import GameChat from "@/components/GameChat";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Volume2, VolumeX } from "lucide-react";
 import { useGameSocket } from "@/hooks/useGameSocket";
+
+interface ChatMessage {
+  id: string;
+  sender: string;
+  senderName: string;
+  type: "text" | "voice";
+  content: string;
+  timestamp: Date;
+  audioUrl?: string;
+}
 import {
   Dialog,
   DialogContent,
@@ -35,8 +45,9 @@ export default function MultiplayerGame() {
   const [gameResult, setGameResult] = useState<any>(null);
   const [opponentConnected, setOpponentConnected] = useState(false);
   const [waitingMessage, setWaitingMessage] = useState("Waiting for opponent...");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
-  const { sendMessage } = useGameSocket(roomCode || "", playerId, (msg) => {
+  const { sendMessage, sendChatMessage } = useGameSocket(roomCode || "", playerId, (msg) => {
     console.log("Received message:", msg);
     if (msg.type === "join") {
       setOpponentConnected(true);
@@ -48,8 +59,20 @@ export default function MultiplayerGame() {
     } else if (msg.type === "guess") {
       // Handle opponent's guess
       setPhase("result");
+    } else if (msg.type === "chat") {
+      // Handle incoming chat message
+      const chatMessage: ChatMessage = {
+        id: Date.now().toString(),
+        sender: msg.playerId,
+        senderName: msg.data.senderName,
+        type: msg.data.messageType,
+        content: msg.data.content,
+        timestamp: new Date(),
+        audioUrl: msg.data.messageType === "voice" ? msg.data.content : undefined,
+      };
+      setChatMessages(prev => [...prev, chatMessage]);
     }
-  });
+  }, playerName);
 
   const handleConfirmSelection = () => {
     setPhase("guessing");
@@ -213,7 +236,29 @@ export default function MultiplayerGame() {
         </Card>
       </div>
 
-      <GameChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      <GameChat
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        currentPlayerId={playerId}
+        currentPlayerName={playerName}
+        messages={chatMessages}
+        onSendMessage={(msg) => {
+          // Add message to local state immediately
+          const userMessage: ChatMessage = {
+            id: Date.now().toString(),
+            sender: playerId,
+            senderName: playerName,
+            type: msg.type,
+            content: msg.type === "text" ? msg.content : `Voice message (${msg.duration}s)`,
+            timestamp: new Date(),
+            audioUrl: msg.type === "voice" ? msg.content : undefined,
+          };
+          setChatMessages(prev => [...prev, userMessage]);
+          
+          // Send via WebSocket
+          sendChatMessage(msg.type, msg.content, msg.duration);
+        }}
+      />
     </div>
   );
 }

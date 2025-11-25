@@ -49,6 +49,15 @@ export default function GamePlay() {
   const [adRewardPlayer, setAdRewardPlayer] = useState<"player1" | "player2" | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isMusicEnabled, setIsMusicEnabled] = useState(true);
+  const [chatMessages, setChatMessages] = useState<Array<{
+    id: string;
+    sender: string;
+    senderName: string;
+    type: "text" | "voice";
+    content: string;
+    timestamp: Date;
+    audioUrl?: string;
+  }>>([]);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const guessingAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -245,6 +254,43 @@ export default function GamePlay() {
     } else if (adRewardPlayer === "player2") {
       setPlayer2Marbles(prev => prev + 25);
     }
+  };
+
+  const handleSendChatMessage = (msg: { type: "text" | "voice"; content: string; duration?: number }) => {
+    // Add user message to chat
+    const userMessage = {
+      id: Date.now().toString(),
+      sender: "player1",
+      senderName: "You",
+      type: msg.type as "text" | "voice",
+      content: msg.type === "text" ? msg.content : `Voice message (${msg.duration}s)`,
+      timestamp: new Date(),
+      audioUrl: msg.type === "voice" ? msg.content : undefined,
+    };
+    setChatMessages(prev => [...prev, userMessage]);
+
+    // AI responds with a message after a delay
+    setTimeout(() => {
+      const aiResponses = [
+        "Nice move! 🎮",
+        "Let's go! 💪",
+        "Good luck! 🍀",
+        "I'm ready! 🔥",
+        "Bring it on! 💯",
+        "Haha, got you! 😎",
+        "You're good at this! 👏",
+        "One more round? 🎲",
+      ];
+      const aiMessage = {
+        id: (Date.now() + 1).toString(),
+        sender: "player2",
+        senderName: "Player 2 (AI)",
+        type: "text" as const,
+        content: aiResponses[Math.floor(Math.random() * aiResponses.length)],
+        timestamp: new Date(),
+      };
+      setChatMessages(prev => [...prev, aiMessage]);
+    }, 800);
   };
 
   return (
@@ -463,7 +509,14 @@ export default function GamePlay() {
       </Dialog>
 
       {/* Chat Component */}
-      <GameChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      <GameChat
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        currentPlayerId="player1"
+        currentPlayerName="You"
+        messages={chatMessages}
+        onSendMessage={handleSendChatMessage}
+      />
     </div>
   );
 }

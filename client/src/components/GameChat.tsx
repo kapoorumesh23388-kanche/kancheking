@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 
 interface ChatMessage {
   id: string;
-  sender: "player1" | "ai";
+  sender: string;
+  senderName: string;
   type: "text" | "voice";
   content: string;
   timestamp: Date;
@@ -16,12 +17,22 @@ interface ChatMessage {
 interface GameChatProps {
   isOpen: boolean;
   onClose: () => void;
+  onSendMessage?: (message: { type: "text" | "voice"; content: string; duration?: number }) => void;
+  currentPlayerId?: string;
+  currentPlayerName?: string;
+  messages?: ChatMessage[];
 }
 
 const EMOJI_LIST = ["😂", "🎉", "😢", "😡", "👍", "👎", "🔥", "💪", "🤔", "😎", "🤗", "❤️", "😘", "🙏", "💯"];
 
-export default function GameChat({ isOpen, onClose }: GameChatProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+export default function GameChat({ 
+  isOpen, 
+  onClose, 
+  onSendMessage,
+  currentPlayerId = "player1",
+  currentPlayerName = "You",
+  messages = []
+}: GameChatProps) {
   const [inputText, setInputText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -34,38 +45,16 @@ export default function GameChat({ isOpen, onClose }: GameChatProps) {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, messages.length]);
 
   const handleSendText = () => {
     if (inputText.trim()) {
-      const newMessage: ChatMessage = {
-        id: Date.now().toString(),
-        sender: "player1",
-        type: "text",
-        content: inputText,
-        timestamp: new Date(),
-      };
-      setMessages([...messages, newMessage]);
-      setInputText("");
+      // Send to parent component via callback
+      if (onSendMessage) {
+        onSendMessage({ type: "text", content: inputText });
+      }
       
-      // AI responds after a short delay
-      setTimeout(() => {
-        const aiResponses = [
-          "Nice move! 🎮",
-          "Let's go! 💪",
-          "Good luck! 🍀",
-          "I'm ready! 🔥",
-          "Bring it on! 💯",
-        ];
-        const aiMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          sender: "ai",
-          type: "text",
-          content: aiResponses[Math.floor(Math.random() * aiResponses.length)],
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, aiMessage]);
-      }, 1000);
+      setInputText("");
     }
   };
 
@@ -87,17 +76,18 @@ export default function GameChat({ isOpen, onClose }: GameChatProps) {
 
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/wav" });
-        const audioUrl = URL.createObjectURL(audioBlob);
         
-        const voiceMessage: ChatMessage = {
-          id: Date.now().toString(),
-          sender: "player1",
-          type: "voice",
-          content: `Voice message (${recordingTime}s)`,
-          audioUrl,
-          timestamp: new Date(),
+        // Convert audio blob to base64 for transmission
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64Audio = reader.result as string;
+          
+          // Send to parent component via callback
+          if (onSendMessage) {
+            onSendMessage({ type: "voice", content: base64Audio, duration: recordingTime });
+          }
         };
-        setMessages([...messages, voiceMessage]);
+        reader.readAsDataURL(audioBlob);
         
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
@@ -150,21 +140,24 @@ export default function GameChat({ isOpen, onClose }: GameChatProps) {
       <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-black/20">
         {messages.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
-            <p className="text-sm">Start chatting with AI opponent!</p>
+            <p className="text-sm">Start chatting with your opponent!</p>
           </div>
         ) : (
           messages.map(msg => (
             <div
               key={msg.id}
-              className={`flex ${msg.sender === "player1" ? "justify-end" : "justify-start"}`}
+              className={`flex ${msg.sender === currentPlayerId ? "justify-end" : "justify-start"}`}
             >
               <div
                 className={`max-w-xs rounded-lg px-3 py-2 ${
-                  msg.sender === "player1"
+                  msg.sender === currentPlayerId
                     ? "bg-primary text-primary-foreground"
                     : "bg-white/10 text-foreground border border-primary/30"
                 }`}
               >
+                {msg.sender !== currentPlayerId && (
+                  <p className="text-xs font-bold mb-1 opacity-70">{msg.senderName}</p>
+                )}
                 {msg.type === "text" ? (
                   <p className="text-sm break-words">{msg.content}</p>
                 ) : (

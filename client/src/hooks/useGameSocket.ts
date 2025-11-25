@@ -1,5 +1,12 @@
 import { useEffect, useRef, useCallback } from "react";
 
+interface ChatData {
+  messageType: "text" | "voice";
+  content: string;
+  duration?: number;
+  senderName: string;
+}
+
 interface GameMessage {
   type: "join" | "move" | "guess" | "result" | "chat" | "sync";
   roomCode: string;
@@ -7,7 +14,12 @@ interface GameMessage {
   data: any;
 }
 
-export function useGameSocket(roomCode: string, playerId: string, onMessage: (msg: GameMessage) => void) {
+export function useGameSocket(
+  roomCode: string,
+  playerId: string,
+  onMessage: (msg: GameMessage) => void,
+  playerName: string = "Player"
+) {
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -19,7 +31,9 @@ export function useGameSocket(roomCode: string, playerId: string, onMessage: (ms
 
       ws.onopen = () => {
         console.log("WebSocket connected");
-        ws.send(JSON.stringify({ type: "join", roomCode, playerId }));
+        ws.send(
+          JSON.stringify({ type: "join", roomCode, playerId, data: { playerName } })
+        );
       };
 
       ws.onmessage = (event) => {
@@ -49,7 +63,7 @@ export function useGameSocket(roomCode: string, playerId: string, onMessage: (ms
         wsRef.current.close();
       }
     };
-  }, [roomCode, playerId, onMessage]);
+  }, [roomCode, playerId, playerName, onMessage]);
 
   const sendMessage = useCallback((message: GameMessage) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -57,5 +71,26 @@ export function useGameSocket(roomCode: string, playerId: string, onMessage: (ms
     }
   }, []);
 
-  return { sendMessage };
+  const sendChatMessage = useCallback(
+    (messageType: "text" | "voice", content: string, duration?: number) => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "chat",
+            roomCode,
+            playerId,
+            data: {
+              messageType,
+              content,
+              duration: duration || 0,
+              senderName: playerName,
+            },
+          })
+        );
+      }
+    },
+    [roomCode, playerId, playerName]
+  );
+
+  return { sendMessage, sendChatMessage };
 }

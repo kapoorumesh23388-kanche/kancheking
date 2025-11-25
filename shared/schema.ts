@@ -128,6 +128,17 @@ export const feedbackSubmissions = pgTable("feedback_submissions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const chatMessages = pgTable("chat_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  roomCode: varchar("room_code").notNull(), // Game room or AI mode
+  senderId: varchar("sender_id").notNull(),
+  senderName: varchar("sender_name").notNull(),
+  messageType: varchar("message_type").notNull(), // "text" or "voice"
+  content: text("content").notNull(), // Text message or base64 voice data
+  duration: integer("duration"), // Voice message duration in seconds
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -144,3 +155,4 @@ export type PlayerAdRevenue = typeof playerAdRevenue.$inferSelect;
 export type PlayerRevenueShare = typeof playerRevenueShare.$inferSelect;
 export type TournamentConversion = typeof tournamentConversions.$inferSelect;
 export type FeedbackSubmission = typeof feedbackSubmissions.$inferSelect;
+export type ChatMessage = typeof chatMessages.$inferSelect;

@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer } from "ws";
 import { storage } from "./storage";
+import { handleNewConnection } from "./ws-manager";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/catalog", async (req, res) => {
@@ -590,5 +592,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+
+  // Setup WebSocket server for real-time chat and game messages
+  // Handle WebSocket upgrades on /ws path
+  httpServer.on("upgrade", (request, socket, head) => {
+    if (request.url === "/ws") {
+      const wss = new WebSocketServer({ noServer: true });
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        handleNewConnection(ws);
+      });
+    } else {
+      socket.destroy();
+    }
+  });
+
   return httpServer;
 }
