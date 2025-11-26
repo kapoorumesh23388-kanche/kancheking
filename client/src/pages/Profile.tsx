@@ -81,31 +81,17 @@ export default function Profile() {
     onSuccess: (data) => {
       setUser({...data.user, userId: localStorage.getItem("userId")});
       
-      // SAVE DIRECTLY FROM FORM INPUT - ensure non-empty
-      const finalDisplayName = displayName || "Player";
-      localStorage.setItem("playerDisplayName", finalDisplayName);
-      console.log("Saved to localStorage:", finalDisplayName);
-      
-      if (profileImage) {
-        localStorage.setItem("playerProfileImage", profileImage);
-      }
+      // Save name to localStorage FIRST
+      localStorage.setItem("playerDisplayName", displayName);
+      localStorage.setItem("playerProfileImageUpdate", profileImage);
+      localStorage.setItem("lastProfileUpdate", Date.now().toString());
       
       toast({
         title: "Profile Updated",
         description: "Your profile has been saved successfully!",
       });
       
-      // Dispatch MULTIPLE events to ensure header gets notified
-      const updateEvent = new CustomEvent("playerProfileUpdated", {
-        detail: { displayName: finalDisplayName, profileImage: profileImage }
-      });
-      window.dispatchEvent(updateEvent);
-      console.log("Event dispatched:", finalDisplayName);
-      
-      // Also set a global flag for header to check
-      (window as any).__profileUpdatedName = finalDisplayName;
-      
-      // Navigate back to home after a short delay to show toast
+      // Navigate back to home
       setTimeout(() => {
         navigate("/");
       }, 500);

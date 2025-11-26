@@ -17,8 +17,8 @@ export default function GameHeader() {
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showGameInfo, setShowGameInfo] = useState(false);
-  const [playerName, setPlayerName] = useState("Rajesh Kumar");
-  const [profilePic, setProfilePic] = useState<string | null>(null);
+  const [playerName, setPlayerName] = useState(() => localStorage.getItem("playerDisplayName") || "Rajesh Kumar");
+  const [profilePic, setProfilePic] = useState<string | null>(() => localStorage.getItem("playerProfileImageUpdate"));
   const [language, setLanguage] = useState<"en" | "hi">("en");
   const [totalMarbles, setTotalMarbles] = useState(150);
   const [gamesPlayed, setGamesPlayed] = useState(0);
@@ -28,17 +28,18 @@ export default function GameHeader() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [volume, setVolume] = useState(70);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [lastUpdate, setLastUpdate] = useState(() => localStorage.getItem("lastProfileUpdate") || "0");
 
   useEffect(() => {
-    // Load settings from localStorage
-    const loadSettings = () => {
+    const syncFromStorage = () => {
       const savedLanguage = localStorage.getItem("language") as "en" | "hi" | null;
       const savedSound = localStorage.getItem("soundEnabled");
       const savedMusic = localStorage.getItem("musicEnabled");
       const savedNotifications = localStorage.getItem("notificationsEnabled");
       const savedVolume = localStorage.getItem("volume");
       const savedDisplayName = localStorage.getItem("playerDisplayName");
-      const savedProfilePic = localStorage.getItem("playerProfileImage");
+      const savedProfilePic = localStorage.getItem("playerProfileImageUpdate");
+      const lastUpdateTime = localStorage.getItem("lastProfileUpdate");
 
       if (savedLanguage) setLanguage(savedLanguage);
       if (savedSound !== null) setSoundEnabled(savedSound === "true");
@@ -47,66 +48,18 @@ export default function GameHeader() {
       if (savedVolume) setVolume(parseInt(savedVolume));
       if (savedDisplayName) setPlayerName(savedDisplayName);
       if (savedProfilePic) setProfilePic(savedProfilePic);
+      if (lastUpdateTime) setLastUpdate(lastUpdateTime);
     };
 
-    const handleStorageChange = () => {
-      const savedMarbles = localStorage.getItem("playerMarbles");
-      const savedGamesPlayed = localStorage.getItem("gamesPlayed");
-      const savedGamesWon = localStorage.getItem("gamesWon");
-      const savedDisplayName = localStorage.getItem("playerDisplayName");
-      const savedProfilePic = localStorage.getItem("playerProfileImage");
-      
-      if (savedMarbles) setTotalMarbles(parseInt(savedMarbles));
-      if (savedGamesPlayed) setGamesPlayed(parseInt(savedGamesPlayed));
-      if (savedGamesWon) setGamesWon(parseInt(savedGamesWon));
-      if (savedDisplayName) setPlayerName(savedDisplayName);
-      if (savedProfilePic) setProfilePic(savedProfilePic);
-    };
-
-    const handleProfileUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (customEvent.detail?.displayName) {
-        setPlayerName(customEvent.detail.displayName);
-      }
-      if (customEvent.detail?.profileImage) {
-        setProfilePic(customEvent.detail.profileImage);
-      }
-    };
-
-    // Polling backup: Check localStorage every 50ms for updates
-    let lastDisplayName = localStorage.getItem("playerDisplayName");
-    const pollInterval = setInterval(() => {
-      // Check localStorage
-      const currentDisplayName = localStorage.getItem("playerDisplayName");
-      if (currentDisplayName && currentDisplayName !== lastDisplayName && currentDisplayName !== "Rajesh Kumar") {
-        console.log("Polling detected change:", currentDisplayName);
-        setPlayerName(currentDisplayName);
-        lastDisplayName = currentDisplayName;
-      }
-      
-      // Also check global flag from Profile component
-      if ((window as any).__profileUpdatedName) {
-        const globalName = (window as any).__profileUpdatedName;
-        if (globalName !== lastDisplayName) {
-          console.log("Global flag detected:", globalName);
-          setPlayerName(globalName);
-          localStorage.setItem("playerDisplayName", globalName);
-          lastDisplayName = globalName;
-          (window as any).__profileUpdatedName = null;
-        }
-      }
-    }, 50);
-
-    loadSettings();
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("marbleUpdate", handleStorageChange);
-    window.addEventListener("playerProfileUpdated", handleProfileUpdate);
+    syncFromStorage();
+    
+    // Check for updates every 200ms
+    const pollInterval = setInterval(syncFromStorage, 200);
+    window.addEventListener("storage", syncFromStorage);
     
     return () => {
       clearInterval(pollInterval);
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("marbleUpdate", handleStorageChange);
-      window.removeEventListener("playerProfileUpdated", handleProfileUpdate);
+      window.removeEventListener("storage", syncFromStorage);
     };
   }, []);
   
