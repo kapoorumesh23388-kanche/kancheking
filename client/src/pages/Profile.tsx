@@ -83,19 +83,20 @@ export default function Profile() {
       // Save displayName to localStorage
       const newDisplayName = data.user.displayName || "";
       localStorage.setItem("playerDisplayName", newDisplayName);
-      
-      // Dispatch custom event that GameHeader listens to
-      const event = new CustomEvent("profileUpdated", {
-        detail: { displayName: newDisplayName },
-        bubbles: true
-      });
-      window.dispatchEvent(event);
-      console.log("Profile updated event dispatched:", newDisplayName);
+      if (data.user.profileImage) {
+        localStorage.setItem("playerProfileImage", data.user.profileImage);
+      }
       
       toast({
         title: "Profile Updated",
         description: "Your profile has been saved successfully!",
       });
+      
+      // Navigate back to home after a short delay to show toast
+      setTimeout(() => {
+        navigate("/");
+      }, 1000);
+      
       queryClient.invalidateQueries({ queryKey: ["/api/catalog"] });
     },
     onError: () => {

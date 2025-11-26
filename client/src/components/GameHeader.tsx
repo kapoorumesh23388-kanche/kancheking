@@ -37,6 +37,7 @@ export default function GameHeader() {
     const savedNotifications = localStorage.getItem("notificationsEnabled");
     const savedVolume = localStorage.getItem("volume");
     const savedDisplayName = localStorage.getItem("playerDisplayName");
+    const savedProfilePic = localStorage.getItem("playerProfileImage");
 
     if (savedLanguage) setLanguage(savedLanguage);
     if (savedSound !== null) setSoundEnabled(savedSound === "true");
@@ -44,39 +45,31 @@ export default function GameHeader() {
     if (savedNotifications !== null) setNotificationsEnabled(savedNotifications === "true");
     if (savedVolume) setVolume(parseInt(savedVolume));
     if (savedDisplayName) setPlayerName(savedDisplayName);
+    if (savedProfilePic) setProfilePic(savedProfilePic);
 
     const handleStorageChange = () => {
       const savedMarbles = localStorage.getItem("playerMarbles");
       const savedGamesPlayed = localStorage.getItem("gamesPlayed");
       const savedGamesWon = localStorage.getItem("gamesWon");
       const savedDisplayName = localStorage.getItem("playerDisplayName");
+      const savedProfilePic = localStorage.getItem("playerProfileImage");
       
       if (savedMarbles) setTotalMarbles(parseInt(savedMarbles));
       if (savedGamesPlayed) setGamesPlayed(parseInt(savedGamesPlayed));
       if (savedGamesWon) setGamesWon(parseInt(savedGamesWon));
       if (savedDisplayName) setPlayerName(savedDisplayName);
-    };
-
-    const handleProfileUpdate = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      console.log("Profile update event received:", customEvent.detail);
-      if (customEvent.detail?.displayName) {
-        console.log("Updating player name to:", customEvent.detail.displayName);
-        setPlayerName(customEvent.detail.displayName);
-      }
+      if (savedProfilePic) setProfilePic(savedProfilePic);
     };
 
     handleStorageChange();
     window.addEventListener("storage", handleStorageChange);
     window.addEventListener("marbleUpdate", handleStorageChange);
-    window.addEventListener("profileUpdated", handleProfileUpdate, true);
     
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("marbleUpdate", handleStorageChange);
-      window.removeEventListener("profileUpdated", handleProfileUpdate, true);
     };
-  }, []);
+  }, [location]);
   
   const showBackButton = location !== "/";
 
