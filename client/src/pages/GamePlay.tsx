@@ -151,29 +151,72 @@ export default function GamePlay() {
 
       // Play appropriate sound with a small delay using Web Audio API
       setTimeout(() => {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+        try {
+          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          
+          if (gameResult.won) {
+            // Win sound: Two ascending notes - celebratory
+            // First note
+            const osc1 = audioContext.createOscillator();
+            const gain1 = audioContext.createGain();
+            osc1.type = "sine";
+            osc1.frequency.setValueAtTime(523, audioContext.currentTime); // C5
+            osc1.frequency.setValueAtTime(659, audioContext.currentTime + 0.2); // E5
+            gain1.gain.setValueAtTime(0.5, audioContext.currentTime);
+            gain1.gain.setValueAtTime(0, audioContext.currentTime + 0.3);
+            osc1.connect(gain1);
+            gain1.connect(audioContext.destination);
+            osc1.start(audioContext.currentTime);
+            osc1.stop(audioContext.currentTime + 0.3);
 
-        if (gameResult.won) {
-          // Win sound: high pitch ascending
-          oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
-          oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.3);
-          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-          oscillator.start(audioContext.currentTime);
-          oscillator.stop(audioContext.currentTime + 0.3);
-        } else {
-          // Loss sound: low pitch descending
-          oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
-          oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.4);
-          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
-          oscillator.start(audioContext.currentTime);
-          oscillator.stop(audioContext.currentTime + 0.4);
+            // Second note
+            const osc2 = audioContext.createOscillator();
+            const gain2 = audioContext.createGain();
+            osc2.type = "sine";
+            osc2.frequency.setValueAtTime(659, audioContext.currentTime + 0.3); // E5
+            osc2.frequency.setValueAtTime(784, audioContext.currentTime + 0.5); // G5
+            gain2.gain.setValueAtTime(0.5, audioContext.currentTime + 0.3);
+            gain2.gain.setValueAtTime(0, audioContext.currentTime + 0.6);
+            osc2.connect(gain2);
+            gain2.connect(audioContext.destination);
+            osc2.start(audioContext.currentTime + 0.3);
+            osc2.stop(audioContext.currentTime + 0.6);
+
+            // Third note - high
+            const osc3 = audioContext.createOscillator();
+            const gain3 = audioContext.createGain();
+            osc3.type = "sine";
+            osc3.frequency.setValueAtTime(784, audioContext.currentTime + 0.6); // G5
+            osc3.frequency.setValueAtTime(1047, audioContext.currentTime + 0.8); // C6
+            gain3.gain.setValueAtTime(0.6, audioContext.currentTime + 0.6);
+            gain3.gain.setValueAtTime(0, audioContext.currentTime + 0.9);
+            osc3.connect(gain3);
+            gain3.connect(audioContext.destination);
+            osc3.start(audioContext.currentTime + 0.6);
+            osc3.stop(audioContext.currentTime + 0.9);
+
+            console.log("Win sound playing!");
+          } else {
+            // Loss sound: Descending tone - sad
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.type = "sine";
+            
+            osc.frequency.setValueAtTime(400, audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.4);
+            
+            gain.gain.setValueAtTime(0.5, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0, audioContext.currentTime + 0.5);
+            
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.start(audioContext.currentTime);
+            osc.stop(audioContext.currentTime + 0.5);
+
+            console.log("Loss sound playing!");
+          }
+        } catch (error) {
+          console.log("Sound play error:", error);
         }
       }, 500);
     }
