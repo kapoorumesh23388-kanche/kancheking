@@ -551,8 +551,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           { username: userId, password: "guest" },
           undefined
         );
-        // Update ID to match the provided userId
-        user.id = userId;
       }
 
       res.json(user);

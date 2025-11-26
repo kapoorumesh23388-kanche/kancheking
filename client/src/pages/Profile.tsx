@@ -31,7 +31,7 @@ export default function Profile() {
     fetch(`/api/user/${userId}`)
       .then((res) => res.json())
       .then((data) => {
-        setUser(data);
+        setUser({...data, userId}); // Store userId in user object
         setDisplayName(data.displayName || "");
         setProfileImage(data.profileImage || "");
         setImagePreview(data.profileImage || "");
@@ -59,13 +59,14 @@ export default function Profile() {
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.id) throw new Error("User not found");
+      const userId = localStorage.getItem("userId");
+      if (!userId) throw new Error("User not found");
 
       const response = await fetch("/api/profile/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user.id,
+          userId: userId,
           displayName: displayName || null,
           profileImage: profileImage || null,
         }),
@@ -78,7 +79,7 @@ export default function Profile() {
       return response.json();
     },
     onSuccess: (data) => {
-      setUser(data.user);
+      setUser({...data.user, userId: localStorage.getItem("userId")});
       toast({
         title: "Profile Updated",
         description: "Your profile has been saved successfully!",
