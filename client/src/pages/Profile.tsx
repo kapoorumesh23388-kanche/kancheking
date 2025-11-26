@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import AdsPreferenceCard from "@/components/AdsPreferenceCard";
 
 export default function Profile() {
   const { toast } = useToast();
@@ -18,6 +19,8 @@ export default function Profile() {
   const [profileImage, setProfileImage] = useState("");
   const [imagePreview, setImagePreview] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [adsPreference, setAdsPreference] = useState("family");
+  const [userAge, setUserAge] = useState<number | null>(null);
 
   // Load user data from localStorage
   useEffect(() => {
@@ -35,6 +38,20 @@ export default function Profile() {
         setDisplayName(data.displayName || "");
         setProfileImage(data.profileImage || "");
         setImagePreview(data.profileImage || "");
+        setAdsPreference(data.adContentRating || localStorage.getItem("playerAdsPreference") || "family");
+        
+        // Calculate age if DOB available
+        if (data.dateOfBirth) {
+          const birthDate = new Date(data.dateOfBirth);
+          const today = new Date();
+          let age = today.getFullYear() - birthDate.getFullYear();
+          const monthDiff = today.getMonth() - birthDate.getMonth();
+          if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+          }
+          setUserAge(age);
+        }
+        
         setIsLoading(false);
       })
       .catch(() => {
@@ -255,6 +272,13 @@ export default function Profile() {
                 </p>
               </div>
             )}
+
+            {/* Ads Preference */}
+            <AdsPreferenceCard
+              currentPreference={adsPreference}
+              userAge={userAge || undefined}
+              onPreferenceChange={setAdsPreference}
+            />
           </div>
 
           {/* Action Buttons */}

@@ -19,6 +19,7 @@ export const users = pgTable("users", {
   referredBy: varchar("referred_by"),
   dateOfBirth: varchar("date_of_birth"),
   isAgeVerified: boolean("is_age_verified").notNull().default(false),
+  adContentRating: varchar("ad_content_rating").default("family"), // "kids" | "family" | "all"
   createdAt: timestamp("created_at").defaultNow(),
 });
 
