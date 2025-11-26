@@ -63,6 +63,9 @@ export default function GamePlay() {
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const guessingAudioRef = useRef<HTMLAudioElement | null>(null);
+  const winAudioRef = useRef<HTMLAudioElement | null>(null);
+  const lossAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   // Initialize background music
   useEffect(() => {
@@ -137,6 +140,41 @@ export default function GamePlay() {
       }
     }
   }, [phase]);
+
+  // Play win/loss sounds when result is revealed
+  useEffect(() => {
+    if (gameResult) {
+      // Create win/loss audio if it doesn't exist
+      if (!winAudioRef.current) {
+        const winAudio = new Audio();
+        winAudio.src = "data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==";
+        winAudioRef.current = winAudio;
+      }
+      if (!lossAudioRef.current) {
+        const lossAudio = new Audio();
+        lossAudio.src = "data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==";
+        lossAudioRef.current = lossAudio;
+      }
+
+      // Play appropriate sound with a small delay
+      setTimeout(() => {
+        if (gameResult.won && winAudioRef.current) {
+          winAudioRef.current.play().catch(() => {});
+        } else if (!gameResult.won && lossAudioRef.current) {
+          lossAudioRef.current.play().catch(() => {});
+        }
+      }, 500);
+    }
+  }, [gameResult]);
+
+  // Show celebration when AI loses all marbles
+  useEffect(() => {
+    if (player2Marbles === 0) {
+      setTimeout(() => {
+        setShowCelebration(true);
+      }, 1000);
+    }
+  }, [player2Marbles]);
 
   const handleToggleMarble = (id: number) => {
     setSelectedMarbleIds(prev => {
@@ -472,6 +510,48 @@ export default function GamePlay() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Celebration Dialog - AI Defeated */}
+      <Dialog open={showCelebration} onOpenChange={setShowCelebration}>
+        <DialogContent className="bg-gradient-to-b from-primary/30 to-black border-4 border-primary max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">
+              <div className="space-y-4">
+                <div className="text-7xl animate-bounce">🎉</div>
+                <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] to-[#FFA500]">
+                  YOU WIN!
+                </h2>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4 text-center">
+            <div className="text-6xl animate-pulse">👑</div>
+            <p className="text-2xl font-bold text-[#00FF88]">
+              AI DEFEATED!
+            </p>
+            <p className="text-lg text-foreground">
+              Congratulations! You've defeated the AI opponent and won all their marbles! 
+            </p>
+            <div className="bg-primary/20 border-2 border-primary/50 rounded-lg p-6">
+              <p className="text-sm text-muted-foreground mb-2">VICTORY BONUS</p>
+              <p className="text-3xl font-black text-[#00FF88]">
+                +100 Points
+              </p>
+            </div>
+            <Button
+              className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground font-bold py-6 text-lg"
+              onClick={() => {
+                setShowCelebration(false);
+                // Reset game or go back to home
+                window.location.href = "/";
+              }}
+              data-testid="button-victory-continue"
+            >
+              Continue 🎮
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Ad Reward Modal */}
       <Dialog open={showAdReward} onOpenChange={setShowAdReward}>
