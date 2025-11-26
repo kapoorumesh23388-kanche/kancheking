@@ -34,6 +34,8 @@ export default function GamePlay() {
     return saved ? parseInt(saved) : 150;
   });
   const [player2Marbles, setPlayer2Marbles] = useState(120);
+  const [player1Name, setPlayer1Name] = useState(() => localStorage.getItem("playerDisplayName") || "You");
+  const [player1Image, setPlayer1Image] = useState<string | null>(() => localStorage.getItem("playerProfileImageUpdate"));
   const [aiHiddenCount, setAiHiddenCount] = useState(0);
   const [showRevealButton, setShowRevealButton] = useState(false);
   const [lastGuess, setLastGuess] = useState<string>("");
@@ -99,6 +101,19 @@ export default function GamePlay() {
     localStorage.setItem("playerMarbles", player1Marbles.toString());
     window.dispatchEvent(new Event("marbleUpdate"));
   }, [player1Marbles]);
+
+  // Load player profile
+  useEffect(() => {
+    const loadProfile = () => {
+      const name = localStorage.getItem("playerDisplayName") || "You";
+      const image = localStorage.getItem("playerProfileImageUpdate");
+      setPlayer1Name(name);
+      setPlayer1Image(image);
+    };
+    loadProfile();
+    window.addEventListener("profileUpdated", loadProfile);
+    return () => window.removeEventListener("profileUpdated", loadProfile);
+  }, []);
 
   // Play guessing sound when in guessing phase
   useEffect(() => {
@@ -328,7 +343,8 @@ export default function GamePlay() {
           <div className="grid grid-cols-3 gap-4 items-center">
             <div className="text-center">
               <PlayerBox
-                name="Player 1"
+                name={player1Name}
+                avatar={player1Image || undefined}
                 marbles={player1Marbles}
                 role={isHiderPlayer1 ? "Hider" : "Guesser"}
                 isActive={isHiderPlayer1 ? phase === "selecting" : phase === "guessing"}
@@ -342,7 +358,7 @@ export default function GamePlay() {
             </div>
             <div className="text-center">
               <PlayerBox
-                name="Player 2 (AI)"
+                name="AI Opponent"
                 marbles={player2Marbles}
                 role={!isHiderPlayer1 ? "Hider" : "Guesser"}
                 isActive={!isHiderPlayer1 ? phase === "selecting" : phase === "guessing"}

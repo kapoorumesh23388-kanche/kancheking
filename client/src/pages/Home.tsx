@@ -1,8 +1,42 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import PlayerProfile from "@/components/PlayerProfile";
 import { Link } from "wouter";
 
 export default function Home() {
+  const [playerName, setPlayerName] = useState("Rajesh Kumar");
+  const [playerImage, setPlayerImage] = useState<string | null>(null);
+  const [playerMarbles, setPlayerMarbles] = useState(1000);
+  const [gamesPlayed, setGamesPlayed] = useState(0);
+  const [gamesWon, setGamesWon] = useState(0);
+
+  useEffect(() => {
+    const loadPlayerProfile = () => {
+      const name = localStorage.getItem("playerDisplayName") || "Rajesh Kumar";
+      const image = localStorage.getItem("playerProfileImageUpdate");
+      const marbles = localStorage.getItem("playerMarbles") || "1000";
+      const played = localStorage.getItem("gamesPlayed") || "0";
+      const won = localStorage.getItem("gamesWon") || "0";
+
+      setPlayerName(name);
+      setPlayerImage(image);
+      setPlayerMarbles(parseInt(marbles));
+      setGamesPlayed(parseInt(played));
+      setGamesWon(parseInt(won));
+    };
+
+    loadPlayerProfile();
+    window.addEventListener("profileUpdated", loadPlayerProfile);
+    window.addEventListener("marbleUpdate", loadPlayerProfile);
+    window.addEventListener("storage", loadPlayerProfile);
+
+    return () => {
+      window.removeEventListener("profileUpdated", loadPlayerProfile);
+      window.removeEventListener("marbleUpdate", loadPlayerProfile);
+      window.removeEventListener("storage", loadPlayerProfile);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen pt-20 pb-10">
       <div className="container max-w-6xl mx-auto px-5">
@@ -27,10 +61,11 @@ export default function Home() {
 
         <div className="mb-10">
           <PlayerProfile
-            name="Rajesh Kumar"
-            marbles={1000}
-            gamesPlayed={45}
-            gamesWon={32}
+            name={playerName}
+            avatar={playerImage || undefined}
+            marbles={playerMarbles}
+            gamesPlayed={gamesPlayed}
+            gamesWon={gamesWon}
           />
         </div>
 

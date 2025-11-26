@@ -32,10 +32,13 @@ export default function MultiplayerGame() {
   const { roomCode } = useParams<{ roomCode: string }>();
   const [location, setLocation] = useLocation();
   const [playerId] = useState(() => `player_${Math.random().toString(36).substr(2, 9)}`);
-  const [playerName, setPlayerName] = useState(`Player_${Math.floor(Math.random() * 10000)}`);
+  const [playerName, setPlayerName] = useState(() => localStorage.getItem("playerDisplayName") || `Player_${Math.floor(Math.random() * 10000)}`);
+  const [playerImage, setPlayerImage] = useState<string | null>(() => localStorage.getItem("playerProfileImageUpdate"));
   const [phase, setPhase] = useState<GamePhase>("waiting");
-  const [player1Name, setPlayer1Name] = useState("Player 1");
-  const [player2Name, setPlayer2Name] = useState("Player 2");
+  const [player1Name, setPlayer1Name] = useState(() => localStorage.getItem("playerDisplayName") || "You");
+  const [player1Image, setPlayer1Image] = useState<string | null>(() => localStorage.getItem("playerProfileImageUpdate"));
+  const [player2Name, setPlayer2Name] = useState("Opponent");
+  const [player2Image, setPlayer2Image] = useState<string | null>(null);
   const [player1Marbles, setPlayer1Marbles] = useState(150);
   const [player2Marbles, setPlayer2Marbles] = useState(150);
   const [isPlayer1, setIsPlayer1] = useState(true);
