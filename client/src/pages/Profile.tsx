@@ -81,10 +81,15 @@ export default function Profile() {
     onSuccess: (data) => {
       setUser({...data.user, userId: localStorage.getItem("userId")});
       
-      // Save name to localStorage FIRST
+      // Save name to localStorage
+      console.log("Profile saving to localStorage:", displayName);
       localStorage.setItem("playerDisplayName", displayName);
       localStorage.setItem("playerProfileImageUpdate", profileImage);
       localStorage.setItem("lastProfileUpdate", Date.now().toString());
+      
+      // Dispatch event to notify header component
+      window.dispatchEvent(new Event("profileUpdated"));
+      console.log("Profile dispatched profileUpdated event");
       
       toast({
         title: "Profile Updated",

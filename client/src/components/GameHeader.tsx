@@ -45,15 +45,26 @@ export default function GameHeader() {
       if (savedMusic !== null) setMusicEnabled(savedMusic === "true");
       if (savedNotifications !== null) setNotificationsEnabled(savedNotifications === "true");
       if (savedVolume) setVolume(parseInt(savedVolume));
-      if (savedDisplayName) setPlayerName(savedDisplayName);
+      if (savedDisplayName) {
+        console.log("Header updating name from storage:", savedDisplayName);
+        setPlayerName(savedDisplayName);
+      }
       if (savedProfilePic) setProfilePic(savedProfilePic);
     };
 
     syncFromStorage();
     window.addEventListener("storage", syncFromStorage);
     
+    // Listen for profile update event
+    const handleProfileUpdate = (event: Event) => {
+      console.log("Header received profileUpdated event");
+      syncFromStorage();
+    };
+    window.addEventListener("profileUpdated", handleProfileUpdate);
+    
     return () => {
       window.removeEventListener("storage", syncFromStorage);
+      window.removeEventListener("profileUpdated", handleProfileUpdate);
     };
   }, [location]);
   
