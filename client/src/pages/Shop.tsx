@@ -3,15 +3,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Check, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import AgeVerificationDialog from "@/components/AgeVerificationDialog";
 import type { CatalogItem } from "@shared/schema";
 
 export default function Shop() {
+  const { toast } = useToast();
   const [copiedCode, setCopiedCode] = useState(false);
   const [marbleCount, setMarbleCount] = useState(() => {
     const saved = localStorage.getItem("playerMarbles");
     return saved ? parseInt(saved) : 1000;
   });
   const [pointCount, setPointCount] = useState(5000);
+  const [isAgeVerified, setIsAgeVerified] = useState(() => 
+    localStorage.getItem("playerIsAgeVerified") === "true"
+  );
+  const [showAgeDialog, setShowAgeDialog] = useState(false);
   const referralCode = "RAJESH123";
 
   useEffect(() => {
@@ -19,9 +26,20 @@ export default function Shop() {
       const saved = localStorage.getItem("playerMarbles");
       if (saved) setMarbleCount(parseInt(saved));
     };
+    const handleAgeVerified = () => {
+      setIsAgeVerified(true);
+      toast({
+        title: "Success",
+        description: "Age verified! You can now purchase marbles.",
+      });
+    };
     window.addEventListener("marbleUpdate", handleStorageChange);
-    return () => window.removeEventListener("marbleUpdate", handleStorageChange);
-  }, []);
+    window.addEventListener("ageVerified", handleAgeVerified);
+    return () => {
+      window.removeEventListener("marbleUpdate", handleStorageChange);
+      window.removeEventListener("ageVerified", handleAgeVerified);
+    };
+  }, [toast]);
 
   // Fetch catalog items from backend
   const { data: catalogItems = [], isLoading } = useQuery<CatalogItem[]>({
@@ -43,8 +61,27 @@ export default function Shop() {
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
+  const handleBuyMarbles = () => {
+    if (!isAgeVerified) {
+      setShowAgeDialog(true);
+      return;
+    }
+    toast({
+      title: "Payment",
+      description: "Payment integration coming soon!",
+    });
+  };
+
   return (
     <div className="min-h-screen pt-20 pb-10">
+      <AgeVerificationDialog 
+        isOpen={showAgeDialog}
+        onClose={() => setShowAgeDialog(false)}
+        onVerified={() => {
+          setShowAgeDialog(false);
+          setIsAgeVerified(true);
+        }}
+      />
       <div className="container max-w-6xl mx-auto px-5">
         <h2 className="text-5xl font-bold text-primary mb-8 text-center" style={{ textShadow: '0 0 20px rgba(255,215,0,0.5)' }}>
           Shop & Marketplace
@@ -162,8 +199,12 @@ export default function Shop() {
                   {pack.savings > 0 && (
                     <p className="text-sm text-green-500 font-semibold mb-4">Save {pack.savings}%</p>
                   )}
-                  <Button className="w-full" data-testid={`button-buy-${pack.marbles}`}>
-                    Buy Now
+                  <Button 
+                    onClick={handleBuyMarbles}
+                    className="w-full"
+                    data-testid={`button-buy-${pack.marbles}`}
+                  >
+                    {isAgeVerified ? "Buy Now" : "Verify Age to Buy"}
                   </Button>
                 </CardContent>
               </Card>

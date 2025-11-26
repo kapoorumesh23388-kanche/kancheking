@@ -38,6 +38,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
 
+      // Check age verification
+      if (!user.isAgeVerified) {
+        return res.status(403).json({ 
+          error: "Age verification required", 
+          message: "You must be 15+ years old to purchase marbles" 
+        });
+      }
+
       const newMarbles = user.marbles + marblesAmount;
       const newPurchasedMarbles = user.purchasedMarbles + marblesAmount;
       

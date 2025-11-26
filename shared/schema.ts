@@ -17,6 +17,8 @@ export const users = pgTable("users", {
   gamesPlayed: integer("games_played").notNull().default(0),
   referralCode: varchar("referral_code").unique(),
   referredBy: varchar("referred_by"),
+  dateOfBirth: varchar("date_of_birth"),
+  isAgeVerified: boolean("is_age_verified").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
