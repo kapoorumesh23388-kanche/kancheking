@@ -58,22 +58,23 @@ export default function GameHeader() {
     };
 
     const handleProfileUpdate = (e: Event) => {
-      const event = e as CustomEvent;
-      if (event.detail?.displayName) {
-        setPlayerName(event.detail.displayName);
-        localStorage.setItem("playerDisplayName", event.detail.displayName);
+      const customEvent = e as CustomEvent;
+      console.log("Profile update event received:", customEvent.detail);
+      if (customEvent.detail?.displayName) {
+        console.log("Updating player name to:", customEvent.detail.displayName);
+        setPlayerName(customEvent.detail.displayName);
       }
     };
 
     handleStorageChange();
     window.addEventListener("storage", handleStorageChange);
     window.addEventListener("marbleUpdate", handleStorageChange);
-    window.addEventListener("profileUpdated", handleProfileUpdate);
+    window.addEventListener("profileUpdated", handleProfileUpdate, true);
     
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("marbleUpdate", handleStorageChange);
-      window.removeEventListener("profileUpdated", handleProfileUpdate);
+      window.removeEventListener("profileUpdated", handleProfileUpdate, true);
     };
   }, []);
   
