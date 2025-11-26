@@ -73,15 +73,29 @@ export default function GameHeader() {
       }
     };
 
-    // Polling backup: Check localStorage every 100ms for updates (safety net)
+    // Polling backup: Check localStorage every 50ms for updates
     let lastDisplayName = localStorage.getItem("playerDisplayName");
     const pollInterval = setInterval(() => {
+      // Check localStorage
       const currentDisplayName = localStorage.getItem("playerDisplayName");
-      if (currentDisplayName && currentDisplayName !== lastDisplayName) {
+      if (currentDisplayName && currentDisplayName !== lastDisplayName && currentDisplayName !== "Rajesh Kumar") {
+        console.log("Polling detected change:", currentDisplayName);
         setPlayerName(currentDisplayName);
         lastDisplayName = currentDisplayName;
       }
-    }, 100);
+      
+      // Also check global flag from Profile component
+      if ((window as any).__profileUpdatedName) {
+        const globalName = (window as any).__profileUpdatedName;
+        if (globalName !== lastDisplayName) {
+          console.log("Global flag detected:", globalName);
+          setPlayerName(globalName);
+          localStorage.setItem("playerDisplayName", globalName);
+          lastDisplayName = globalName;
+          (window as any).__profileUpdatedName = null;
+        }
+      }
+    }, 50);
 
     loadSettings();
     window.addEventListener("storage", handleStorageChange);

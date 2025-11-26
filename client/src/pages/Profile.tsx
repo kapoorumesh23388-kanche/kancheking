@@ -81,8 +81,11 @@ export default function Profile() {
     onSuccess: (data) => {
       setUser({...data.user, userId: localStorage.getItem("userId")});
       
-      // SAVE DIRECTLY FROM FORM INPUT (not from response) - this is the source of truth
-      localStorage.setItem("playerDisplayName", displayName);
+      // SAVE DIRECTLY FROM FORM INPUT - ensure non-empty
+      const finalDisplayName = displayName || "Player";
+      localStorage.setItem("playerDisplayName", finalDisplayName);
+      console.log("Saved to localStorage:", finalDisplayName);
+      
       if (profileImage) {
         localStorage.setItem("playerProfileImage", profileImage);
       }
@@ -92,16 +95,20 @@ export default function Profile() {
         description: "Your profile has been saved successfully!",
       });
       
-      // Dispatch event to notify GameHeader BEFORE navigating
+      // Dispatch MULTIPLE events to ensure header gets notified
       const updateEvent = new CustomEvent("playerProfileUpdated", {
-        detail: { displayName: displayName, profileImage: profileImage }
+        detail: { displayName: finalDisplayName, profileImage: profileImage }
       });
       window.dispatchEvent(updateEvent);
+      console.log("Event dispatched:", finalDisplayName);
+      
+      // Also set a global flag for header to check
+      (window as any).__profileUpdatedName = finalDisplayName;
       
       // Navigate back to home after a short delay to show toast
       setTimeout(() => {
         navigate("/");
-      }, 1000);
+      }, 500);
       
       queryClient.invalidateQueries({ queryKey: ["/api/catalog"] });
     },
