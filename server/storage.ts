@@ -5,7 +5,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByReferralCode(code: string): Promise<User | undefined>;
-  createUser(user: InsertUser, referralCode?: string): Promise<User>;
+  createUser(user: InsertUser, referralCode?: string, customId?: string): Promise<User>;
   updateUserMarbles(userId: string, marbles: number): Promise<User | undefined>;
   updateUserPoints(userId: string, points: number): Promise<User | undefined>;
   updateUserStats(userId: string, stats: { gamesWon?: number; gamesPlayed?: number }): Promise<User | undefined>;
@@ -89,8 +89,8 @@ export class MemStorage implements IStorage {
     );
   }
 
-  async createUser(insertUser: InsertUser, referralCode?: string): Promise<User> {
-    const id = randomUUID();
+  async createUser(insertUser: InsertUser, referralCode?: string, customId?: string): Promise<User> {
+    const id = customId || randomUUID();
     const code = referralCode || `REF${Math.random().toString(36).substring(7).toUpperCase()}`;
     const user: User = { 
       ...insertUser, 

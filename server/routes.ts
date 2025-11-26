@@ -549,7 +549,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         user = await storage.createUser(
           { username: userId, password: "guest" },
-          undefined
+          undefined,
+          userId
         );
       }
 
