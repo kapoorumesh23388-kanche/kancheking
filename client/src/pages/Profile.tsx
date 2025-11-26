@@ -80,6 +80,15 @@ export default function Profile() {
     },
     onSuccess: (data) => {
       setUser({...data.user, userId: localStorage.getItem("userId")});
+      // Save displayName to localStorage for header to pick up
+      if (data.user.displayName) {
+        localStorage.setItem("playerDisplayName", data.user.displayName);
+      }
+      // Trigger storage event for GameHeader to listen to
+      window.dispatchEvent(new StorageEvent("storage", {
+        key: "playerDisplayName",
+        newValue: data.user.displayName || "",
+      }));
       toast({
         title: "Profile Updated",
         description: "Your profile has been saved successfully!",

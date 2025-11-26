@@ -36,21 +36,25 @@ export default function GameHeader() {
     const savedMusic = localStorage.getItem("musicEnabled");
     const savedNotifications = localStorage.getItem("notificationsEnabled");
     const savedVolume = localStorage.getItem("volume");
+    const savedDisplayName = localStorage.getItem("playerDisplayName");
 
     if (savedLanguage) setLanguage(savedLanguage);
     if (savedSound !== null) setSoundEnabled(savedSound === "true");
     if (savedMusic !== null) setMusicEnabled(savedMusic === "true");
     if (savedNotifications !== null) setNotificationsEnabled(savedNotifications === "true");
     if (savedVolume) setVolume(parseInt(savedVolume));
+    if (savedDisplayName) setPlayerName(savedDisplayName);
 
     const handleStorageChange = () => {
       const savedMarbles = localStorage.getItem("playerMarbles");
       const savedGamesPlayed = localStorage.getItem("gamesPlayed");
       const savedGamesWon = localStorage.getItem("gamesWon");
+      const savedDisplayName = localStorage.getItem("playerDisplayName");
       
       if (savedMarbles) setTotalMarbles(parseInt(savedMarbles));
       if (savedGamesPlayed) setGamesPlayed(parseInt(savedGamesPlayed));
       if (savedGamesWon) setGamesWon(parseInt(savedGamesWon));
+      if (savedDisplayName) setPlayerName(savedDisplayName);
     };
 
     handleStorageChange();
