@@ -39,7 +39,6 @@ export default function GameHeader() {
       const savedVolume = localStorage.getItem("volume");
       const savedDisplayName = localStorage.getItem("playerDisplayName");
       const savedProfilePic = localStorage.getItem("playerProfileImageUpdate");
-      const lastUpdateTime = localStorage.getItem("lastProfileUpdate");
 
       if (savedLanguage) setLanguage(savedLanguage);
       if (savedSound !== null) setSoundEnabled(savedSound === "true");
@@ -48,20 +47,15 @@ export default function GameHeader() {
       if (savedVolume) setVolume(parseInt(savedVolume));
       if (savedDisplayName) setPlayerName(savedDisplayName);
       if (savedProfilePic) setProfilePic(savedProfilePic);
-      if (lastUpdateTime) setLastUpdate(lastUpdateTime);
     };
 
     syncFromStorage();
-    
-    // Check for updates every 200ms
-    const pollInterval = setInterval(syncFromStorage, 200);
     window.addEventListener("storage", syncFromStorage);
     
     return () => {
-      clearInterval(pollInterval);
       window.removeEventListener("storage", syncFromStorage);
     };
-  }, []);
+  }, [location]);
   
   const showBackButton = location !== "/";
 
