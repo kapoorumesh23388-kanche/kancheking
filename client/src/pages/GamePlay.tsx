@@ -144,28 +144,47 @@ export default function GamePlay() {
   // Play win/loss sounds when result is revealed
   useEffect(() => {
     if (gameResult) {
-      // Create win/loss audio if it doesn't exist
-      if (!winAudioRef.current) {
-        const winAudio = new Audio();
-        winAudio.src = "data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==";
-        winAudioRef.current = winAudio;
-      }
-      if (!lossAudioRef.current) {
-        const lossAudio = new Audio();
-        lossAudio.src = "data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==";
-        lossAudioRef.current = lossAudio;
+      // Pause background music
+      if (audioRef.current) {
+        audioRef.current.pause();
       }
 
-      // Play appropriate sound with a small delay
+      // Play appropriate sound with a small delay using Web Audio API
       setTimeout(() => {
-        if (gameResult.won && winAudioRef.current) {
-          winAudioRef.current.play().catch(() => {});
-        } else if (!gameResult.won && lossAudioRef.current) {
-          lossAudioRef.current.play().catch(() => {});
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        if (gameResult.won) {
+          // Win sound: high pitch ascending
+          oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+          oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.3);
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.3);
+        } else {
+          // Loss sound: low pitch descending
+          oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+          oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.4);
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.4);
         }
       }, 500);
     }
   }, [gameResult]);
+
+  // Resume background music when result dialog closes
+  useEffect(() => {
+    if (!gameResult && isMusicEnabled && audioRef.current) {
+      audioRef.current.play().catch(() => {});
+    }
+  }, [gameResult, isMusicEnabled]);
 
   // Show celebration when AI loses all marbles
   useEffect(() => {
@@ -298,6 +317,14 @@ export default function GamePlay() {
     setFistOpen(false);
     setGameResult(null);
     setShowRevealButton(false);
+    
+    // Resume background music
+    setTimeout(() => {
+      if (isMusicEnabled && audioRef.current) {
+        audioRef.current.play().catch(() => {});
+      }
+    }, 100);
+    
     console.log("Starting new game, hider is now:", !isHiderPlayer1 ? "Player 1" : "AI");
   };
 
