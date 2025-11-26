@@ -80,17 +80,23 @@ export default function Profile() {
     },
     onSuccess: (data) => {
       setUser({...data.user, userId: localStorage.getItem("userId")});
-      // Save displayName to localStorage
-      const newDisplayName = data.user.displayName || "";
-      localStorage.setItem("playerDisplayName", newDisplayName);
-      if (data.user.profileImage) {
-        localStorage.setItem("playerProfileImage", data.user.profileImage);
+      
+      // SAVE DIRECTLY FROM FORM INPUT (not from response) - this is the source of truth
+      localStorage.setItem("playerDisplayName", displayName);
+      if (profileImage) {
+        localStorage.setItem("playerProfileImage", profileImage);
       }
       
       toast({
         title: "Profile Updated",
         description: "Your profile has been saved successfully!",
       });
+      
+      // Dispatch event to notify GameHeader BEFORE navigating
+      const updateEvent = new CustomEvent("playerProfileUpdated", {
+        detail: { displayName: displayName, profileImage: profileImage }
+      });
+      window.dispatchEvent(updateEvent);
       
       // Navigate back to home after a short delay to show toast
       setTimeout(() => {

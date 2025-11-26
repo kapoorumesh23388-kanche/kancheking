@@ -31,21 +31,23 @@ export default function GameHeader() {
 
   useEffect(() => {
     // Load settings from localStorage
-    const savedLanguage = localStorage.getItem("language") as "en" | "hi" | null;
-    const savedSound = localStorage.getItem("soundEnabled");
-    const savedMusic = localStorage.getItem("musicEnabled");
-    const savedNotifications = localStorage.getItem("notificationsEnabled");
-    const savedVolume = localStorage.getItem("volume");
-    const savedDisplayName = localStorage.getItem("playerDisplayName");
-    const savedProfilePic = localStorage.getItem("playerProfileImage");
+    const loadSettings = () => {
+      const savedLanguage = localStorage.getItem("language") as "en" | "hi" | null;
+      const savedSound = localStorage.getItem("soundEnabled");
+      const savedMusic = localStorage.getItem("musicEnabled");
+      const savedNotifications = localStorage.getItem("notificationsEnabled");
+      const savedVolume = localStorage.getItem("volume");
+      const savedDisplayName = localStorage.getItem("playerDisplayName");
+      const savedProfilePic = localStorage.getItem("playerProfileImage");
 
-    if (savedLanguage) setLanguage(savedLanguage);
-    if (savedSound !== null) setSoundEnabled(savedSound === "true");
-    if (savedMusic !== null) setMusicEnabled(savedMusic === "true");
-    if (savedNotifications !== null) setNotificationsEnabled(savedNotifications === "true");
-    if (savedVolume) setVolume(parseInt(savedVolume));
-    if (savedDisplayName) setPlayerName(savedDisplayName);
-    if (savedProfilePic) setProfilePic(savedProfilePic);
+      if (savedLanguage) setLanguage(savedLanguage);
+      if (savedSound !== null) setSoundEnabled(savedSound === "true");
+      if (savedMusic !== null) setMusicEnabled(savedMusic === "true");
+      if (savedNotifications !== null) setNotificationsEnabled(savedNotifications === "true");
+      if (savedVolume) setVolume(parseInt(savedVolume));
+      if (savedDisplayName) setPlayerName(savedDisplayName);
+      if (savedProfilePic) setProfilePic(savedProfilePic);
+    };
 
     const handleStorageChange = () => {
       const savedMarbles = localStorage.getItem("playerMarbles");
@@ -61,15 +63,38 @@ export default function GameHeader() {
       if (savedProfilePic) setProfilePic(savedProfilePic);
     };
 
-    handleStorageChange();
+    const handleProfileUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.displayName) {
+        setPlayerName(customEvent.detail.displayName);
+      }
+      if (customEvent.detail?.profileImage) {
+        setProfilePic(customEvent.detail.profileImage);
+      }
+    };
+
+    // Polling backup: Check localStorage every 100ms for updates (safety net)
+    let lastDisplayName = localStorage.getItem("playerDisplayName");
+    const pollInterval = setInterval(() => {
+      const currentDisplayName = localStorage.getItem("playerDisplayName");
+      if (currentDisplayName && currentDisplayName !== lastDisplayName) {
+        setPlayerName(currentDisplayName);
+        lastDisplayName = currentDisplayName;
+      }
+    }, 100);
+
+    loadSettings();
     window.addEventListener("storage", handleStorageChange);
     window.addEventListener("marbleUpdate", handleStorageChange);
+    window.addEventListener("playerProfileUpdated", handleProfileUpdate);
     
     return () => {
+      clearInterval(pollInterval);
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("marbleUpdate", handleStorageChange);
+      window.removeEventListener("playerProfileUpdated", handleProfileUpdate);
     };
-  }, [location]);
+  }, []);
   
   const showBackButton = location !== "/";
 
