@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import PlayerProfile from "@/components/PlayerProfile";
+import FloatingMarbles from "@/components/FloatingMarbles";
 import { Link } from "wouter";
 
 export default function Home() {
@@ -39,6 +40,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen pt-20 pb-20 flex flex-col">
+      <FloatingMarbles />
       <div className="container max-w-6xl mx-auto px-5 flex-1">
         <div className="text-center mb-8 p-10 backdrop-blur-lg bg-primary/10 rounded-3xl border-2 border-primary/30 shadow-[0_10px_40px_rgba(255,215,0,0.2)]">
           <h1
