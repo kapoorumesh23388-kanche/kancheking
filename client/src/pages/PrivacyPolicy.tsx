@@ -47,7 +47,7 @@ export default function PrivacyPolicy() {
                     <li>Username and display name</li>
                     <li>Profile picture/avatar</li>
                     <li>Email address (if provided)</li>
-                    <li>Age verification data (18+ for in-app purchases)</li>
+                    <li>Age verification data (15+ for in-app purchases)</li>
                     <li>Gender preference for avatar customization</li>
                   </ul>
                 </div>
