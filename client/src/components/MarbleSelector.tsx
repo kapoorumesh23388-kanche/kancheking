@@ -10,33 +10,33 @@ interface MarbleSelectorProps {
 }
 
 const marbleColors = [
-  // Green marbles with swirls
-  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.9), rgba(255,255,255,0.3) 15%, #10b981 50%, #047857 100%)", name: "green1" },
-  { bg: "radial-gradient(circle at 28% 28%, rgba(255,255,255,0.85), rgba(200,255,200,0.4) 12%, #059669 45%, #065f46 100%)", name: "green2" },
-  // Blue marbles
-  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.9), rgba(150,200,255,0.4) 15%, #3b82f6 50%, #1e40af 100%)", name: "blue1" },
-  { bg: "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.88), rgba(100,150,255,0.5) 18%, #0ea5e9 48%, #0369a1 100%)", name: "blue2" },
-  // Red marbles with amber swirl
-  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.9), rgba(255,100,100,0.5) 12%, #dc2626 50%, #7f1d1d 100%)", name: "red1" },
-  { bg: "radial-gradient(circle at 28% 28%, rgba(255,255,255,0.88), rgba(255,150,0,0.4) 14%, #ea580c 48%, #92400e 100%)", name: "red2" },
-  // Yellow marbles
-  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.92), rgba(255,255,100,0.5) 14%, #fbbf24 50%, #b45309 100%)", name: "yellow1" },
-  { bg: "radial-gradient(circle at 28% 28%, rgba(255,255,255,0.9), rgba(255,220,0,0.45) 13%, #fcd34d 48%, #78350f 100%)", name: "yellow2" },
-  // White/Clear marbles
-  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.95), rgba(200,220,255,0.5) 15%, rgba(150,170,200,0.8) 50%, #4b5563 100%)", name: "white" },
-  { bg: "radial-gradient(circle at 28% 28%, rgba(255,255,255,0.93), rgba(230,240,255,0.6) 12%, rgba(180,200,220,0.7) 45%, #374151 100%)", name: "clear" },
-  // Dark Green/Teal marbles
-  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.88), rgba(0,255,200,0.4) 14%, #0d9488 50%, #134e4a 100%)", name: "teal" },
-  { bg: "radial-gradient(circle at 28% 28%, rgba(255,255,255,0.85), rgba(100,200,150,0.45) 16%, #14b8a6 48%, #0f766e 100%)", name: "teal2" },
-  // Purple marbles
-  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.9), rgba(200,100,255,0.4) 13%, #a855f7 50%, #5b21b6 100%)", name: "purple" },
-  { bg: "radial-gradient(circle at 28% 28%, rgba(255,255,255,0.88), rgba(168,85,247,0.45) 14%, #9333ea 48%, #4c0519 100%)", name: "purple2" },
-  // Orange/Amber marbles
-  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.92), rgba(255,150,50,0.5) 13%, #f97316 50%, #7c2d12 100%)", name: "orange" },
-  { bg: "radial-gradient(circle at 28% 28%, rgba(255,255,255,0.9), rgba(255,180,100,0.45) 15%, #fb923c 48%, #5a2e0f 100%)", name: "orange2" },
-  // Cyan/Sky marbles
-  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.9), rgba(100,220,255,0.5) 12%, #06b6d4 50%, #0c4a6e 100%)", name: "cyan" },
-  { bg: "radial-gradient(circle at 28% 28%, rgba(255,255,255,0.88), rgba(150,240,255,0.45) 14%, #22d3ee 48%, #164e63 100%)", name: "cyan2" },
+  // Transparent Green glass marbles
+  { bg: "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.95), rgba(200,255,200,0.6) 10%, rgba(100,200,100,0.4) 40%, rgba(50,150,50,0.3) 100%)", name: "green1" },
+  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.92), rgba(150,220,150,0.55) 12%, rgba(80,180,80,0.35) 45%, rgba(40,140,40,0.25) 100%)", name: "green2" },
+  // Transparent Blue glass marbles
+  { bg: "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.94), rgba(180,220,255,0.5) 10%, rgba(100,180,255,0.35) 40%, rgba(50,140,200,0.25) 100%)", name: "blue1" },
+  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.92), rgba(150,200,255,0.55) 12%, rgba(80,160,220,0.4) 45%, rgba(40,120,180,0.3) 100%)", name: "blue2" },
+  // Transparent Red/Orange glass marbles
+  { bg: "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.95), rgba(255,150,100,0.5) 10%, rgba(220,100,80,0.35) 40%, rgba(180,60,40,0.25) 100%)", name: "red1" },
+  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.92), rgba(255,180,120,0.55) 12%, rgba(230,130,80,0.4) 45%, rgba(200,80,40,0.3) 100%)", name: "red2" },
+  // Transparent Yellow glass marbles
+  { bg: "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.96), rgba(255,250,150,0.55) 10%, rgba(240,200,80,0.4) 40%, rgba(200,160,40,0.28) 100%)", name: "yellow1" },
+  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.93), rgba(255,240,100,0.6) 12%, rgba(220,180,60,0.42) 45%, rgba(180,140,30,0.32) 100%)", name: "yellow2" },
+  // Transparent Clear/White glass marbles
+  { bg: "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.98), rgba(220,230,245,0.4) 10%, rgba(180,200,220,0.25) 40%, rgba(140,160,180,0.18) 100%)", name: "white" },
+  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.95), rgba(230,240,255,0.45) 12%, rgba(190,210,230,0.3) 45%, rgba(150,170,190,0.2) 100%)", name: "clear" },
+  // Transparent Teal/Dark Green glass marbles
+  { bg: "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.94), rgba(100,240,200,0.48) 10%, rgba(60,200,150,0.35) 40%, rgba(30,150,100,0.23) 100%)", name: "teal" },
+  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.91), rgba(120,220,180,0.52) 12%, rgba(70,190,140,0.38) 45%, rgba(40,140,90,0.28) 100%)", name: "teal2" },
+  // Transparent Purple glass marbles
+  { bg: "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.94), rgba(220,150,255,0.48) 10%, rgba(180,100,220,0.35) 40%, rgba(140,60,180,0.24) 100%)", name: "purple" },
+  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.92), rgba(210,130,240,0.52) 12%, rgba(170,80,200,0.38) 45%, rgba(130,40,160,0.28) 100%)", name: "purple2" },
+  // Transparent Orange/Brown glass marbles
+  { bg: "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.95), rgba(255,180,80,0.5) 10%, rgba(230,140,60,0.36) 40%, rgba(190,100,30,0.25) 100%)", name: "orange" },
+  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.92), rgba(255,200,100,0.55) 12%, rgba(240,150,70,0.4) 45%, rgba(200,110,40,0.3) 100%)", name: "orange2" },
+  // Transparent Cyan/Sky glass marbles
+  { bg: "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.94), rgba(120,220,255,0.5) 10%, rgba(80,190,240,0.35) 40%, rgba(40,150,200,0.25) 100%)", name: "cyan" },
+  { bg: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.92), rgba(150,230,255,0.55) 12%, rgba(100,200,240,0.4) 45%, rgba(60,160,200,0.3) 100%)", name: "cyan2" },
 ];
 
 export default function MarbleSelector({
