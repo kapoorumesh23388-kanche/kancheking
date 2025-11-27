@@ -435,7 +435,7 @@ export default function GamePlay() {
   return (
     <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black">
       {/* Music Toggle Button */}
-      <div className="fixed top-24 right-5 z-30 flex gap-2">
+      <div className="fixed top-20 right-2 sm:right-5 z-30 flex gap-2">
         <Button
           size="icon"
           variant="outline"
@@ -462,9 +462,9 @@ export default function GamePlay() {
         </Button>
       </div>
 
-      <div className="container max-w-7xl mx-auto px-5">
-        <div className="mb-8">
-          <div className="grid grid-cols-3 gap-4 items-center">
+      <div className="container max-w-7xl mx-auto px-2 sm:px-5">
+        <div className="mb-4 sm:mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4 items-center">
             <div className="text-center">
               <PlayerBox
                 name={player1Name}
@@ -496,14 +496,14 @@ export default function GamePlay() {
         </div>
         
         <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40 shadow-2xl backdrop-blur-sm mb-6">
-          <CardContent className="p-8">
+          <CardContent className="p-4 sm:p-8">
 
             {phase === "selecting" && (
               <div className="space-y-6">
                 {isHiderPlayer1 ? (
                   <Card className="bg-white/5 border-2 border-primary/20">
                     <CardContent className="p-6">
-                      <h3 className="text-2xl font-bold text-primary mb-4 text-center">
+                      <h3 className="text-lg sm:text-2xl font-bold text-primary mb-4 text-center">
                         🎯 Select Marbles to Hide
                       </h3>
                       <MarbleSelector
@@ -524,7 +524,7 @@ export default function GamePlay() {
                 ) : (
                   <Card className="bg-white/5 border-2 border-primary/20">
                     <CardContent className="p-8 text-center">
-                      <h3 className="text-3xl font-bold text-primary mb-6">
+                      <h3 className="text-xl sm:text-3xl font-bold text-primary mb-6">
                         🤖 AI is hiding marbles...
                       </h3>
                       <div className="text-6xl animate-bounce mb-6">✊</div>
