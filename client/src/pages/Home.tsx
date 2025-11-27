@@ -84,21 +84,13 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-primary/20 bg-black/40 backdrop-blur-sm mt-10 py-6">
         <div className="container max-w-6xl mx-auto px-5">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex justify-between items-center gap-4 text-sm text-muted-foreground">
             <div>
               <p>&copy; 2025 Kanche King. All rights reserved.</p>
             </div>
-            <div className="flex gap-6">
-              <Link href="/privacy" className="text-primary hover:text-primary/80 transition-colors" data-testid="link-privacy-policy">
-                Privacy Policy
-              </Link>
-              <Link href="/support" className="text-primary hover:text-primary/80 transition-colors" data-testid="link-support">
-                Support
-              </Link>
-              <Link href="/feedback" className="text-primary hover:text-primary/80 transition-colors" data-testid="link-feedback">
-                Feedback
-              </Link>
-            </div>
+            <Link href="/privacy" className="text-primary hover:text-primary/80 transition-colors" data-testid="link-privacy-policy">
+              Privacy Policy
+            </Link>
           </div>
         </div>
       </footer>
