@@ -109,13 +109,25 @@ export default function GamePlay() {
     window.dispatchEvent(new Event("marbleUpdate"));
   }, [player1Marbles]);
 
-  // Load player profile
+  // Load player profile from API and localStorage
   useEffect(() => {
-    const loadProfile = () => {
-      const name = localStorage.getItem("playerDisplayName") || "You";
-      const image = localStorage.getItem("playerProfileImageUpdate");
-      setPlayer1Name(name);
-      setPlayer1Image(image);
+    const loadProfile = async () => {
+      try {
+        const userId = localStorage.getItem("userId");
+        if (userId) {
+          // Fetch fresh profile from API - ensures latest picture
+          const response = await fetch(`/api/user/${userId}`);
+          const userData = await response.json();
+          if (userData.displayName) setPlayer1Name(userData.displayName);
+          if (userData.profileImage) setPlayer1Image(userData.profileImage);
+        }
+      } catch (err) {
+        // Fallback to localStorage if API fails
+        const name = localStorage.getItem("playerDisplayName") || "You";
+        const image = localStorage.getItem("playerProfileImageUpdate");
+        setPlayer1Name(name);
+        setPlayer1Image(image);
+      }
     };
     loadProfile();
     window.addEventListener("profileUpdated", loadProfile);
