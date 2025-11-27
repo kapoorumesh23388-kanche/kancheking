@@ -6,6 +6,7 @@ import GuessingPanel from "@/components/GuessingPanel";
 import ResultDisplay from "@/components/ResultDisplay";
 import MarbleSelector from "@/components/MarbleSelector";
 import GameChat from "@/components/GameChat";
+import FloatingMarbles from "@/components/FloatingMarbles";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Volume2, VolumeX } from "lucide-react";
 import {
@@ -434,6 +435,7 @@ export default function GamePlay() {
 
   return (
     <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black">
+      <FloatingMarbles />
       {/* Music Toggle Button */}
       <div className="fixed top-20 right-2 sm:right-5 z-30 flex gap-2">
         <Button

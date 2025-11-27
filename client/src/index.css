@@ -288,3 +288,31 @@
     inset: -1px;
   }
 }
+
+/* Marble jump and floating animation */
+@keyframes marble-jump {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 1;
+  }
+  25% {
+    transform: translateY(-120px) translateX(20px);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(-80px) translateX(40px);
+    opacity: 0.8;
+  }
+  75% {
+    transform: translateY(-40px) translateX(20px);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-marble-jump {
+  animation: marble-jump 3s ease-in-out infinite;
+}
