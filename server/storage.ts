@@ -97,6 +97,7 @@ export class MemStorage implements IStorage {
       id,
       displayName: null,
       profileImage: null,
+      gender: "boy",
       marbles: 150,
       purchasedMarbles: 0,
       tournamentWinnings: 0,
@@ -105,6 +106,9 @@ export class MemStorage implements IStorage {
       gamesPlayed: 0,
       referralCode: code,
       referredBy: referralCode || null,
+      dateOfBirth: null,
+      isAgeVerified: false,
+      adContentRating: "family",
       createdAt: new Date(),
     };
     this.users.set(id, user);
@@ -142,11 +146,12 @@ export class MemStorage implements IStorage {
     return undefined;
   }
 
-  async updateUserProfile(userId: string, profile: { displayName?: string; profileImage?: string }): Promise<User | undefined> {
+  async updateUserProfile(userId: string, profile: { displayName?: string; profileImage?: string; gender?: string }): Promise<User | undefined> {
     const user = this.users.get(userId);
     if (user) {
       if (profile.displayName !== undefined) user.displayName = profile.displayName;
       if (profile.profileImage !== undefined) user.profileImage = profile.profileImage;
+      if (profile.gender !== undefined) user.gender = profile.gender;
       this.users.set(userId, user);
       return user;
     }

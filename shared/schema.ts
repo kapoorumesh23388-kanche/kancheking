@@ -9,6 +9,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   displayName: text("display_name"),
   profileImage: varchar("profile_image"),
+  gender: varchar("gender").default("boy"), // "boy" | "girl"
   marbles: integer("marbles").notNull().default(150),
   purchasedMarbles: integer("purchased_marbles").notNull().default(0),
   tournamentWinnings: integer("tournament_winnings").notNull().default(0),
