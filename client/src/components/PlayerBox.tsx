@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import AnimatedPlayerAvatar from "@/components/AnimatedPlayerAvatar";
 
 interface PlayerBoxProps {
   name: string;
@@ -8,6 +9,8 @@ interface PlayerBoxProps {
   marbles: number;
   role: string;
   isActive?: boolean;
+  gender?: "boy" | "girl";
+  isGuesser?: boolean;
 }
 
 export default function PlayerBox({
@@ -15,7 +18,9 @@ export default function PlayerBox({
   avatar,
   marbles,
   role,
-  isActive = false
+  isActive = false,
+  gender = "boy",
+  isGuesser = false
 }: PlayerBoxProps) {
   return (
     <Card
@@ -28,16 +33,27 @@ export default function PlayerBox({
     >
       <CardContent className="p-8 text-center">
         <div className={`relative mb-6 inline-block ${isActive ? "animate-pulse" : ""}`}>
-          <Avatar
-            className={`w-24 h-24 border-4 ${
-              isActive ? "border-[#00FF88]" : "border-primary"
-            } shadow-[0_0_25px_rgba(255,215,0,0.5)] transition-all`}
-          >
-            <AvatarImage src={avatar} alt={name} />
-            <AvatarFallback className="bg-gradient-to-br from-primary to-[#FFA500] text-primary-foreground text-4xl font-bold">
-              {name.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          {avatar ? (
+            <Avatar
+              className={`w-24 h-24 border-4 ${
+                isActive ? "border-[#00FF88]" : "border-primary"
+              } shadow-[0_0_25px_rgba(255,215,0,0.5)] transition-all`}
+            >
+              <AvatarImage src={avatar} alt={name} />
+              <AvatarFallback className="bg-gradient-to-br from-primary to-[#FFA500] text-primary-foreground text-4xl font-bold">
+                {name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          ) : (
+            <div className={`${isActive ? "animate-pulse" : ""}`}>
+              <AnimatedPlayerAvatar
+                gender={gender}
+                playerName={name}
+                isGuesser={isGuesser}
+                size="lg"
+              />
+            </div>
+          )}
           {isActive && (
             <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#00FF88] rounded-full border-2 border-white animate-pulse"></div>
           )}

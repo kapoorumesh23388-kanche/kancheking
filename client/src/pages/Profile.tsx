@@ -7,7 +7,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdsPreferenceCard from "@/components/AdsPreferenceCard";
+import AnimatedPlayerAvatar from "@/components/AnimatedPlayerAvatar";
 
 export default function Profile() {
   const { toast } = useToast();
@@ -21,6 +23,7 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const [adsPreference, setAdsPreference] = useState("family");
   const [userAge, setUserAge] = useState<number | null>(null);
+  const [gender, setGender] = useState<"boy" | "girl">("boy");
 
   // Load user data from localStorage
   useEffect(() => {
@@ -38,6 +41,7 @@ export default function Profile() {
         setDisplayName(data.displayName || "");
         setProfileImage(data.profileImage || "");
         setImagePreview(data.profileImage || "");
+        setGender(data.gender || "boy");
         setAdsPreference(data.adContentRating || localStorage.getItem("playerAdsPreference") || "family");
         
         // Calculate age if DOB available
@@ -86,6 +90,7 @@ export default function Profile() {
           userId: userId,
           displayName: displayName || null,
           profileImage: profileImage || null,
+          gender: gender,
         }),
       });
 
@@ -98,10 +103,11 @@ export default function Profile() {
     onSuccess: (data) => {
       setUser({...data.user, userId: localStorage.getItem("userId")});
       
-      // Save name to localStorage
+      // Save name and gender to localStorage
       console.log("Profile saving to localStorage:", displayName);
       localStorage.setItem("playerDisplayName", displayName);
       localStorage.setItem("playerProfileImageUpdate", profileImage);
+      localStorage.setItem("playerGender", gender);
       localStorage.setItem("lastProfileUpdate", Date.now().toString());
       
       // Dispatch event to notify header component
@@ -158,12 +164,20 @@ export default function Profile() {
         <Card className="p-8 bg-card/50 backdrop-blur border-primary/20">
           {/* Profile Picture Section */}
           <div className="flex flex-col items-center gap-6 mb-8">
-            <Avatar className="h-24 w-24 border-2 border-primary">
-              <AvatarImage src={imagePreview} alt={displayName || user.username} />
-              <AvatarFallback className="text-lg font-bold">
-                {(displayName || user.username || "P").charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            {imagePreview ? (
+              <Avatar className="h-24 w-24 border-2 border-primary">
+                <AvatarImage src={imagePreview} alt={displayName || user.username} />
+                <AvatarFallback className="text-lg font-bold">
+                  {(displayName || user.username || "P").charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <AnimatedPlayerAvatar
+                gender={gender}
+                playerName={displayName || user.username}
+                size="md"
+              />
+            )}
 
             <div className="w-full">
               <Label htmlFor="profile-image" className="text-sm font-medium">
@@ -212,6 +226,25 @@ export default function Profile() {
               />
               <p className="text-xs text-secondary mt-2">
                 How other players will see you ({displayName.length}/50)
+              </p>
+            </div>
+
+            {/* Gender Selection */}
+            <div>
+              <Label htmlFor="gender" className="text-sm font-medium">
+                Player Avatar
+              </Label>
+              <Select value={gender} onValueChange={(value) => setGender(value as "boy" | "girl")}>
+                <SelectTrigger id="gender" className="mt-2" data-testid="select-gender">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="boy">Boy Avatar</SelectItem>
+                  <SelectItem value="girl">Girl Avatar</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-secondary mt-2">
+                Choose which animated avatar represents you
               </p>
             </div>
 

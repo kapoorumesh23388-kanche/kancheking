@@ -36,6 +36,10 @@ export default function GamePlay() {
   const [player2Marbles, setPlayer2Marbles] = useState(120);
   const [player1Name, setPlayer1Name] = useState(() => localStorage.getItem("playerDisplayName") || "You");
   const [player1Image, setPlayer1Image] = useState<string | null>(() => localStorage.getItem("playerProfileImageUpdate"));
+  const [player1Gender, setPlayer1Gender] = useState<"boy" | "girl">(() => {
+    const saved = localStorage.getItem("playerGender");
+    return (saved as "boy" | "girl") || "boy";
+  });
   const [aiHiddenCount, setAiHiddenCount] = useState(0);
   const [showRevealButton, setShowRevealButton] = useState(false);
   const [lastGuess, setLastGuess] = useState<string>("");
