@@ -571,7 +571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update User Profile
   app.post("/api/profile/update", async (req, res) => {
     try {
-      const { userId, displayName, profileImage } = req.body;
+      const { userId, displayName, profileImage, gender } = req.body;
 
       if (!userId) {
         return res.status(400).json({ error: "User ID required" });
@@ -585,6 +585,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedUser = await storage.updateUserProfile(userId, {
         displayName: displayName || undefined,
         profileImage: profileImage || undefined,
+        gender: gender || undefined,
       });
 
       res.json({

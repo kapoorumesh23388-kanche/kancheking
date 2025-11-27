@@ -460,6 +460,8 @@ export default function GamePlay() {
                 marbles={player1Marbles}
                 role={isHiderPlayer1 ? "Hider" : "Guesser"}
                 isActive={isHiderPlayer1 ? phase === "selecting" : phase === "guessing"}
+                gender={player1Gender}
+                isGuesser={!isHiderPlayer1 && phase === "guessing"}
               />
             </div>
             <div className="text-center">
@@ -474,6 +476,8 @@ export default function GamePlay() {
                 marbles={player2Marbles}
                 role={!isHiderPlayer1 ? "Hider" : "Guesser"}
                 isActive={!isHiderPlayer1 ? phase === "selecting" : phase === "guessing"}
+                gender="boy"
+                isGuesser={isHiderPlayer1 && phase === "guessing"}
               />
             </div>
           </div>
