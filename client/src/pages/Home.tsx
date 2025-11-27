@@ -38,8 +38,8 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen pt-20 pb-10">
-      <div className="container max-w-6xl mx-auto px-5">
+    <div className="min-h-screen pt-20 pb-20 flex flex-col">
+      <div className="container max-w-6xl mx-auto px-5 flex-1">
         <div className="text-center mb-8 p-10 backdrop-blur-lg bg-primary/10 rounded-3xl border-2 border-primary/30 shadow-[0_10px_40px_rgba(255,215,0,0.2)]">
           <h1
             className="text-6xl font-bold mb-3 bg-gradient-to-r from-primary via-[#FFA500] to-primary bg-clip-text text-transparent"
@@ -80,6 +80,28 @@ export default function Home() {
           </Link>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="border-t border-primary/20 bg-black/40 backdrop-blur-sm mt-10 py-6">
+        <div className="container max-w-6xl mx-auto px-5">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
+            <div>
+              <p>&copy; 2025 Kanche King. All rights reserved.</p>
+            </div>
+            <div className="flex gap-6">
+              <Link href="/privacy" className="text-primary hover:text-primary/80 transition-colors" data-testid="link-privacy-policy">
+                Privacy Policy
+              </Link>
+              <Link href="/support" className="text-primary hover:text-primary/80 transition-colors" data-testid="link-support">
+                Support
+              </Link>
+              <Link href="/feedback" className="text-primary hover:text-primary/80 transition-colors" data-testid="link-feedback">
+                Feedback
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

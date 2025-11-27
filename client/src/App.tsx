@@ -19,6 +19,7 @@ import LeaderboardPage from "@/pages/LeaderboardPage";
 import Shop from "@/pages/Shop";
 import Tournament from "@/pages/Tournament";
 import Profile from "@/pages/Profile";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/shop" component={Shop} />
       <Route path="/tournament" component={Tournament} />
       <Route path="/profile" component={Profile} />
+      <Route path="/privacy" component={PrivacyPolicy} />
       <Route component={NotFound} />
     </Switch>
   );
