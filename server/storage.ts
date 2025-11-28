@@ -11,6 +11,8 @@ export interface IStorage {
   updateUserStats(userId: string, stats: { gamesWon?: number; gamesPlayed?: number }): Promise<User | undefined>;
   updateUserProfile(userId: string, profile: { displayName?: string; profileImage?: string }): Promise<User | undefined>;
   incrementAiWins(userId: string): Promise<User | undefined>;
+  addEarnedMarbles(userId: string, amount: number): Promise<User | undefined>;
+  updateEarnedMarbles(userId: string, earnedMarbles: number): Promise<User | undefined>;
   
   getCatalogItems(): Promise<CatalogItem[]>;
   addCatalogItem(item: Omit<CatalogItem, 'id' | 'createdAt'>): Promise<CatalogItem>;
@@ -100,6 +102,7 @@ export class MemStorage implements IStorage {
       profileImage: null,
       gender: "boy",
       marbles: 150,
+      earnedMarbles: 0,
       purchasedMarbles: 0,
       tournamentWinnings: 0,
       points: 0,
@@ -164,6 +167,27 @@ export class MemStorage implements IStorage {
     const user = this.users.get(userId);
     if (user) {
       user.aiWins = (user.aiWins || 0) + 1;
+      this.users.set(userId, user);
+      return user;
+    }
+    return undefined;
+  }
+
+  async addEarnedMarbles(userId: string, amount: number): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (user) {
+      user.marbles = (user.marbles || 0) + amount;
+      user.earnedMarbles = (user.earnedMarbles || 0) + amount;
+      this.users.set(userId, user);
+      return user;
+    }
+    return undefined;
+  }
+
+  async updateEarnedMarbles(userId: string, earnedMarbles: number): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (user) {
+      user.earnedMarbles = earnedMarbles;
       this.users.set(userId, user);
       return user;
     }
@@ -251,6 +275,9 @@ export class MemStorage implements IStorage {
           maxPlayers: 100,
           entryFee: 2500,
           prizePool: 0,
+          winnerId: null,
+          winnerMarblesAwarded: 0,
+          endedAt: null,
         });
       }
       this.tournamentWindows.set(windowId, window);

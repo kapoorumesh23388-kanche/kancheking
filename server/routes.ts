@@ -48,9 +48,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const newMarbles = user.marbles + marblesAmount;
       const newPurchasedMarbles = user.purchasedMarbles + marblesAmount;
+      const newEarnedMarbles = user.earnedMarbles + marblesAmount;
       
       await storage.updateUserMarbles(userId, newMarbles);
       // Also track purchased marbles separately
+      await storage.addEarnedMarbles(userId, marblesAmount);
       
       await storage.recordTransaction({
         userId,
@@ -60,9 +62,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transactionId: transactionId || null,
       });
 
-      res.json({ marbles: newMarbles, purchasedMarbles: newPurchasedMarbles, success: true });
+      res.json({ marbles: newMarbles, purchasedMarbles: newPurchasedMarbles, earnedMarbles: newEarnedMarbles, success: true });
     } catch (error) {
       res.status(500).json({ error: "Purchase failed" });
+    }
+  });
+
+  app.post("/api/tournament/check-eligibility", async (req, res) => {
+    try {
+      const { userId } = req.body;
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const earnedMarbles = user.earnedMarbles || 0;
+      const isEligible = earnedMarbles >= 2500;
+
+      res.json({
+        eligible: isEligible,
+        earnedMarbles,
+        required: 2500,
+        message: isEligible ? "You can enter tournament" : `You need ${2500 - earnedMarbles} more marbles to enter tournament`,
+      });
+    } catch (error) {
+      console.error("Tournament eligibility check error:", error);
+      res.status(500).json({ error: "Failed to check tournament eligibility" });
+    }
+  });
+
+  app.post("/api/tournament/entry", async (req, res) => {
+    try {
+      const { userId } = req.body;
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const earnedMarbles = user.earnedMarbles || 0;
+      if (earnedMarbles < 2500) {
+        return res.status(403).json({ 
+          error: "Insufficient tournament-eligible marbles",
+          message: `You need ${2500 - earnedMarbles} more marbles earned from friends, random players, or purchases to enter tournament`
+        });
+      }
+
+      // Deduct tournament fee from marbles
+      const newMarbles = user.marbles - 2500;
+      const newEarnedMarbles = user.earnedMarbles - 2500;
+      
+      await storage.updateUserMarbles(userId, newMarbles);
+      await storage.updateEarnedMarbles(userId, newEarnedMarbles);
+      
+      res.json({
+        success: true,
+        message: "Tournament entry successful",
+        marbles: newMarbles,
+        earnedMarbles: newEarnedMarbles,
+      });
+    } catch (error) {
+      console.error("Tournament entry error:", error);
+      res.status(500).json({ error: "Failed to enter tournament" });
     }
   });
 
@@ -82,6 +144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const referrerNewMarbles = referrer.marbles + 50;
       await storage.updateUserMarbles(referrer.id, referrerNewMarbles);
+      await storage.addEarnedMarbles(referrer.id, 50);
       
       await storage.recordTransaction({
         userId: referrer.id,
@@ -99,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/game-points", async (req, res) => {
     try {
-      const { userId, points, gameType, opponent, won } = req.body;
+      const { userId, points, gameType, opponent, won, opponentType } = req.body;
       
       const user = await storage.getUser(userId);
       if (!user) {
@@ -112,6 +175,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.updateUserPoints(userId, newPoints);
       await storage.updateUserStats(userId, { gamesWon: newGamesWon, gamesPlayed: newGamesPlayed });
+
+      // If player won against friend or random player, add earned marbles
+      if (won && opponentType && opponentType !== "ai") {
+        // Add marbles to earned marbles for tournament eligibility
+        await storage.addEarnedMarbles(userId, 10);
+      }
 
       await storage.addGamePoints({
         userId,
