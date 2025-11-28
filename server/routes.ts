@@ -109,18 +109,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Deduct tournament fee from marbles
-      const newMarbles = user.marbles - 2500;
-      const newEarnedMarbles = user.earnedMarbles - 2500;
-      
-      await storage.updateUserMarbles(userId, newMarbles);
-      await storage.updateEarnedMarbles(userId, newEarnedMarbles);
-      
+      // Tournament entry successful - no marble deduction
+      // 2500 earned marbles is just an entry barrier to motivate players
       res.json({
         success: true,
-        message: "Tournament entry successful",
-        marbles: newMarbles,
-        earnedMarbles: newEarnedMarbles,
+        message: "Tournament entry successful! Good luck!",
+        marbles: user.marbles,
+        earnedMarbles: user.earnedMarbles,
       });
     } catch (error) {
       console.error("Tournament entry error:", error);
