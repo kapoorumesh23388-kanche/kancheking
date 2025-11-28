@@ -262,6 +262,12 @@ export default function Profile() {
                   {user.gamesWon || 0}
                 </p>
               </div>
+              <div className="bg-background/50 p-4 rounded-md border border-primary/10">
+                <p className="text-xs text-secondary mb-1">AI Defeated</p>
+                <p className="text-2xl font-bold text-primary" data-testid="text-ai-wins">
+                  {user.aiWins || 0}
+                </p>
+              </div>
             </div>
 
             {/* Inventory Stats */}

@@ -599,6 +599,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/ai-defeat", async (req, res) => {
+    try {
+      const { userId } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ error: "User ID required" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const updatedUser = await storage.incrementAiWins(userId);
+
+      res.json({
+        success: true,
+        message: "AI defeat recorded",
+        aiWins: updatedUser?.aiWins || 0,
+      });
+    } catch (error) {
+      console.error("AI defeat error:", error);
+      res.status(500).json({ error: "Failed to record AI defeat" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Setup WebSocket server for real-time chat and game messages

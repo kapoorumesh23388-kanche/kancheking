@@ -10,6 +10,7 @@ export interface IStorage {
   updateUserPoints(userId: string, points: number): Promise<User | undefined>;
   updateUserStats(userId: string, stats: { gamesWon?: number; gamesPlayed?: number }): Promise<User | undefined>;
   updateUserProfile(userId: string, profile: { displayName?: string; profileImage?: string }): Promise<User | undefined>;
+  incrementAiWins(userId: string): Promise<User | undefined>;
   
   getCatalogItems(): Promise<CatalogItem[]>;
   addCatalogItem(item: Omit<CatalogItem, 'id' | 'createdAt'>): Promise<CatalogItem>;
@@ -104,6 +105,7 @@ export class MemStorage implements IStorage {
       points: 0,
       gamesWon: 0,
       gamesPlayed: 0,
+      aiWins: 0,
       referralCode: code,
       referredBy: referralCode || null,
       dateOfBirth: null,
@@ -152,6 +154,16 @@ export class MemStorage implements IStorage {
       if (profile.displayName !== undefined) user.displayName = profile.displayName;
       if (profile.profileImage !== undefined) user.profileImage = profile.profileImage;
       if (profile.gender !== undefined) user.gender = profile.gender;
+      this.users.set(userId, user);
+      return user;
+    }
+    return undefined;
+  }
+
+  async incrementAiWins(userId: string): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (user) {
+      user.aiWins = (user.aiWins || 0) + 1;
       this.users.set(userId, user);
       return user;
     }
