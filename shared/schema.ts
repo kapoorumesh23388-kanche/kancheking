@@ -16,6 +16,7 @@ export const users = pgTable("users", {
   points: integer("points").notNull().default(0),
   gamesWon: integer("games_won").notNull().default(0),
   gamesPlayed: integer("games_played").notNull().default(0),
+  aiWins: integer("ai_wins").notNull().default(0),
   referralCode: varchar("referral_code").unique(),
   referredBy: varchar("referred_by"),
   dateOfBirth: varchar("date_of_birth"),

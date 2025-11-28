@@ -355,6 +355,19 @@ export default function GamePlay() {
       setPlayer1Marbles(newPlayer1Marbles);
       setPlayer2Marbles(newPlayer2Marbles);
 
+      // Track AI defeats
+      if (won && !isHiderPlayer1) {
+        // Player won against AI
+        const userId = localStorage.getItem("userId");
+        if (userId) {
+          fetch("/api/ai-defeat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId })
+          }).catch(() => {});
+        }
+      }
+
       setGameResult({
         won,
         change: lastBet,
