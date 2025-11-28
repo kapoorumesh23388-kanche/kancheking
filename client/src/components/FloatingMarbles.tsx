@@ -16,7 +16,7 @@ export default function FloatingMarbles() {
       {marbles.map((i) => (
         <div
           key={i}
-          className={`absolute w-8 h-8 rounded-full ${colors[i % colors.length]} shadow-lg animate-marble-jump`}
+          className={`absolute w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 rounded-full ${colors[i % colors.length]} shadow-lg animate-marble-jump`}
           style={{
             left: `${10 + i * 12}%`,
             animationDelay: `${i * 0.15}s`,
