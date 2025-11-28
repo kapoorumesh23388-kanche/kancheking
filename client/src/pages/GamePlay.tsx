@@ -355,17 +355,34 @@ export default function GamePlay() {
       setPlayer1Marbles(newPlayer1Marbles);
       setPlayer2Marbles(newPlayer2Marbles);
 
-      // Track AI defeats
-      if (won && !isHiderPlayer1) {
-        // Player won against AI
-        const userId = localStorage.getItem("userId");
-        if (userId) {
+      // Track AI defeats and update game stats
+      const userId = localStorage.getItem("userId");
+      if (userId) {
+        if (won && !isHiderPlayer1) {
+          // Player won against AI
           fetch("/api/ai-defeat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ userId })
           }).catch(() => {});
         }
+
+        // Save game points and stats to backend
+        fetch("/api/game-points", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId,
+            won,
+            opponentType: "ai",
+            pointsEarned: won ? 10 : 0,
+          })
+        })
+        .then(() => {
+          // Dispatch event to refresh profile stats
+          window.dispatchEvent(new Event("gameStatsUpdated"));
+        })
+        .catch(() => {});
       }
 
       setGameResult({

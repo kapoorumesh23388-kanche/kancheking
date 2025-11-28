@@ -25,6 +25,37 @@ export default function Profile() {
   const [userAge, setUserAge] = useState<number | null>(null);
   const [gender, setGender] = useState<"boy" | "girl">("boy");
 
+  // Function to load user data
+  const loadUserData = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/user/${userId}`);
+      const data = await response.json();
+      setUser({...data, userId}); // Store userId in user object
+      setDisplayName(data.displayName || "");
+      setProfileImage(data.profileImage || "");
+      setImagePreview(data.profileImage || "");
+      setGender(data.gender || "boy");
+      setAdsPreference(data.adContentRating || localStorage.getItem("playerAdsPreference") || "family");
+      
+      // Calculate age if DOB available
+      if (data.dateOfBirth) {
+        const birthDate = new Date(data.dateOfBirth);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        setUserAge(age);
+      }
+      
+      setIsLoading(false);
+    } catch (err) {
+      console.error("Failed to load user data:", err);
+      setIsLoading(false);
+    }
+  };
+
   // Load user data from localStorage
   useEffect(() => {
     const userId = localStorage.getItem("userId");
@@ -33,35 +64,21 @@ export default function Profile() {
       return;
     }
 
-    // Fetch user data
-    fetch(`/api/user/${userId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setUser({...data, userId}); // Store userId in user object
-        setDisplayName(data.displayName || "");
-        setProfileImage(data.profileImage || "");
-        setImagePreview(data.profileImage || "");
-        setGender(data.gender || "boy");
-        setAdsPreference(data.adContentRating || localStorage.getItem("playerAdsPreference") || "family");
-        
-        // Calculate age if DOB available
-        if (data.dateOfBirth) {
-          const birthDate = new Date(data.dateOfBirth);
-          const today = new Date();
-          let age = today.getFullYear() - birthDate.getFullYear();
-          const monthDiff = today.getMonth() - birthDate.getMonth();
-          if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-          }
-          setUserAge(age);
-        }
-        
-        setIsLoading(false);
-      })
-      .catch(() => {
-        setIsLoading(false);
-      });
+    loadUserData(userId);
   }, [navigate]);
+
+  // Listen for game completion and stats update events
+  useEffect(() => {
+    const handleGameUpdate = () => {
+      const userId = localStorage.getItem("userId");
+      if (userId) {
+        loadUserData(userId);
+      }
+    };
+
+    window.addEventListener("gameStatsUpdated", handleGameUpdate);
+    return () => window.removeEventListener("gameStatsUpdated", handleGameUpdate);
+  }, []);
 
   // Handle image input
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
