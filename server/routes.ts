@@ -29,6 +29,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/catalog/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteCatalogItem(id);
+      res.json({ success: true, message: "Catalog item deleted" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete catalog item" });
+    }
+  });
+
   app.post("/api/marbles/purchase", async (req, res) => {
     try {
       const { userId, marblesAmount, transactionId } = req.body;
