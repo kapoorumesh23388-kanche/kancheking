@@ -1,247 +1,190 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, Loader2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Trash2, Loader2 } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import AgeVerificationDialog from "@/components/AgeVerificationDialog";
+import { useLocation } from "wouter";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { CatalogItem } from "@shared/schema";
 
-export default function Shop() {
+export default function Admin() {
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [marbleCount, setMarbleCount] = useState(() => {
-    const saved = localStorage.getItem("playerMarbles");
-    return saved ? parseInt(saved) : 1000;
-  });
-  const [pointCount, setPointCount] = useState(5000);
-  const [isAgeVerified, setIsAgeVerified] = useState(() => 
-    localStorage.getItem("playerIsAgeVerified") === "true"
-  );
-  const [showAgeDialog, setShowAgeDialog] = useState(false);
-  const referralCode = "RAJESH123";
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [pointsCost, setPointsCost] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
 
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const saved = localStorage.getItem("playerMarbles");
-      if (saved) setMarbleCount(parseInt(saved));
-    };
-    const handleAgeVerified = () => {
-      setIsAgeVerified(true);
-      toast({
-        title: "Success",
-        description: "Age verified! You can now purchase marbles.",
-      });
-    };
-    window.addEventListener("marbleUpdate", handleStorageChange);
-    window.addEventListener("ageVerified", handleAgeVerified);
-    return () => {
-      window.removeEventListener("marbleUpdate", handleStorageChange);
-      window.removeEventListener("ageVerified", handleAgeVerified);
-    };
-  }, [toast]);
-
-  // Fetch catalog items from backend
   const { data: catalogItems = [], isLoading } = useQuery<CatalogItem[]>({
     queryKey: ["/api/catalog"],
   });
 
-  const marblePacks = [
-    { price: 10, marbles: 100, savings: 0 },
-    { price: 20, marbles: 250, savings: 0 },
-    { price: 30, marbles: 400, savings: 0 },
-    { price: 40, marbles: 550, savings: 0 },
-    { price: 50, marbles: 700, savings: 0 },
-    { price: 100, marbles: 1500, savings: 0 },
-  ];
+  const addItemMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("/api/catalog", {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          description,
+          pointsCost: parseInt(pointsCost),
+          imageUrl,
+        }),
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Item added to catalog!" });
+      setName("");
+      setDescription("");
+      setPointsCost("");
+      setImageUrl("");
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog"] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to add item", variant: "destructive" });
+    },
+  });
 
-  const copyReferralCode = () => {
-    navigator.clipboard.writeText(referralCode);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
-  };
+  const deleteItemMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      return apiRequest(`/api/catalog/${itemId}`, { method: "DELETE" });
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Item deleted!" });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog"] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete item", variant: "destructive" });
+    },
+  });
 
-  const handleBuyMarbles = () => {
-    if (!isAgeVerified) {
-      setShowAgeDialog(true);
+  const handleAddItem = () => {
+    if (!name || !description || !pointsCost) {
+      toast({ title: "Error", description: "Fill all required fields", variant: "destructive" });
       return;
     }
-    toast({
-      title: "Payment",
-      description: "Payment integration coming soon!",
-    });
+    addItemMutation.mutate();
   };
 
   return (
-    <div className="min-h-screen pt-20 pb-10">
-      <AgeVerificationDialog 
-        isOpen={showAgeDialog}
-        onClose={() => setShowAgeDialog(false)}
-        onVerified={() => {
-          setShowAgeDialog(false);
-          setIsAgeVerified(true);
-        }}
-      />
+    <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black">
       <div className="container max-w-6xl mx-auto px-5">
-        <h2 className="text-5xl font-bold text-primary mb-8 text-center" style={{ textShadow: '0 0 20px rgba(255,215,0,0.5)' }}>
-          Shop & Marketplace
-        </h2>
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <Card className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/30">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-muted-foreground mb-2">Available Marbles</p>
-                <p className="text-3xl font-bold text-yellow-500">{marbleCount}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-purple-500/30">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-muted-foreground mb-2">Redeemable Points</p>
-                <p className="text-3xl font-bold text-purple-500">{pointCount}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-500/30">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-muted-foreground mb-2">Games Won</p>
-                <p className="text-3xl font-bold text-blue-500">15</p>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-5xl font-bold text-primary" style={{ textShadow: '0 0 30px rgba(255,215,0,0.5)' }}>
+            Admin Panel
+          </h1>
+          <Button variant="outline" onClick={() => setLocation("/kanchey-king")} data-testid="button-back-admin">
+            Back to Home
+          </Button>
         </div>
 
-        {/* Referral Section */}
-        <Card className="mb-8 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30">
-          <CardHeader>
-            <CardTitle>🎁 Referral Program - Earn 50 Marbles per Friend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4 items-center">
-              <div className="flex-1">
-                <p className="text-muted-foreground mb-3">Share your referral code with friends. Get 50 marbles when they join!</p>
-                <div className="bg-background rounded-lg p-4 flex items-center justify-between">
-                  <code className="text-lg font-mono font-bold text-primary">{referralCode}</code>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={copyReferralCode}
-                    className="gap-2"
-                    data-testid="button-copy-referral"
-                  >
-                    {copiedCode ? (
-                      <>
-                        <Check className="w-4 h-4" /> Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4" /> Copy
-                      </>
-                    )}
-                  </Button>
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Add Item Form */}
+          <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40 h-fit">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="w-5 h-5" /> Add Catalog Item
+              </CardTitle>
+              <CardDescription>Add new items to the points catalog (updates quarterly)</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Item Name</label>
+                <Input
+                  placeholder="e.g., Premium Avatar Bundle"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  data-testid="input-item-name"
+                />
               </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Catalog Items - Premium Products */}
-        <div className="mb-8">
-          <h3 className="text-2xl font-bold mb-4">💎 Premium Catalog - Redeem with Points</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {catalogItems && catalogItems.length > 0 ? (
-              catalogItems.map((item) => (
-                <Card key={item.id} className="hover:shadow-lg transition-shadow border-primary/20">
-                  <CardHeader>
-                    <CardTitle className="text-lg">{item.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-center space-y-3">
-                    <p className="text-muted-foreground text-sm">{item.description}</p>
-                    <p className="text-2xl font-bold text-purple-400">{item.pointsCost?.toLocaleString()} Points</p>
-                    <p className="text-xs text-muted-foreground">Worth ~₹{(item.pointsCost || 0 / 10).toLocaleString()}</p>
-                    <Button 
-                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold"
-                      disabled={pointCount < (item.pointsCost || 0)}
-                      data-testid={`button-redeem-${item.id}`}
-                    >
-                      {pointCount >= (item.pointsCost || 0) ? "Redeem" : "Not Enough Points"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <Card className="col-span-full bg-blue-500/10 border-blue-500/30">
-                <CardContent className="pt-6 text-center">
-                  <p className="text-muted-foreground mb-2">📦 No Premium Items Available</p>
-                  <p className="text-sm text-muted-foreground">Check back when catalog updates with exclusive items!</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Description</label>
+                <Textarea
+                  placeholder="Item description..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="resize-none"
+                  data-testid="input-item-desc"
+                />
+              </div>
 
-        {/* Marble Packages */}
-        <div className="mb-8">
-          <h3 className="text-2xl font-bold mb-6">💎 Buy Marbles</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {marblePacks.map((pack) => (
-              <Card key={pack.price} className="hover:shadow-lg transition-shadow border-primary/20">
-                <CardHeader>
-                  <CardTitle className="text-center">₹{pack.price}/-</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                  <p className="text-4xl font-bold text-yellow-500 mb-4">{pack.marbles}</p>
-                  <p className="text-muted-foreground mb-4">Marbles</p>
-                  {pack.savings > 0 && (
-                    <p className="text-sm text-green-500 font-semibold mb-4">Save {pack.savings}%</p>
-                  )}
-                  <Button 
-                    onClick={handleBuyMarbles}
-                    className="w-full"
-                    data-testid={`button-buy-${pack.marbles}`}
-                  >
-                    {isAgeVerified ? "Buy Now" : "Verify Age to Buy"}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Points Cost</label>
+                <Input
+                  type="number"
+                  placeholder="e.g., 5000"
+                  value={pointsCost}
+                  onChange={(e) => setPointsCost(e.target.value)}
+                  data-testid="input-points-cost"
+                />
+              </div>
 
-        {/* Catalog */}
-        <div>
-          <h3 className="text-2xl font-bold mb-6">🎪 Points Catalog (Updated every 6 months by admin)</h3>
-          <Card>
-            <CardContent className="pt-6">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Image URL (Optional)</label>
+                <Input
+                  placeholder="https://example.com/image.jpg"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  data-testid="input-image-url"
+                />
+              </div>
+
+              <Button
+                className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground font-bold"
+                onClick={handleAddItem}
+                disabled={addItemMutation.isPending}
+                data-testid="button-add-item"
+              >
+                {addItemMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Adding...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2" /> Add Item
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Current Catalog */}
+          <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40">
+            <CardHeader>
+              <CardTitle>Catalog Items ({catalogItems.length})</CardTitle>
+              <CardDescription>Manage current catalog (updates quarterly)</CardDescription>
+            </CardHeader>
+            <CardContent>
               {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin" />
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
                 </div>
               ) : catalogItems.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No catalog items available yet.</p>
-                  <p className="text-sm">Admin will add items every 6 months.</p>
-                </div>
+                <p className="text-muted-foreground text-center py-6">No items yet. Add the first one!</p>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3 max-h-96 overflow-y-auto">
                   {catalogItems.map((item) => (
-                    <div key={item.id} className="border border-primary/20 rounded-lg p-4 flex justify-between items-center">
-                      <div>
-                        <p className="font-semibold">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">{item.description}</p>
-                        <p className="text-sm text-purple-500 font-bold">{item.pointsCost} points</p>
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between bg-white/5 border border-primary/20 rounded-lg p-4"
+                      data-testid={`item-${item.id}`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-primary truncate">{item.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">{item.pointsCost?.toLocaleString()} pts</p>
                       </div>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        disabled={pointCount < item.pointsCost}
-                        data-testid={`button-redeem-${item.id}`}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="ml-2 text-red-500 hover:text-red-700"
+                        onClick={() => deleteItemMutation.mutate(item.id)}
+                        disabled={deleteItemMutation.isPending}
+                        data-testid={`button-delete-${item.id}`}
                       >
-                        {pointCount < item.pointsCost ? "Not enough" : "Redeem"}
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   ))}
@@ -250,6 +193,15 @@ export default function Shop() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Info Card */}
+        <Card className="mt-8 bg-blue-500/10 border-blue-500/30">
+          <CardContent className="pt-6">
+            <p className="text-muted-foreground">
+              <strong>ℹ️ Admin Note:</strong> Catalog items are updated quarterly. Players redeem these items using their points earned from gameplay. Only add items that you want to offer this quarter.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
