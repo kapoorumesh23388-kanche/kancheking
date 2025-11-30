@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PlayerProfile from "@/components/PlayerProfile";
 import FloatingMarbles from "@/components/FloatingMarbles";
 import { Link } from "wouter";
+import { useLanguage } from "@/lib/LanguageContext";
+import { t, LANGUAGES, getMarbleName, type Language } from "@/lib/translations";
 
 export default function Home() {
+  const { language, setLanguage } = useLanguage();
   const [playerName, setPlayerName] = useState("Rajesh Kumar");
   const [playerImage, setPlayerImage] = useState<string | null>(null);
   const [playerMarbles, setPlayerMarbles] = useState(1000);
@@ -47,18 +51,26 @@ export default function Home() {
             className="text-6xl font-bold mb-3 bg-gradient-to-r from-primary via-[#FFA500] to-primary bg-clip-text text-transparent"
             style={{ textShadow: '0 0 30px #FFD700' }}
           >
-            Kanche King
+            {t('appTitle', language)}
           </h1>
-          <p className="text-2xl text-primary/90 mb-5">
-            Traditional Indian Marble Game
+          <p className="text-2xl text-primary/90 mb-8">
+            {t('appSubtitle', language)}
           </p>
-          <Button
-            variant="outline"
-            className="bg-primary/20 border-2 border-primary/40 text-primary hover:bg-primary/30 px-6 py-3 rounded-full font-semibold"
-            data-testid="button-language-toggle"
-          >
-            🌐 Switch to Hindi
-          </Button>
+          
+          <div className="mb-6 flex justify-center" data-testid="language-selector">
+            <Select value={language} onValueChange={(value) => setLanguage(value as Language)}>
+              <SelectTrigger className="w-48 bg-primary/20 border-2 border-primary/40 text-primary">
+                <SelectValue placeholder={t('selectLanguage', language)} />
+              </SelectTrigger>
+              <SelectContent className="bg-black border-2 border-primary/40">
+                {(Object.entries(LANGUAGES) as Array<[Language, { nativeName: string }]>).map(([code, { nativeName }]) => (
+                  <SelectItem key={code} value={code} className="text-primary hover:bg-primary/20">
+                    {nativeName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="mb-10">
@@ -77,7 +89,7 @@ export default function Home() {
               className="bg-gradient-to-r from-[#FF6B6B] to-[#FF8E53] hover:from-[#FF6B6B]/80 hover:to-[#FF8E53]/80 text-white px-15 py-8 text-3xl font-bold rounded-full shadow-[0_10px_30px_rgba(255,107,107,0.4)] hover:shadow-[0_15px_40px_rgba(255,107,107,0.6)] hover:-translate-y-1 transition-all uppercase tracking-wider flex items-center justify-center gap-3 leading-none h-24"
               data-testid="button-start-game"
             >
-              <span className="text-4xl leading-none">🎮</span> <span className="leading-none">Start Game</span>
+              <span className="text-4xl leading-none">🎮</span> <span className="leading-none">{t('startGame', language)}</span>
             </Button>
           </Link>
         </div>
@@ -88,10 +100,10 @@ export default function Home() {
         <div className="container max-w-6xl mx-auto px-5">
           <div className="flex justify-between items-center gap-4 text-sm text-muted-foreground">
             <div>
-              <p>&copy; 2025 Kanche King. All rights reserved.</p>
+              <p>&copy; 2025 {t('appTitle', language)}. All rights reserved.</p>
             </div>
             <Link href="/privacy" className="text-primary hover:text-primary/80 transition-colors" data-testid="link-privacy-policy">
-              Privacy Policy
+              {t('privacyPolicy', language)}
             </Link>
           </div>
         </div>
