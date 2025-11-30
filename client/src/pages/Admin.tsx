@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, LogOut, Settings } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -17,6 +17,18 @@ export default function Admin() {
   const [description, setDescription] = useState("");
   const [pointsCost, setPointsCost] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [showPasswordSettings, setShowPasswordSettings] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Check if admin is logged in
+  useEffect(() => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) {
+      setLocation("/admin-login");
+    }
+  }, [setLocation]);
 
   const { data: catalogItems = [], isLoading } = useQuery<CatalogItem[]>({
     queryKey: ["/api/catalog"],
@@ -59,6 +71,26 @@ export default function Admin() {
     },
   });
 
+  const changePasswordMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/change-password", {
+        oldPassword,
+        newPassword,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Password changed successfully!" });
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setShowPasswordSettings(false);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Password change failed", variant: "destructive" });
+    },
+  });
+
   const handleAddItem = () => {
     if (!name || !description || !pointsCost) {
       toast({ title: "Error", description: "Fill all required fields", variant: "destructive" });
@@ -67,71 +99,143 @@ export default function Admin() {
     addItemMutation.mutate();
   };
 
+  const handleChangePassword = () => {
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      toast({ title: "Error", description: "Fill all fields", variant: "destructive" });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: "Error", description: "Passwords don't match", variant: "destructive" });
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast({ title: "Error", description: "Password must be at least 6 characters", variant: "destructive" });
+      return;
+    }
+    changePasswordMutation.mutate();
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("adminToken");
+    toast({ title: "Success", description: "Logged out successfully!" });
+    setLocation("/admin-login");
+  };
+
   return (
     <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black">
       <div className="container max-w-6xl mx-auto px-5">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-5xl font-bold text-primary" style={{ textShadow: '0 0 30px rgba(255,215,0,0.5)' }}>
-            Admin Panel
+            Admin Dashboard
           </h1>
-          <Button variant="outline" onClick={() => setLocation("/kanchey-king")} data-testid="button-back-admin">
-            Back to Home
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowPasswordSettings(!showPasswordSettings)}
+              className="gap-2"
+              data-testid="button-settings"
+            >
+              <Settings className="w-4 h-4" /> Settings
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleLogout}
+              className="gap-2"
+              data-testid="button-logout"
+            >
+              <LogOut className="w-4 h-4" /> Logout
+            </Button>
+          </div>
         </div>
 
+        {/* Password Settings */}
+        {showPasswordSettings && (
+          <Card className="mb-8 bg-orange-500/10 border-orange-500/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5" /> Change Password
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input
+                  type="password"
+                  placeholder="Current password"
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  data-testid="input-old-password"
+                />
+                <Input
+                  type="password"
+                  placeholder="New password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  data-testid="input-new-password"
+                />
+                <Input
+                  type="password"
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  data-testid="input-confirm-password"
+                />
+              </div>
+              <Button
+                onClick={handleChangePassword}
+                disabled={changePasswordMutation.isPending}
+                className="bg-orange-600 hover:bg-orange-700"
+                data-testid="button-change-password"
+              >
+                {changePasswordMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Updating...
+                  </>
+                ) : (
+                  "Update Password"
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Add Item Form */}
           <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40 h-fit">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Plus className="w-5 h-5" /> Add Catalog Item
               </CardTitle>
-              <CardDescription>Add new items to the points catalog (updates quarterly)</CardDescription>
+              <CardDescription>Add items for quarterly catalog update</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Item Name</label>
-                <Input
-                  placeholder="e.g., Premium Avatar Bundle"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  data-testid="input-item-name"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">Description</label>
-                <Textarea
-                  placeholder="Item description..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="resize-none"
-                  data-testid="input-item-desc"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">Points Cost</label>
-                <Input
-                  type="number"
-                  placeholder="e.g., 5000"
-                  value={pointsCost}
-                  onChange={(e) => setPointsCost(e.target.value)}
-                  data-testid="input-points-cost"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">Image URL (Optional)</label>
-                <Input
-                  placeholder="https://example.com/image.jpg"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  data-testid="input-image-url"
-                />
-              </div>
-
+              <Input
+                placeholder="Item Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                data-testid="input-item-name"
+              />
+              <Textarea
+                placeholder="Description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="resize-none"
+                data-testid="input-item-desc"
+              />
+              <Input
+                type="number"
+                placeholder="Points Cost"
+                value={pointsCost}
+                onChange={(e) => setPointsCost(e.target.value)}
+                data-testid="input-points-cost"
+              />
+              <Input
+                placeholder="Image URL (optional)"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                data-testid="input-image-url"
+              />
               <Button
-                className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground font-bold"
+                className="w-full bg-gradient-to-r from-primary to-[#FFA500]"
                 onClick={handleAddItem}
                 disabled={addItemMutation.isPending}
                 data-testid="button-add-item"
@@ -149,10 +253,11 @@ export default function Admin() {
             </CardContent>
           </Card>
 
+          {/* Catalog List */}
           <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40">
             <CardHeader>
               <CardTitle>Catalog Items ({catalogItems.length})</CardTitle>
-              <CardDescription>Manage current catalog (updates quarterly)</CardDescription>
+              <CardDescription>Quarterly update management</CardDescription>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -160,7 +265,7 @@ export default function Admin() {
                   <Loader2 className="w-6 h-6 animate-spin text-primary" />
                 </div>
               ) : catalogItems.length === 0 ? (
-                <p className="text-muted-foreground text-center py-6">No items yet. Add the first one!</p>
+                <p className="text-muted-foreground text-center py-6">No items yet</p>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {catalogItems.map((item) => (
@@ -171,7 +276,7 @@ export default function Admin() {
                     >
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-primary truncate">{item.name}</p>
-                        <p className="text-sm text-muted-foreground truncate">{item.pointsCost?.toLocaleString()} pts</p>
+                        <p className="text-sm text-muted-foreground">{item.pointsCost?.toLocaleString()} pts</p>
                       </div>
                       <Button
                         size="sm"
@@ -190,14 +295,6 @@ export default function Admin() {
             </CardContent>
           </Card>
         </div>
-
-        <Card className="mt-8 bg-blue-500/10 border-blue-500/30">
-          <CardContent className="pt-6">
-            <p className="text-muted-foreground">
-              <strong>ℹ️ Admin Note:</strong> Catalog items are updated quarterly. Players redeem these items using their points earned from gameplay.
-            </p>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

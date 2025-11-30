@@ -699,6 +699,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/login", async (req, res) => {
+    try {
+      const { adminId, password } = req.body;
+
+      if (!adminId || !password) {
+        return res.status(400).json({ error: "Admin ID and password required" });
+      }
+
+      const admin = await storage.getAdminByIdAndPassword(adminId, password);
+      if (!admin) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      const token = `admin-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      res.json({ success: true, token, adminId });
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  app.post("/api/admin/change-password", async (req, res) => {
+    try {
+      const token = req.headers.authorization?.split(" ")[1];
+      if (!token) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { oldPassword, newPassword } = req.body;
+      const adminId = "admin"; // Simplified - in production use token verification
+
+      if (!oldPassword || !newPassword) {
+        return res.status(400).json({ error: "Old and new passwords required" });
+      }
+
+      const success = await storage.updateAdminPassword(adminId, oldPassword, newPassword);
+      if (!success) {
+        return res.status(401).json({ error: "Incorrect old password" });
+      }
+
+      res.json({ success: true, message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Password change error:", error);
+      res.status(500).json({ error: "Failed to change password" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Setup WebSocket server for real-time chat and game messages

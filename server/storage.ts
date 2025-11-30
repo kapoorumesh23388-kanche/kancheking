@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type GameRoom, type FeedbackSubmission } from "@shared/schema";
+import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type GameRoom, type FeedbackSubmission, type AdminUser } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -38,6 +38,10 @@ export interface IStorage {
 
   addFeedbackSubmission(feedback: Omit<FeedbackSubmission, 'id' | 'createdAt'>): Promise<FeedbackSubmission>;
   getFeedbackSubmissions(): Promise<FeedbackSubmission[]>;
+
+  createOrUpdateAdmin(adminId: string, password: string): Promise<AdminUser>;
+  getAdminByIdAndPassword(adminId: string, password: string): Promise<AdminUser | undefined>;
+  updateAdminPassword(adminId: string, oldPassword: string, newPassword: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -49,6 +53,7 @@ export class MemStorage implements IStorage {
   private gameRooms: Map<string, GameRoom>;
   private matchQueue: Map<string, { userId: string; username: string; marbles: number }>;
   private feedbackSubmissions: FeedbackSubmission[];
+  private adminUsers: Map<string, AdminUser>;
 
   constructor() {
     this.users = new Map();
@@ -59,6 +64,15 @@ export class MemStorage implements IStorage {
     this.gameRooms = new Map();
     this.matchQueue = new Map();
     this.feedbackSubmissions = [];
+    this.adminUsers = new Map();
+    
+    // Initialize default admin account
+    this.adminUsers.set("admin", {
+      id: randomUUID(),
+      adminId: "admin",
+      password: "admin123",
+      createdAt: new Date(),
+    });
     
     const window: TournamentWindow = {
       id: randomUUID(),
@@ -357,6 +371,35 @@ export class MemStorage implements IStorage {
 
   async getFeedbackSubmissions(): Promise<FeedbackSubmission[]> {
     return this.feedbackSubmissions;
+  }
+
+  async createOrUpdateAdmin(adminId: string, password: string): Promise<AdminUser> {
+    const admin: AdminUser = {
+      id: randomUUID(),
+      adminId,
+      password,
+      createdAt: new Date(),
+    };
+    this.adminUsers.set(adminId, admin);
+    return admin;
+  }
+
+  async getAdminByIdAndPassword(adminId: string, password: string): Promise<AdminUser | undefined> {
+    const admin = this.adminUsers.get(adminId);
+    if (admin && admin.password === password) {
+      return admin;
+    }
+    return undefined;
+  }
+
+  async updateAdminPassword(adminId: string, oldPassword: string, newPassword: string): Promise<boolean> {
+    const admin = this.adminUsers.get(adminId);
+    if (admin && admin.password === oldPassword) {
+      admin.password = newPassword;
+      this.adminUsers.set(adminId, admin);
+      return true;
+    }
+    return false;
   }
 }
 

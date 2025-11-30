@@ -9,7 +9,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   displayName: text("display_name"),
   profileImage: varchar("profile_image"),
-  gender: varchar("gender").default("boy"), // "boy" | "girl"
+  gender: varchar("gender").default("boy"),
   marbles: integer("marbles").notNull().default(150),
   earnedMarbles: integer("earned_marbles").notNull().default(0),
   purchasedMarbles: integer("purchased_marbles").notNull().default(0),
@@ -22,7 +22,14 @@ export const users = pgTable("users", {
   referredBy: varchar("referred_by"),
   dateOfBirth: varchar("date_of_birth"),
   isAgeVerified: boolean("is_age_verified").notNull().default(false),
-  adContentRating: varchar("ad_content_rating").default("family"), // "kids" | "family" | "all"
+  adContentRating: varchar("ad_content_rating").default("family"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const adminUsers = pgTable("admin_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminId: varchar("admin_id").notNull().unique(),
+  password: text("password").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -59,7 +66,7 @@ export const tournamentWindows = pgTable("tournament_windows", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   windowNumber: integer("window_number").notNull(),
   playerCount: integer("player_count").notNull().default(0),
-  status: varchar("status").notNull().default("waiting"), // waiting, active, completed, converted
+  status: varchar("status").notNull().default("waiting"),
   maxPlayers: integer("max_players").notNull().default(100),
   entryFee: integer("entry_fee").notNull().default(2500),
   prizePool: integer("prize_pool").notNull().default(0),
@@ -94,19 +101,19 @@ export const matchQueue = pgTable("match_queue", {
 export const playerAdRevenue = pgTable("player_ad_revenue", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
-  adType: varchar("ad_type").notNull(), // "banner", "rewarded", "interstitial"
-  revenueGenerated: integer("revenue_generated").notNull(), // in paise (1 rupee = 100 paise)
+  adType: varchar("ad_type").notNull(),
+  revenueGenerated: integer("revenue_generated").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const playerRevenueShare = pgTable("player_revenue_share", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
-  month: varchar("month").notNull(), // "2025-11" format
+  month: varchar("month").notNull(),
   totalAdRevenue: integer("total_ad_revenue").notNull(),
   sharePercentage: integer("share_percentage").notNull().default(20),
   pointsAwarded: integer("points_awarded").notNull(),
-  status: varchar("status").notNull().default("pending"), // pending, awarded
+  status: varchar("status").notNull().default("pending"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -116,7 +123,7 @@ export const tournamentConversions = pgTable("tournament_conversions", {
   tournamentWindowId: varchar("tournament_window_id").notNull(),
   marblesWon: integer("marbles_won").notNull(),
   pointsAwarded: integer("points_awarded").notNull(),
-  status: varchar("status").notNull().default("pending"), // pending, completed
+  status: varchar("status").notNull().default("pending"),
   createdAt: timestamp("created_at").defaultNow(),
   convertedAt: timestamp("converted_at"),
 });
@@ -127,21 +134,21 @@ export const feedbackSubmissions = pgTable("feedback_submissions", {
   name: text("name"),
   email: text("email"),
   phone: text("phone"),
-  type: varchar("type").notNull(), // "feedback" or "support"
+  type: varchar("type").notNull(),
   subject: text("subject"),
   message: text("message").notNull(),
-  status: varchar("status").notNull().default("pending"), // pending, responded, resolved
+  status: varchar("status").notNull().default("pending"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const chatMessages = pgTable("chat_messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  roomCode: varchar("room_code").notNull(), // Game room or AI mode
+  roomCode: varchar("room_code").notNull(),
   senderId: varchar("sender_id").notNull(),
   senderName: varchar("sender_name").notNull(),
-  messageType: varchar("message_type").notNull(), // "text" or "voice"
-  content: text("content").notNull(), // Text message or base64 voice data
-  duration: integer("duration"), // Voice message duration in seconds
+  messageType: varchar("message_type").notNull(),
+  content: text("content").notNull(),
+  duration: integer("duration"),
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
@@ -152,6 +159,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type AdminUser = typeof adminUsers.$inferSelect;
 export type CatalogItem = typeof catalogItems.$inferSelect;
 export type MarbleTransaction = typeof marbleTransactions.$inferSelect;
 export type GamePoint = typeof gamePoints.$inferSelect;

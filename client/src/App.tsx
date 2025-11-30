@@ -19,6 +19,7 @@ import Support from "@/pages/Support";
 import LeaderboardPage from "@/pages/LeaderboardPage";
 import Shop from "@/pages/Shop";
 import Admin from "@/pages/Admin";
+import AdminLogin from "@/pages/AdminLogin";
 import Tournament from "@/pages/Tournament";
 import Profile from "@/pages/Profile";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
@@ -40,6 +41,7 @@ function Router() {
       <Route path="/support" component={Support} />
       <Route path="/leaderboard" component={LeaderboardPage} />
       <Route path="/shop" component={Shop} />
+      <Route path="/admin-login" component={AdminLogin} />
       <Route path="/admin" component={Admin} />
       <Route path="/tournament" component={Tournament} />
       <Route path="/profile" component={Profile} />
