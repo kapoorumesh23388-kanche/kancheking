@@ -1,15 +1,15 @@
 export type Language = "en" | "hi" | "ta" | "te" | "kn" | "bn" | "mr" | "gu" | "pa";
 
 export const LANGUAGES = {
-  en: { name: "English", nativeName: "English" },
-  hi: { name: "Hindi", nativeName: "हिन्दी" },
-  ta: { name: "Tamil", nativeName: "தமிழ்" },
-  te: { name: "Telugu", nativeName: "తెలుగు" },
-  kn: { name: "Kannada", nativeName: "ಕನ್ನಡ" },
-  bn: { name: "Bengali", nativeName: "বাংলা" },
-  mr: { name: "Marathi", nativeName: "मराठी" },
-  gu: { name: "Gujarati", nativeName: "ગુજરાતી" },
-  pa: { name: "Punjabi", nativeName: "ਪੰਜਾਬੀ" },
+  en: { name: "English", nativeName: "English", marblesName: "Marbles" },
+  hi: { name: "Hindi", nativeName: "हिन्दी", marblesName: "कंचे" },
+  ta: { name: "Tamil", nativeName: "தமிழ்", marblesName: "பளிங்குக்கள்" },
+  te: { name: "Telugu", nativeName: "తెలుగు", marblesName: "గుళ్ళ" },
+  kn: { name: "Kannada", nativeName: "ಕನ್ನಡ", marblesName: "ಮುತ್ತುಗಳು" },
+  bn: { name: "Bengali", nativeName: "বাংলা", marblesName: "মার্বেল" },
+  mr: { name: "Marathi", nativeName: "मराठी", marblesName: "कंचे" },
+  gu: { name: "Gujarati", nativeName: "ગુજરાતી", marblesName: "ગુલીઓ" },
+  pa: { name: "Punjabi", nativeName: "ਪੰਜਾਬੀ", marblesName: "ਕਣਕਾਂ" },
 };
 
 export const MARBLE_NAMES = {

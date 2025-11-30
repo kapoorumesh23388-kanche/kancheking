@@ -59,13 +59,16 @@ export default function Home() {
           
           <div className="mb-6 flex justify-center" data-testid="language-selector">
             <Select value={language} onValueChange={(value) => setLanguage(value as Language)}>
-              <SelectTrigger className="w-48 bg-primary/20 border-2 border-primary/40 text-primary">
+              <SelectTrigger className="w-80 bg-primary/20 border-2 border-primary/40 text-primary text-base font-semibold px-4 py-3 h-auto">
                 <SelectValue placeholder={t('selectLanguage', language)} />
               </SelectTrigger>
-              <SelectContent className="bg-black border-2 border-primary/40">
-                {(Object.entries(LANGUAGES) as Array<[Language, { nativeName: string }]>).map(([code, { nativeName }]) => (
-                  <SelectItem key={code} value={code} className="text-primary hover:bg-primary/20">
-                    {nativeName}
+              <SelectContent className="bg-black border-2 border-primary/40 w-80 min-w-max">
+                {(Object.entries(LANGUAGES) as Array<[Language, { nativeName: string; marblesName: string }]>).map(([code, { nativeName, marblesName }]) => (
+                  <SelectItem key={code} value={code} className="text-primary hover:bg-primary/20 text-base font-semibold py-4 px-3 whitespace-normal">
+                    <div className="flex flex-col gap-1">
+                      <span className="block text-lg">{nativeName}</span>
+                      <span className="block text-sm text-primary/70">{marblesName}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
