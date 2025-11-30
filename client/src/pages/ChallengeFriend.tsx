@@ -68,7 +68,7 @@ export default function ChallengeFriend() {
     }
   };
 
-  if (gameMode === "friend" && roomCode && opponentWaiting && !gameStarted) {
+  if (roomCode && opponentWaiting && !gameStarted) {
     return (
       <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black">
         <div className="container max-w-2xl mx-auto px-5">
@@ -81,10 +81,19 @@ export default function ChallengeFriend() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="bg-primary/20 rounded-lg p-8 border-2 border-primary/50">
-                <p className="text-sm text-muted-foreground text-center mb-2">Room Code</p>
-                <p className="text-5xl font-black text-primary text-center tracking-widest font-mono">
+                <p className="text-sm text-muted-foreground text-center mb-4">Your Room Code</p>
+                <p className="text-6xl font-black text-primary text-center tracking-widest font-mono break-all">
                   {roomCode}
                 </p>
+              </div>
+
+              <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 text-center">
+                <p className="text-sm text-primary/80 mb-2">Share Link</p>
+                <div className="bg-black/40 rounded p-3 mb-3">
+                  <p className="text-xs text-muted-foreground break-all font-mono">
+                    {`${window.location.origin}/game/friend-join?code=${roomCode}`}
+                  </p>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -97,11 +106,11 @@ export default function ChallengeFriend() {
                 >
                   {copiedCode ? (
                     <>
-                      <Check className="w-4 h-4" /> Copied!
+                      <Check className="w-5 h-5" /> Copied!
                     </>
                   ) : (
                     <>
-                      <Copy className="w-4 h-4" /> Copy Code
+                      <Copy className="w-5 h-5" /> Copy Code
                     </>
                   )}
                 </Button>
@@ -111,7 +120,7 @@ export default function ChallengeFriend() {
                   onClick={shareRoom}
                   data-testid="button-share-room"
                 >
-                  <Share2 className="w-4 h-4" /> Share Link
+                  <Share2 className="w-5 h-5" /> Share Link
                 </Button>
               </div>
 
@@ -120,7 +129,7 @@ export default function ChallengeFriend() {
                   <Loader2 className="w-5 h-5 animate-spin text-primary" />
                   <p className="font-bold text-primary">Waiting for opponent...</p>
                 </div>
-                <p className="text-sm text-muted-foreground">Your friend will join automatically</p>
+                <p className="text-sm text-muted-foreground">Your friend will join using the code or link</p>
               </div>
 
               <Button
