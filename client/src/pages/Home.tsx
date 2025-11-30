@@ -48,26 +48,27 @@ export default function Home() {
       <div className="container max-w-6xl mx-auto px-5 flex-1">
         <div className="text-center mb-8 p-10 backdrop-blur-lg bg-primary/10 rounded-3xl border-2 border-primary/30 shadow-[0_10px_40px_rgba(255,215,0,0.2)]">
           <h1
-            className="text-6xl font-bold mb-3 bg-gradient-to-r from-primary via-[#FFA500] to-primary bg-clip-text text-transparent"
+            className={`${language !== 'en' ? 'text-7xl leading-tight' : 'text-6xl'} font-bold mb-3 bg-gradient-to-r from-primary via-[#FFA500] to-primary bg-clip-text text-transparent lang-${language}`}
             style={{ textShadow: '0 0 30px #FFD700' }}
+            lang={language}
           >
             {t('appTitle', language)}
           </h1>
-          <p className="text-2xl text-primary/90 mb-8">
+          <p className={`${language !== 'en' ? 'text-3xl leading-relaxed' : 'text-2xl'} text-primary/90 mb-8 lang-${language}`} lang={language}>
             {t('appSubtitle', language)}
           </p>
           
           <div className="mb-6 flex justify-center" data-testid="language-selector">
             <Select value={language} onValueChange={(value) => setLanguage(value as Language)}>
-              <SelectTrigger className="w-80 bg-primary/20 border-2 border-primary/40 text-primary text-base font-semibold px-4 py-3 h-auto">
+              <SelectTrigger className={`w-96 bg-primary/20 border-2 border-primary/40 text-primary font-semibold px-4 py-3 h-auto ${language !== 'en' ? 'text-lg' : 'text-base'} lang-${language}`} lang={language}>
                 <SelectValue placeholder={t('selectLanguage', language)} />
               </SelectTrigger>
-              <SelectContent className="bg-black border-2 border-primary/40 w-80 min-w-max">
+              <SelectContent className={`bg-black border-2 border-primary/40 w-96 min-w-max lang-${language}`} lang={language}>
                 {(Object.entries(LANGUAGES) as Array<[Language, { nativeName: string; marblesName: string }]>).map(([code, { nativeName, marblesName }]) => (
-                  <SelectItem key={code} value={code} className="text-primary hover:bg-primary/20 text-base font-semibold py-4 px-3 whitespace-normal">
-                    <div className="flex flex-col gap-1">
-                      <span className="block text-lg">{nativeName}</span>
-                      <span className="block text-sm text-primary/70">{marblesName}</span>
+                  <SelectItem key={code} value={code} className={`text-primary hover:bg-primary/20 font-semibold py-4 px-3 whitespace-normal ${code !== 'en' ? 'text-base' : 'text-sm'} lang-${code}`} lang={code}>
+                    <div className="flex flex-col gap-2">
+                      <span className={`block font-bold ${code !== 'en' ? 'text-2xl leading-relaxed' : 'text-xl'}`}>{nativeName}</span>
+                      <span className={`block text-primary/70 ${code !== 'en' ? 'text-lg' : 'text-sm'}`}>{marblesName}</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -89,10 +90,11 @@ export default function Home() {
         <div className="flex justify-center items-center w-full">
           <Link href="/kanchey-king" className="w-full flex justify-center">
             <Button
-              className="bg-gradient-to-r from-[#FF6B6B] to-[#FF8E53] hover:from-[#FF6B6B]/80 hover:to-[#FF8E53]/80 text-white px-15 py-8 text-3xl font-bold rounded-full shadow-[0_10px_30px_rgba(255,107,107,0.4)] hover:shadow-[0_15px_40px_rgba(255,107,107,0.6)] hover:-translate-y-1 transition-all uppercase tracking-wider flex items-center justify-center gap-3 leading-none h-24"
+              className={`bg-gradient-to-r from-[#FF6B6B] to-[#FF8E53] hover:from-[#FF6B6B]/80 hover:to-[#FF8E53]/80 text-white px-15 py-8 font-bold rounded-full shadow-[0_10px_30px_rgba(255,107,107,0.4)] hover:shadow-[0_15px_40px_rgba(255,107,107,0.6)] hover:-translate-y-1 transition-all uppercase tracking-wider flex items-center justify-center gap-3 h-24 ${language !== 'en' ? 'text-2xl leading-relaxed' : 'text-3xl leading-none'} lang-${language}`}
               data-testid="button-start-game"
+              lang={language}
             >
-              <span className="text-4xl leading-none">🎮</span> <span className="leading-none">{t('startGame', language)}</span>
+              <span className="text-4xl">🎮</span> <span>{t('startGame', language)}</span>
             </Button>
           </Link>
         </div>

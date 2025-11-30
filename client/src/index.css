@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Tamil:wght@400;600;700&family=Noto+Sans+Telugu:wght@400;600;700&family=Noto+Sans+Kannada:wght@400;600;700&family=Noto+Sans+Bengali:wght@400;600;700&family=Noto+Sans+Marathi:wght@400;600;700&family=Noto+Sans+Gujarati:wght@400;600;700&family=Noto+Sans+Gurmukhi:wght@400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -174,6 +176,49 @@
     @apply font-sans antialiased text-foreground;
     background: linear-gradient(135deg, #0F2027 0%, #203A43 50%, #2C5364 100%);
     min-height: 100vh;
+  }
+
+  /* Indian Script Support */
+  [lang="hi"], [lang="mr"], .lang-hi, .lang-mr {
+    font-family: 'Noto Sans Devanagari', 'Open Sans', sans-serif;
+    line-height: 1.8;
+    letter-spacing: 0.3px;
+  }
+
+  [lang="ta"], .lang-ta {
+    font-family: 'Noto Sans Tamil', 'Open Sans', sans-serif;
+    line-height: 1.85;
+    letter-spacing: 0.2px;
+  }
+
+  [lang="te"], .lang-te {
+    font-family: 'Noto Sans Telugu', 'Open Sans', sans-serif;
+    line-height: 1.85;
+    letter-spacing: 0.2px;
+  }
+
+  [lang="kn"], .lang-kn {
+    font-family: 'Noto Sans Kannada', 'Open Sans', sans-serif;
+    line-height: 1.85;
+    letter-spacing: 0.2px;
+  }
+
+  [lang="bn"], .lang-bn {
+    font-family: 'Noto Sans Bengali', 'Open Sans', sans-serif;
+    line-height: 1.85;
+    letter-spacing: 0.2px;
+  }
+
+  [lang="gu"], .lang-gu {
+    font-family: 'Noto Sans Gujarati', 'Open Sans', sans-serif;
+    line-height: 1.85;
+    letter-spacing: 0.2px;
+  }
+
+  [lang="pa"], .lang-pa {
+    font-family: 'Noto Sans Gurmukhi', 'Open Sans', sans-serif;
+    line-height: 1.85;
+    letter-spacing: 0.2px;
   }
 }
 
