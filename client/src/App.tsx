@@ -30,10 +30,10 @@ function Router() {
       <Route path="/kanchey-king" component={KancheyKing} />
       <Route path="/modes" component={ModeSelection} />
       <Route path="/game-modes" component={GameModes} />
-      <Route path="/game/:mode" component={GamePlay} />
       <Route path="/game/friend" component={ChallengeFriend} />
       <Route path="/game/friend-join" component={ChallengeFriend} />
       <Route path="/game/random" component={ChallengeRandom} />
+      <Route path="/game/:mode" component={GamePlay} />
       <Route path="/multiplayer-game/:roomCode" component={MultiplayerGame} />
       <Route path="/feedback" component={Feedback} />
       <Route path="/support" component={Support} />
