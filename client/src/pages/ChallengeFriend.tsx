@@ -7,36 +7,27 @@ import { useLocation } from "wouter";
 
 export default function ChallengeFriend() {
   const [location, setLocation] = useLocation();
-  const [gameMode] = useState<"friend" | "join">(location.includes("join") ? "join" : "friend");
   const [roomCode, setRoomCode] = useState<string>("");
   const [copiedCode, setCopiedCode] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [joinCode, setJoinCode] = useState("");
-  const [gameStarted, setGameStarted] = useState(false);
-  const [opponentWaiting, setOpponentWaiting] = useState(false);
+  const [showRoomCode, setShowRoomCode] = useState(false);
 
-  const handleCreateRoom = async () => {
+  const handleCreateRoom = () => {
+    console.log("Create room clicked");
     setIsCreating(true);
-    try {
-      // Simulate room creation
-      const code = `ROOM${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      setRoomCode(code);
-      setOpponentWaiting(true);
-    } catch (error) {
-      console.error("Failed to create room:", error);
-    } finally {
-      setIsCreating(false);
-    }
+    const code = `ROOM${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    console.log("Generated room code:", code);
+    setRoomCode(code);
+    setShowRoomCode(true);
+    setIsCreating(false);
   };
 
   const handleJoinRoom = async () => {
     if (!joinCode.trim()) return;
     setIsJoining(true);
     try {
-      // Simulate room join
-      setRoomCode(joinCode);
-      setGameStarted(true);
       // Redirect to game after 2 seconds
       setTimeout(() => {
         setLocation(`/multiplayer-game/${joinCode}`);
@@ -68,7 +59,7 @@ export default function ChallengeFriend() {
     }
   };
 
-  if (roomCode && opponentWaiting && !gameStarted) {
+  if (showRoomCode && roomCode) {
     return (
       <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black">
         <div className="container max-w-2xl mx-auto px-5">
@@ -82,7 +73,7 @@ export default function ChallengeFriend() {
             <CardContent className="space-y-6">
               <div className="bg-primary/20 rounded-lg p-8 border-2 border-primary/50">
                 <p className="text-sm text-muted-foreground text-center mb-4">Your Room Code</p>
-                <p className="text-6xl font-black text-primary text-center tracking-widest font-mono break-all">
+                <p className="text-6xl font-black text-primary text-center tracking-widest font-mono break-all" data-testid="text-room-code">
                   {roomCode}
                 </p>
               </div>
@@ -90,7 +81,7 @@ export default function ChallengeFriend() {
               <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 text-center">
                 <p className="text-sm text-primary/80 mb-2">Share Link</p>
                 <div className="bg-black/40 rounded p-3 mb-3">
-                  <p className="text-xs text-muted-foreground break-all font-mono">
+                  <p className="text-xs text-muted-foreground break-all font-mono" data-testid="text-share-link">
                     {`${window.location.origin}/game/friend-join?code=${roomCode}`}
                   </p>
                 </div>
@@ -137,7 +128,7 @@ export default function ChallengeFriend() {
                 className="w-full"
                 onClick={() => {
                   setRoomCode("");
-                  setOpponentWaiting(false);
+                  setShowRoomCode(false);
                 }}
                 data-testid="button-cancel-room"
               >
@@ -176,7 +167,7 @@ export default function ChallengeFriend() {
               <Button
                 className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 font-bold py-6"
                 onClick={handleCreateRoom}
-                disabled={isCreating}
+                disabled={isCreating || showRoomCode}
                 data-testid="button-create-room"
               >
                 {isCreating ? (
