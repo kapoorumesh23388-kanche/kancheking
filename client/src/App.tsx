@@ -19,7 +19,7 @@ import Support from "@/pages/Support";
 import LeaderboardPage from "@/pages/LeaderboardPage";
 import Shop from "@/pages/Shop";
 import Admin from "@/pages/Admin";
-import AdminLogin from "@/pages/AdminLogin";
+import AdminLogin from "@/pages/AdminLoginOTP";
 import Tournament from "@/pages/Tournament";
 import Profile from "@/pages/Profile";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";

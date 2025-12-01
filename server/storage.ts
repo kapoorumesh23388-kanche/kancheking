@@ -42,6 +42,10 @@ export interface IStorage {
   createOrUpdateAdmin(adminId: string, password: string): Promise<AdminUser>;
   getAdminByIdAndPassword(adminId: string, password: string): Promise<AdminUser | undefined>;
   updateAdminPassword(adminId: string, oldPassword: string, newPassword: string): Promise<boolean>;
+  updateAdminPhone(adminId: string, phoneNumber: string): Promise<void>;
+  getAdminPhone(adminId: string): Promise<string | undefined>;
+  saveOTP(adminId: string, otp: string): Promise<void>;
+  verifyOTP(adminId: string, otp: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -397,6 +401,38 @@ export class MemStorage implements IStorage {
     if (admin && admin.password === oldPassword) {
       admin.password = newPassword;
       this.adminUsers.set(adminId, admin);
+      return true;
+    }
+    return false;
+  }
+
+  private adminPhones: Map<string, string> = new Map();
+  private otpStore: Map<string, { otp: string; timestamp: number }> = new Map();
+
+  async updateAdminPhone(adminId: string, phoneNumber: string): Promise<void> {
+    this.adminPhones.set(adminId, phoneNumber);
+  }
+
+  async getAdminPhone(adminId: string): Promise<string | undefined> {
+    return this.adminPhones.get(adminId);
+  }
+
+  async saveOTP(adminId: string, otp: string): Promise<void> {
+    this.otpStore.set(adminId, { otp, timestamp: Date.now() });
+  }
+
+  async verifyOTP(adminId: string, otp: string): Promise<boolean> {
+    const stored = this.otpStore.get(adminId);
+    if (!stored) return false;
+
+    const isExpired = Date.now() - stored.timestamp > 5 * 60 * 1000; // 5 min expiry
+    if (isExpired) {
+      this.otpStore.delete(adminId);
+      return false;
+    }
+
+    if (stored.otp === otp) {
+      this.otpStore.delete(adminId);
       return true;
     }
     return false;

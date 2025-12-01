@@ -722,13 +722,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/change-password", async (req, res) => {
     try {
-      const token = req.headers.authorization?.split(" ")[1];
+      const { token, oldPassword, newPassword } = req.body;
+      
       if (!token) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const { oldPassword, newPassword } = req.body;
-      const adminId = "admin"; // Simplified - in production use token verification
+      const adminId = "admin";
 
       if (!oldPassword || !newPassword) {
         return res.status(400).json({ error: "Old and new passwords required" });
@@ -743,6 +743,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Password change error:", error);
       res.status(500).json({ error: "Failed to change password" });
+    }
+  });
+
+  app.post("/api/admin/setup-phone", async (req, res) => {
+    try {
+      const { token, phoneNumber } = req.body;
+      
+      if (!token || !phoneNumber) {
+        return res.status(400).json({ error: "Token and phone number required" });
+      }
+
+      const adminId = "admin";
+      await storage.updateAdminPhone(adminId, phoneNumber);
+      
+      res.json({ success: true, message: "Phone number saved for OTP" });
+    } catch (error) {
+      console.error("Setup phone error:", error);
+      res.status(500).json({ error: "Failed to save phone number" });
+    }
+  });
+
+  app.post("/api/admin/send-otp", async (req, res) => {
+    try {
+      const { adminId, password } = req.body;
+
+      if (!adminId || !password) {
+        return res.status(400).json({ error: "Admin ID and password required" });
+      }
+
+      const admin = await storage.getAdminByIdAndPassword(adminId, password);
+      if (!admin) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      const phoneNumber = await storage.getAdminPhone(adminId);
+      if (!phoneNumber) {
+        return res.status(400).json({ error: "Phone number not configured. Please setup phone number first." });
+      }
+
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      await storage.saveOTP(adminId, otp);
+
+      console.log(`OTP for admin ${adminId}: ${otp}`);
+
+      res.json({ 
+        success: true, 
+        message: "OTP sent to your phone",
+        phoneNumber: phoneNumber.slice(-4),
+      });
+    } catch (error) {
+      console.error("Send OTP error:", error);
+      res.status(500).json({ error: "Failed to send OTP" });
+    }
+  });
+
+  app.post("/api/admin/verify-otp", async (req, res) => {
+    try {
+      const { adminId, otp } = req.body;
+
+      if (!adminId || !otp) {
+        return res.status(400).json({ error: "Admin ID and OTP required" });
+      }
+
+      const isValid = await storage.verifyOTP(adminId, otp);
+      if (!isValid) {
+        return res.status(401).json({ error: "Invalid OTP" });
+      }
+
+      const token = `admin-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      res.json({ success: true, token, adminId });
+    } catch (error) {
+      console.error("Verify OTP error:", error);
+      res.status(500).json({ error: "Failed to verify OTP" });
     }
   });
 

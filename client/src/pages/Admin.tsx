@@ -73,9 +73,11 @@ export default function Admin() {
 
   const changePasswordMutation = useMutation({
     mutationFn: async () => {
+      const token = localStorage.getItem("adminToken");
       const res = await apiRequest("POST", "/api/admin/change-password", {
         oldPassword,
         newPassword,
+        token,
       });
       return res.json();
     },
