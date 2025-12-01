@@ -406,7 +406,7 @@ export class MemStorage implements IStorage {
     return false;
   }
 
-  private adminPhones: Map<string, string> = new Map();
+  private adminPhones: Map<string, string> = new Map([["admin", "9211979518"]]);
   private otpStore: Map<string, { otp: string; timestamp: number }> = new Map();
 
   async updateAdminPhone(adminId: string, phoneNumber: string): Promise<void> {
