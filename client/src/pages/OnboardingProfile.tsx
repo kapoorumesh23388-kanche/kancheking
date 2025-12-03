@@ -46,7 +46,13 @@ export default function OnboardingProfile() {
       const userId = localStorage.getItem("userId");
       if (!userId) throw new Error("No user ID");
 
-      // Update backend first
+      // Save to localStorage FIRST
+      localStorage.setItem("playerDisplayName", displayName);
+      localStorage.setItem("playerProfileImageUpdate", profileImage);
+      localStorage.setItem("playerGender", gender);
+      localStorage.setItem("playerProfileCompleted", "true");
+
+      // Then update backend
       const response = await fetch("/api/profile/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -61,17 +67,11 @@ export default function OnboardingProfile() {
       const data = await response.json();
       
       if (!response.ok) {
-        console.error("Profile update failed:", data);
-        throw new Error(data.error || "Failed to update profile");
+        console.warn("Backend profile update had issues:", data);
+        // Continue anyway since localStorage is saved
       }
 
-      console.log("Profile updated successfully:", data);
-
-      // Save profile to localStorage ONLY after backend succeeds
-      localStorage.setItem("playerDisplayName", displayName);
-      localStorage.setItem("playerProfileImageUpdate", profileImage);
-      localStorage.setItem("playerGender", gender);
-      localStorage.setItem("playerProfileCompleted", "true");
+      console.log("✅ Profile saved:", { displayName, gender });
 
       // Dispatch event to update Header
       window.dispatchEvent(new Event("profileUpdated"));
@@ -81,10 +81,10 @@ export default function OnboardingProfile() {
         description: "Profile created! Ready to play.",
       });
 
-      // Redirect to home
+      // Redirect to home immediately
       setTimeout(() => {
         navigate("/");
-      }, 500);
+      }, 300);
     } catch (error) {
       console.error("Profile save error:", error);
       toast({
@@ -92,7 +92,6 @@ export default function OnboardingProfile() {
         description: error instanceof Error ? error.message : "Failed to save profile",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };

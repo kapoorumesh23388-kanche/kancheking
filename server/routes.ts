@@ -651,9 +651,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User ID required" });
       }
 
-      const user = await storage.getUser(userId);
+      let user = await storage.getUser(userId);
+      
+      // Create user if doesn't exist
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        user = await storage.createUser(
+          { username: userId, password: "guest" },
+          undefined,
+          userId
+        );
       }
 
       const updatedUser = await storage.updateUserProfile(userId, {
@@ -1100,6 +1106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         amount: marblesCount,
         type: 'purchase',
         description: `Purchased ${marblesCount} marbles via Razorpay`,
+        transactionId: null,
       });
 
       res.json({
