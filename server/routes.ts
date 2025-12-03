@@ -990,6 +990,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId || !username) return res.status(400).json({ error: "userId and username required" });
       
       await storage.addToMatchQueue(userId, username, marbles || 0);
+      console.log(`[MATCH QUEUE] Added ${username} (${userId}) with ${marbles} marbles`);
       res.json({ success: true });
     } catch (error) {
       console.error("Add to queue error:", error);
@@ -1012,6 +1013,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           marbles: p.marbles,
         }));
 
+      console.log(`[MATCH QUEUE LIST] Total players: ${allUsers.length}, Available for ${userId}: ${players.length}`);
       res.json({ success: true, players });
     } catch (error) {
       console.error("List queue error:", error);

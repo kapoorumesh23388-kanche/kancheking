@@ -36,6 +36,7 @@ export default function ChallengeRandom() {
         const res = await apiRequest("POST", "/api/match-queue/list", { userId });
         const data = await res.json();
         if (isMounted && data.players) {
+          console.log(`[CHALLENGE RANDOM] Fetched ${data.players.length} available players`);
           setPlayers(data.players.filter((p: LivePlayer) => p.id !== userId));
         }
         setIsLoading(false);
