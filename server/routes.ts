@@ -822,6 +822,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Game room endpoints for multiplayer
+  app.post("/api/game-room/create", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ error: "userId required" });
+      
+      const room = await storage.createGameRoom(userId, "friend");
+      const user = await storage.getUser(userId);
+      
+      res.json({
+        success: true,
+        roomCode: room.roomCode,
+        player1: { id: userId, marbles: user?.marbles || 0, name: user?.displayName || "You" }
+      });
+    } catch (error) {
+      console.error("Game room creation error:", error);
+      res.status(500).json({ error: "Failed to create room" });
+    }
+  });
+
+  app.post("/api/game-room/join", async (req, res) => {
+    try {
+      const { roomCode, userId } = req.body;
+      if (!roomCode || !userId) return res.status(400).json({ error: "roomCode and userId required" });
+      
+      const room = await storage.joinGameRoom(roomCode, userId);
+      if (!room) return res.status(400).json({ error: "Room not found or already has 2 players" });
+      
+      const user = await storage.getUser(userId);
+      const player1 = await storage.getUser(room.player1Id || "");
+      
+      res.json({
+        success: true,
+        room,
+        player1: { id: room.player1Id, marbles: player1?.marbles || 0, name: player1?.displayName || "Player 1" },
+        player2: { id: userId, marbles: user?.marbles || 0, name: user?.displayName || "You" }
+      });
+    } catch (error) {
+      console.error("Game room join error:", error);
+      res.status(500).json({ error: "Failed to join room" });
+    }
+  });
+
+  app.post("/api/game-room/find-random", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ error: "userId required" });
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        // Create user if doesn't exist
+        const newUser = await storage.createUser(
+          { username: userId, password: "guest" },
+          undefined,
+          userId
+        );
+        
+        // Try to find match
+        const match = await storage.findMatchingPlayer(userId);
+        if (match) {
+          res.json({
+            success: true,
+            matchFound: true,
+            roomCode: match.roomCode,
+            opponent: {
+              id: match.player.id,
+              marbles: match.player.marbles,
+              name: match.player.displayName || `Player_${Math.floor(Math.random() * 10000)}`
+            }
+          });
+        } else {
+          await storage.addToMatchQueue(userId, newUser.displayName || newUser.username, newUser.marbles || 0);
+          res.json({
+            success: true,
+            matchFound: false,
+            queued: true,
+            message: "Added to match queue. Waiting for opponent..."
+          });
+        }
+      } else {
+        // Try to find existing match
+        const match = await storage.findMatchingPlayer(userId);
+        
+        if (match) {
+          // Match found
+          res.json({
+            success: true,
+            matchFound: true,
+            roomCode: match.roomCode,
+            opponent: {
+              id: match.player.id,
+              marbles: match.player.marbles,
+              name: match.player.displayName || `Player_${Math.floor(Math.random() * 10000)}`
+            }
+          });
+        } else {
+          // Add to queue and wait
+          await storage.addToMatchQueue(userId, user.displayName || user.username, user.marbles || 0);
+          res.json({
+            success: true,
+            matchFound: false,
+            queued: true,
+            message: "Added to match queue. Waiting for opponent..."
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Random match error:", error);
+      res.status(500).json({ error: "Failed to find match" });
+    }
+  });
+
+  app.post("/api/match-queue/remove", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ error: "userId required" });
+      
+      await storage.removeFromMatchQueue(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Remove from queue error:", error);
+      res.status(500).json({ error: "Failed to remove from queue" });
+    }
+  });
+
+  app.get("/api/game-room/:roomCode", async (req, res) => {
+    try {
+      const { roomCode } = req.params;
+      const room = await storage.getGameRoom(roomCode);
+      
+      if (!room) return res.status(404).json({ error: "Room not found" });
+      
+      const player1 = await storage.getUser(room.player1Id || "");
+      const player2 = await storage.getUser(room.player2Id || "");
+      
+      res.json({
+        room,
+        players: {
+          player1: player1 ? { id: player1.id, name: player1.displayName || player1.username, marbles: player1.marbles } : null,
+          player2: player2 ? { id: player2.id, name: player2.displayName || player2.username, marbles: player2.marbles } : null
+        }
+      });
+    } catch (error) {
+      console.error("Get room error:", error);
+      res.status(500).json({ error: "Failed to get room" });
+    }
+  });
+
   // Razorpay marble purchase endpoint (for India)
   app.post("/api/marble-purchase", async (req, res) => {
     try {
@@ -892,8 +1040,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.recordTransaction({
         userId,
         amount: marblesCount,
-        transactionType: 'purchase',
-        timestamp: new Date().toISOString(),
+        type: 'purchase',
+        description: `Purchased ${marblesCount} marbles via Razorpay`,
       });
 
       res.json({

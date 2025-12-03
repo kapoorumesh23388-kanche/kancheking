@@ -3,36 +3,98 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, X } from "lucide-react";
 import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function ChallengeRandom() {
   const [location, setLocation] = useLocation();
+  const { toast } = useToast();
   const [matchFound, setMatchFound] = useState(false);
   const [searchTime, setSearchTime] = useState(0);
   const [opponentName, setOpponentName] = useState("");
   const [opponentMarbles, setOpponentMarbles] = useState(0);
   const [gameStarting, setGameStarting] = useState(false);
+  const [roomCode, setRoomCode] = useState<string>("");
+  const userId = localStorage.getItem("userId") || `player_${Date.now()}`;
 
   useEffect(() => {
-    // Simulate finding a match after 3-8 seconds
-    const matchDelay = Math.random() * 5000 + 3000;
-    const matchTimer = setTimeout(() => {
-      setOpponentName(`Player_${Math.floor(Math.random() * 10000)}`);
-      setOpponentMarbles(Math.floor(Math.random() * 500) + 50);
-      setMatchFound(true);
+    let isMounted = true;
+    let pollInterval: NodeJS.Timeout;
 
-      // Simulate game start after 2 more seconds
-      const gameTimer = setTimeout(() => {
-        setGameStarting(true);
-        setTimeout(() => {
-          setLocation("/multiplayer-game/random");
-        }, 1500);
-      }, 2000);
+    const startMatching = async () => {
+      try {
+        // Try to find a match
+        const res = await apiRequest("POST", "/api/game-room/find-random", { userId });
+        const data = await res.json();
 
-      return () => clearTimeout(gameTimer);
-    }, matchDelay);
+        if (!isMounted) return;
 
-    return () => clearTimeout(matchTimer);
-  }, [setLocation]);
+        if (data.matchFound && data.roomCode) {
+          // Match found immediately
+          setRoomCode(data.roomCode);
+          setOpponentName(data.opponent?.name || "Opponent");
+          setOpponentMarbles(data.opponent?.marbles || 100);
+          setMatchFound(true);
+
+          // Start game after 2 seconds
+          setTimeout(() => {
+            if (isMounted) {
+              setGameStarting(true);
+              setTimeout(() => {
+                if (isMounted) {
+                  setLocation(`/multiplayer-game/${data.roomCode}`);
+                }
+              }, 1500);
+            }
+          }, 2000);
+        } else if (data.queued) {
+          // In queue, start polling for match
+          pollInterval = setInterval(async () => {
+            try {
+              const pollRes = await apiRequest("POST", "/api/game-room/find-random", { userId });
+              const pollData = await pollRes.json();
+
+              if (isMounted && pollData.matchFound && pollData.roomCode) {
+                clearInterval(pollInterval);
+                setRoomCode(pollData.roomCode);
+                setOpponentName(pollData.opponent?.name || "Opponent");
+                setOpponentMarbles(pollData.opponent?.marbles || 100);
+                setMatchFound(true);
+
+                setTimeout(() => {
+                  if (isMounted) {
+                    setGameStarting(true);
+                    setTimeout(() => {
+                      if (isMounted) {
+                        setLocation(`/multiplayer-game/${pollData.roomCode}`);
+                      }
+                    }, 1500);
+                  }
+                }, 2000);
+              }
+            } catch (error) {
+              console.error("Error polling for match:", error);
+            }
+          }, 2000); // Poll every 2 seconds
+        }
+      } catch (error) {
+        if (isMounted) {
+          toast({
+            title: "Error",
+            description: "Failed to start matchmaking",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+
+    startMatching();
+
+    return () => {
+      isMounted = false;
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [setLocation, userId, toast]);
 
   useEffect(() => {
     if (matchFound) return;
@@ -44,7 +106,8 @@ export default function ChallengeRandom() {
     return () => clearInterval(interval);
   }, [matchFound]);
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
+    await apiRequest("POST", "/api/match-queue/remove", { userId });
     setLocation("/modes");
   };
 

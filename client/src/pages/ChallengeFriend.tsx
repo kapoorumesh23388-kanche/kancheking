@@ -4,17 +4,42 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Copy, Check, Share2, Loader2, ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function ChallengeFriend() {
   const [location, setLocation] = useLocation();
+  const { toast } = useToast();
   const [roomCode, setRoomCode] = useState<string>("");
   const [copiedCode, setCopiedCode] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [isJoining, setIsJoining] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const userId = localStorage.getItem("userId") || `player_${Date.now()}`;
 
-  const createRoom = () => {
-    const newCode = `ROOM${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    setRoomCode(newCode);
+  const createRoom = async () => {
+    setIsCreating(true);
+    try {
+      const res = await apiRequest("POST", "/api/game-room/create", { userId });
+      const data = await res.json();
+      if (data.success && data.roomCode) {
+        setRoomCode(data.roomCode);
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to create room",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create room",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const copyCode = async () => {
@@ -40,9 +65,30 @@ export default function ChallengeFriend() {
   const joinRoom = async () => {
     if (!joinCode.trim()) return;
     setIsJoining(true);
-    setTimeout(() => {
-      setLocation(`/multiplayer-game/${joinCode}`);
-    }, 1000);
+    try {
+      const res = await apiRequest("POST", "/api/game-room/join", { 
+        roomCode: joinCode.toUpperCase(), 
+        userId 
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLocation(`/multiplayer-game/${joinCode.toUpperCase()}`);
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to join room",
+          variant: "destructive",
+        });
+        setIsJoining(false);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to join room",
+        variant: "destructive",
+      });
+      setIsJoining(false);
+    }
   };
 
   // Show room code and share options after creating room
@@ -157,9 +203,11 @@ export default function ChallengeFriend() {
               <Button
                 className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 font-bold text-white py-6 text-lg"
                 onClick={createRoom}
+                disabled={isCreating}
                 data-testid="button-create-room"
               >
-                Create Room
+                {isCreating ? <Loader2 className="inline mr-2 animate-spin w-4 h-4" /> : null}
+                {isCreating ? "Creating..." : "Create Room"}
               </Button>
             </CardContent>
           </Card>
