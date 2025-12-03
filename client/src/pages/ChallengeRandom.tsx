@@ -23,7 +23,21 @@ export default function ChallengeRandom() {
   const [selectedPlayer, setSelectedPlayer] = useState<LivePlayer | null>(null);
   const [isChallenging, setIsChallenging] = useState(false);
   const [totalInQueue, setTotalInQueue] = useState(0);
-  const userId = localStorage.getItem("userId") || `player_${Date.now()}`;
+  
+  // Use sessionStorage for unique session ID per tab/window
+  // This ensures each browser tab gets a unique ID even if localStorage is shared
+  const getSessionUserId = () => {
+    let sessionId = sessionStorage.getItem("matchSessionId");
+    if (!sessionId) {
+      const baseId = localStorage.getItem("userId") || `player_${Date.now()}`;
+      // Add a unique suffix for this tab/session
+      sessionId = `${baseId}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      sessionStorage.setItem("matchSessionId", sessionId);
+    }
+    return sessionId;
+  };
+  
+  const userId = getSessionUserId();
   const playerName = localStorage.getItem("playerDisplayName") || `Player_${userId.slice(-6)}`;
   const playerMarbles = parseInt(localStorage.getItem("playerMarbles") || "150");
   const shortId = userId.slice(-8);
