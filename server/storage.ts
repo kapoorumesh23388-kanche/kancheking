@@ -46,6 +46,10 @@ export interface IStorage {
   getAdminPhone(adminId: string): Promise<string | undefined>;
   saveOTP(adminId: string, otp: string): Promise<void>;
   verifyOTP(adminId: string, otp: string): Promise<boolean>;
+
+  updateUserStripeInfo(userId: string, stripeInfo: { stripeCustomerId?: string; stripeSubscriptionId?: string }): Promise<User | undefined>;
+  getProduct(productId: string): Promise<any>;
+  getSubscription(subscriptionId: string): Promise<any>;
 }
 
 export class MemStorage implements IStorage {
@@ -132,6 +136,8 @@ export class MemStorage implements IStorage {
       dateOfBirth: null,
       isAgeVerified: false,
       adContentRating: "family",
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
       createdAt: new Date(),
     };
     this.users.set(id, user);
@@ -436,6 +442,25 @@ export class MemStorage implements IStorage {
       return true;
     }
     return false;
+  }
+
+  async updateUserStripeInfo(userId: string, stripeInfo: { stripeCustomerId?: string; stripeSubscriptionId?: string }): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (user) {
+      if (stripeInfo.stripeCustomerId) user.stripeCustomerId = stripeInfo.stripeCustomerId;
+      if (stripeInfo.stripeSubscriptionId) user.stripeSubscriptionId = stripeInfo.stripeSubscriptionId;
+      this.users.set(userId, user);
+      return user;
+    }
+    return undefined;
+  }
+
+  async getProduct(productId: string): Promise<any> {
+    return { id: productId, name: "Marble Pack" };
+  }
+
+  async getSubscription(subscriptionId: string): Promise<any> {
+    return { id: subscriptionId };
   }
 }
 

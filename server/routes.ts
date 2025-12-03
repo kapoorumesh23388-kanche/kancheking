@@ -819,6 +819,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stripe marble purchase endpoint
+  app.post("/api/marble-purchase", async (req, res) => {
+    try {
+      const { userId, priceId, successUrl, cancelUrl } = req.body;
+      
+      if (!userId || !priceId) {
+        return res.status(400).json({ error: "userId and priceId required" });
+      }
+
+      const { stripeService } = await import('./stripeService');
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripeService.createCustomer(user.username, user.id);
+        await storage.updateUserStripeInfo(user.id, { stripeCustomerId: customer.id });
+        customerId = customer.id;
+      }
+
+      const session = await stripeService.createCheckoutSession(
+        customerId,
+        priceId,
+        successUrl || `${req.protocol}://${req.get('host')}/shop?success=true`,
+        cancelUrl || `${req.protocol}://${req.get('host')}/shop?cancel=true`
+      );
+
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error("Marble purchase error:", error);
+      res.status(500).json({ error: "Failed to create checkout session" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Setup WebSocket server for real-time chat and game messages

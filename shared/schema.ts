@@ -23,6 +23,8 @@ export const users = pgTable("users", {
   dateOfBirth: varchar("date_of_birth"),
   isAgeVerified: boolean("is_age_verified").notNull().default(false),
   adContentRating: varchar("ad_content_rating").default("family"),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
