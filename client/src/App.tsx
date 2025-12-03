@@ -65,9 +65,16 @@ function App() {
     // Initialize userId if not present
     let userId = localStorage.getItem("userId");
     if (!userId) {
+      // Clear ALL localStorage for new user (data isolation)
+      localStorage.clear();
+      
       userId = `player-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       localStorage.setItem("userId", userId);
       localStorage.setItem("playerProfileCompleted", "false");
+      localStorage.setItem("playerMarbles", "150");
+      localStorage.setItem("playerRewardPoints", "0");
+      localStorage.setItem("gamesPlayed", "0");
+      localStorage.setItem("gamesWon", "0");
       
       // Create user in backend
       fetch("/api/user/init", {

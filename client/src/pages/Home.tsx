@@ -11,7 +11,8 @@ export default function Home() {
   const { language, setLanguage } = useLanguage();
   const [playerName, setPlayerName] = useState("");
   const [playerImage, setPlayerImage] = useState<string | null>(null);
-  const [playerMarbles, setPlayerMarbles] = useState(1000);
+  const [playerMarbles, setPlayerMarbles] = useState(150);
+  const [playerRewardPoints, setPlayerRewardPoints] = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const [gamesWon, setGamesWon] = useState(0);
 
@@ -19,13 +20,15 @@ export default function Home() {
     const loadPlayerProfile = () => {
       const name = localStorage.getItem("playerDisplayName") || "";
       const image = localStorage.getItem("playerProfileImageUpdate");
-      const marbles = localStorage.getItem("playerMarbles") || "1000";
+      const marbles = localStorage.getItem("playerMarbles") || "150";
+      const points = localStorage.getItem("playerRewardPoints") || "0";
       const played = localStorage.getItem("gamesPlayed") || "0";
       const won = localStorage.getItem("gamesWon") || "0";
 
       setPlayerName(name);
       setPlayerImage(image);
       setPlayerMarbles(parseInt(marbles));
+      setPlayerRewardPoints(parseInt(points));
       setGamesPlayed(parseInt(played));
       setGamesWon(parseInt(won));
     };
@@ -33,11 +36,13 @@ export default function Home() {
     loadPlayerProfile();
     window.addEventListener("profileUpdated", loadPlayerProfile);
     window.addEventListener("marbleUpdate", loadPlayerProfile);
+    window.addEventListener("rewardPointsUpdate", loadPlayerProfile);
     window.addEventListener("storage", loadPlayerProfile);
 
     return () => {
       window.removeEventListener("profileUpdated", loadPlayerProfile);
       window.removeEventListener("marbleUpdate", loadPlayerProfile);
+      window.removeEventListener("rewardPointsUpdate", loadPlayerProfile);
       window.removeEventListener("storage", loadPlayerProfile);
     };
   }, []);

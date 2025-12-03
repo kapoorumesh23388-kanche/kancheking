@@ -828,6 +828,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tournament entry validation endpoint
+  app.post("/api/tournament/can-enter", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ error: "userId required" });
+      
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+      
+      // Only earned marbles count for tournament entry, not purchased or ad rewards
+      const canEnter = (user.earnedMarbles || 0) >= 2500;
+      
+      res.json({
+        success: true,
+        canEnter,
+        earnedMarbles: user.earnedMarbles || 0,
+        requiredMarbles: 2500,
+      });
+    } catch (error) {
+      console.error("Tournament entry check error:", error);
+      res.status(500).json({ error: "Failed to check tournament eligibility" });
+    }
+  });
+
   // Game room endpoints for multiplayer
   app.post("/api/game-room/create", async (req, res) => {
     try {
