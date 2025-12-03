@@ -76,15 +76,8 @@ export default function OnboardingProfile() {
       // Dispatch event to update Header
       window.dispatchEvent(new Event("profileUpdated"));
 
-      toast({
-        title: "Success!",
-        description: "Profile created! Ready to play.",
-      });
-
-      // Redirect to home immediately
-      setTimeout(() => {
-        navigate("/");
-      }, 300);
+      // Redirect immediately - don't wait
+      navigate("/");
     } catch (error) {
       console.error("Profile save error:", error);
       toast({

@@ -27,15 +27,8 @@ import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import NotFound from "@/pages/not-found";
 
 function Router({ needsOnboarding }: { needsOnboarding: boolean }) {
-  const [location] = useLocation();
-
-  // Always show onboarding on /onboarding
-  if (location === "/onboarding") {
-    return <Route path="/onboarding" component={OnboardingProfile} />;
-  }
-
   // Redirect to onboarding if needed (except for specific pages)
-  if (needsOnboarding && !location.includes("/admin") && !location.includes("/privacy")) {
+  if (needsOnboarding) {
     return <OnboardingProfile />;
   }
 
@@ -92,7 +85,17 @@ function App() {
     
     if (profileCompleted !== "true" && !profileName) {
       setNeedsOnboarding(true);
+    } else {
+      setNeedsOnboarding(false);
     }
+
+    // Listen for profile updates
+    const handleProfileUpdated = () => {
+      setNeedsOnboarding(false);
+    };
+
+    window.addEventListener("profileUpdated", handleProfileUpdated);
+    return () => window.removeEventListener("profileUpdated", handleProfileUpdated);
   }, []);
 
   return (
