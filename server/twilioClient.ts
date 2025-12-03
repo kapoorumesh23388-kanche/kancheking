@@ -7,42 +7,56 @@ let twilioClient: any = null;
 let twilioPhoneNumber: string = '';
 
 async function getTwilioCredentials() {
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY
-    ? 'repl ' + process.env.REPL_IDENTITY
-    : process.env.WEB_REPL_RENEWAL
-      ? 'depl ' + process.env.WEB_REPL_RENEWAL
-      : null;
-
-  if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found');
+  // First check environment variables (user-provided Twilio credentials)
+  if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
+    return {
+      accountSid: process.env.TWILIO_ACCOUNT_SID,
+      authToken: process.env.TWILIO_AUTH_TOKEN,
+      phoneNumber: process.env.TWILIO_PHONE_NUMBER,
+    };
   }
 
-  const connectorName = 'twilio';
-  const url = new URL(`https://${hostname}/api/v2/connection`);
-  url.searchParams.set('include_secrets', 'true');
-  url.searchParams.set('connector_names', connectorName);
+  // Fallback to Replit connector if available
+  try {
+    const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+    const xReplitToken = process.env.REPL_IDENTITY
+      ? 'repl ' + process.env.REPL_IDENTITY
+      : process.env.WEB_REPL_RENEWAL
+        ? 'depl ' + process.env.WEB_REPL_RENEWAL
+        : null;
 
-  const response = await fetch(url.toString(), {
-    headers: {
-      'Accept': 'application/json',
-      'X_REPLIT_TOKEN': xReplitToken
+    if (!xReplitToken || !hostname) {
+      return null;
     }
-  });
 
-  const data = await response.json();
-  const connectionSettings = data.items?.[0];
+    const connectorName = 'twilio';
+    const url = new URL(`https://${hostname}/api/v2/connection`);
+    url.searchParams.set('include_secrets', 'true');
+    url.searchParams.set('connector_names', connectorName);
 
-  if (!connectionSettings) {
-    console.warn('Twilio integration not configured. OTP will still work in development mode.');
+    const response = await fetch(url.toString(), {
+      headers: {
+        'Accept': 'application/json',
+        'X_REPLIT_TOKEN': xReplitToken
+      }
+    });
+
+    const data = await response.json();
+    const connectionSettings = data.items?.[0];
+
+    if (!connectionSettings) {
+      return null;
+    }
+
+    return {
+      accountSid: connectionSettings.settings.account_sid,
+      authToken: connectionSettings.settings.auth_token,
+      phoneNumber: connectionSettings.settings.phone_number,
+    };
+  } catch (error) {
+    console.warn('Twilio connector not available, checking environment variables...');
     return null;
   }
-
-  return {
-    accountSid: connectionSettings.settings.account_sid,
-    authToken: connectionSettings.settings.auth_token,
-    phoneNumber: connectionSettings.settings.phone_number,
-  };
 }
 
 export async function getTwilioClient() {
