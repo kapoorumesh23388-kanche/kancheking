@@ -40,3 +40,10 @@ waitForPort = 5000
 
 [agent]
 integrations = ["javascript_websocket:1.0.0", "javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "stripe:1.0.0"]
+
+[userenv]
+
+[userenv.shared]
+TWILIO_ACCOUNT_SID = "AC25e1cbddd2e9859c785ba907b90ca12a"
+TWILIO_AUTH_TOKEN = "e717540ca64abb29c0c60a51a213bf0f"
+TWILIO_PHONE_NUMBER = "+12566648366"
