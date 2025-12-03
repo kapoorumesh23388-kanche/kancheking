@@ -9,7 +9,7 @@ import { t, LANGUAGES, getMarbleName, type Language } from "@/lib/translations";
 
 export default function Home() {
   const { language, setLanguage } = useLanguage();
-  const [playerName, setPlayerName] = useState("Rajesh Kumar");
+  const [playerName, setPlayerName] = useState("");
   const [playerImage, setPlayerImage] = useState<string | null>(null);
   const [playerMarbles, setPlayerMarbles] = useState(1000);
   const [gamesPlayed, setGamesPlayed] = useState(0);
@@ -17,7 +17,7 @@ export default function Home() {
 
   useEffect(() => {
     const loadPlayerProfile = () => {
-      const name = localStorage.getItem("playerDisplayName") || "Rajesh Kumar";
+      const name = localStorage.getItem("playerDisplayName") || "";
       const image = localStorage.getItem("playerProfileImageUpdate");
       const marbles = localStorage.getItem("playerMarbles") || "1000";
       const played = localStorage.getItem("gamesPlayed") || "0";

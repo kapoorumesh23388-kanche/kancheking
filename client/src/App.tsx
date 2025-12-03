@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { Switch, Route } from "wouter";
+import { useEffect, useState } from "react";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/lib/LanguageContext";
 import GameHeader from "@/components/GameHeader";
 import Home from "@/pages/Home";
+import OnboardingProfile from "@/pages/OnboardingProfile";
 import KancheyKing from "@/pages/KancheyKing";
 import ModeSelection from "@/pages/ModeSelection";
 import GameModes from "@/pages/GameModes";
@@ -25,10 +26,23 @@ import Profile from "@/pages/Profile";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import NotFound from "@/pages/not-found";
 
-function Router() {
+function Router({ needsOnboarding }: { needsOnboarding: boolean }) {
+  const [location] = useLocation();
+
+  // Always show onboarding on /onboarding
+  if (location === "/onboarding") {
+    return <Route path="/onboarding" component={OnboardingProfile} />;
+  }
+
+  // Redirect to onboarding if needed (except for specific pages)
+  if (needsOnboarding && !location.includes("/admin") && !location.includes("/privacy")) {
+    return <OnboardingProfile />;
+  }
+
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/onboarding" component={OnboardingProfile} />
       <Route path="/kanchey-king" component={KancheyKing} />
       <Route path="/modes" component={ModeSelection} />
       <Route path="/game-modes" component={GameModes} />
@@ -52,12 +66,15 @@ function Router() {
 }
 
 function App() {
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+
   useEffect(() => {
     // Initialize userId if not present
     let userId = localStorage.getItem("userId");
     if (!userId) {
       userId = `player-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       localStorage.setItem("userId", userId);
+      localStorage.setItem("playerProfileCompleted", "false");
       
       // Create user in backend
       fetch("/api/user/init", {
@@ -68,15 +85,23 @@ function App() {
         // Silently fail if backend not ready
       });
     }
+
+    // Check if player profile is completed
+    const profileCompleted = localStorage.getItem("playerProfileCompleted");
+    const profileName = localStorage.getItem("playerDisplayName");
+    
+    if (profileCompleted !== "true" && !profileName) {
+      setNeedsOnboarding(true);
+    }
   }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
         <TooltipProvider>
-          <GameHeader />
+          {!needsOnboarding && <GameHeader />}
           <Toaster />
-          <Router />
+          <Router needsOnboarding={needsOnboarding} />
         </TooltipProvider>
       </LanguageProvider>
     </QueryClientProvider>
