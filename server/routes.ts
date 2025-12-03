@@ -785,7 +785,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       await storage.saveOTP(adminId, otp);
 
-      console.log(`OTP for admin ${adminId}: ${otp}`);
+      const { sendOTPSMS } = await import('./twilioClient');
+      await sendOTPSMS(phoneNumber, otp);
 
       res.json({ 
         success: true, 
