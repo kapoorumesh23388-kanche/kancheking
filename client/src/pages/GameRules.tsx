@@ -28,7 +28,7 @@ export default function GameRules() {
             <ol className="space-y-4 text-gray-200">
               <li className="flex gap-3">
                 <span className="text-primary font-bold">1.</span>
-                <span><strong>Hide Marbles:</strong> The "hider" puts 1-10 marbles in their closed fist</span>
+                <span><strong>Hide Marbles:</strong> The "hider" puts 1-20 marbles in their closed fist</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">2.</span>
@@ -218,7 +218,7 @@ export default function GameRules() {
             <ul className="space-y-3 text-gray-200">
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
-                <span><strong>Marble Range:</strong> Must hide between 1-10 marbles (no more, no less)</span>
+                <span><strong>Marble Range:</strong> Must hide between 1-20 marbles (no more, no less)</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary">•</span>

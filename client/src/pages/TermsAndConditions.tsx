@@ -21,7 +21,7 @@ export default function TermsAndConditions() {
             <ul className="space-y-3 text-gray-200">
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
-                <span>Each game requires players to hide marbles (1-10) in their fist</span>
+                <span>Each game requires players to hide marbles (1-20) in their fist</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
