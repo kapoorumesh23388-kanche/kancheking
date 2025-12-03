@@ -22,9 +22,11 @@ export default function ChallengeRandom() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPlayer, setSelectedPlayer] = useState<LivePlayer | null>(null);
   const [isChallenging, setIsChallenging] = useState(false);
+  const [totalInQueue, setTotalInQueue] = useState(0);
   const userId = localStorage.getItem("userId") || `player_${Date.now()}`;
   const playerName = localStorage.getItem("playerDisplayName") || `Player_${userId.slice(-6)}`;
   const playerMarbles = parseInt(localStorage.getItem("playerMarbles") || "150");
+  const shortId = userId.slice(-8);
 
   // Fetch live players
   useEffect(() => {
@@ -33,11 +35,20 @@ export default function ChallengeRandom() {
 
     const fetchPlayers = async () => {
       try {
+        // Get list of other players
         const res = await apiRequest("POST", "/api/match-queue/list", { userId });
         const data = await res.json();
-        if (isMounted && data.players) {
-          console.log(`[CHALLENGE RANDOM] Fetched ${data.players.length} available players`);
-          setPlayers(data.players.filter((p: LivePlayer) => p.id !== userId));
+        
+        // Also get total queue count for debugging
+        const debugRes = await fetch("/api/match-queue/debug");
+        const debugData = await debugRes.json();
+        
+        if (isMounted) {
+          if (data.players) {
+            console.log(`[CHALLENGE RANDOM] My ID: ${shortId}, Total in queue: ${debugData.totalPlayers}, Available for me: ${data.players.length}`);
+            setPlayers(data.players.filter((p: LivePlayer) => p.id !== userId));
+          }
+          setTotalInQueue(debugData.totalPlayers || 0);
         }
         setIsLoading(false);
       } catch (error) {
@@ -54,7 +65,7 @@ export default function ChallengeRandom() {
       isMounted = false;
       clearInterval(refreshInterval);
     };
-  }, [userId]);
+  }, [userId, shortId]);
 
   // Add player to queue on mount
   useEffect(() => {
@@ -149,6 +160,13 @@ export default function ChallengeRandom() {
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-bold text-primary">Live Players</CardTitle>
             <p className="text-muted-foreground mt-2">Tap any player to challenge them</p>
+            <div className="mt-3 p-2 bg-primary/10 rounded-lg">
+              <p className="text-xs text-muted-foreground">
+                Your ID: <span className="text-primary font-mono">{shortId}</span> | 
+                Total in Queue: <span className="text-green-400 font-bold">{totalInQueue}</span> | 
+                Available for you: <span className="text-yellow-400 font-bold">{players.length}</span>
+              </p>
+            </div>
           </CardHeader>
         </Card>
 

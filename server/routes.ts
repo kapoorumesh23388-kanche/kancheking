@@ -1050,10 +1050,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) return res.status(400).json({ error: "userId required" });
       
       await storage.removeFromMatchQueue(userId);
+      console.log(`[MATCH QUEUE] Removed ${userId}`);
       res.json({ success: true });
     } catch (error) {
       console.error("Remove from queue error:", error);
       res.status(500).json({ error: "Failed to remove from queue" });
+    }
+  });
+
+  // Debug endpoint to check current queue state
+  app.get("/api/match-queue/debug", async (_req, res) => {
+    try {
+      const allUsers = await storage.getUsersInMatchQueue();
+      console.log(`[MATCH QUEUE DEBUG] Current queue:`, allUsers);
+      res.json({ 
+        success: true, 
+        totalPlayers: allUsers.length,
+        players: allUsers 
+      });
+    } catch (error) {
+      console.error("Debug queue error:", error);
+      res.status(500).json({ error: "Failed to get queue debug info" });
     }
   });
 
