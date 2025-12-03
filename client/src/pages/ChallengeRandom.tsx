@@ -27,15 +27,19 @@ export default function ChallengeRandom() {
   // Generate a unique match session ID for this page load
   // Each time you visit Challenge Random, you get a fresh ID
   const [matchSessionId] = useState(() => {
-    const baseId = localStorage.getItem("userId") || `player_${Date.now()}`;
-    const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    return `${baseId}_${uniqueSuffix}`;
+    // Generate a completely random ID - no dependency on localStorage
+    const randomPart = Math.random().toString(36).slice(2, 10);
+    const timePart = Date.now().toString(36).slice(-4);
+    return `device_${randomPart}_${timePart}`;
   });
   
   const userId = matchSessionId;
   const playerName = localStorage.getItem("playerDisplayName") || `Player_${userId.slice(-6)}`;
   const playerMarbles = parseInt(localStorage.getItem("playerMarbles") || "150");
   const shortId = userId.slice(-8);
+  
+  // Get the current page URL to share with other device
+  const currentUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   // Fetch live players
   useEffect(() => {
@@ -165,17 +169,39 @@ export default function ChallengeRandom() {
   return (
     <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black">
       <div className="container max-w-2xl mx-auto px-5">
+        {/* BIG DEBUG PANEL - Shows device ID and URL for testing */}
+        <Card className="bg-gradient-to-b from-green-900/50 to-green-950/50 border-2 border-green-500/60 mb-4">
+          <CardContent className="p-4 space-y-3">
+            <div className="text-center">
+              <p className="text-green-400 text-sm font-bold mb-2">DEVICE CONNECTION INFO</p>
+              <div className="bg-black/50 rounded-lg p-3 mb-2">
+                <p className="text-xs text-muted-foreground mb-1">This Device ID:</p>
+                <p className="text-xl font-bold text-green-400 font-mono">{shortId}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="bg-black/30 rounded p-2">
+                  <p className="text-xs text-muted-foreground">Total in Queue</p>
+                  <p className="text-2xl font-bold text-yellow-400">{totalInQueue}</p>
+                </div>
+                <div className="bg-black/30 rounded p-2">
+                  <p className="text-xs text-muted-foreground">Can Challenge</p>
+                  <p className="text-2xl font-bold text-primary">{players.length}</p>
+                </div>
+              </div>
+            </div>
+            {currentUrl && (
+              <div className="bg-black/50 rounded-lg p-2 text-center">
+                <p className="text-xs text-muted-foreground mb-1">Open this URL on other device:</p>
+                <p className="text-xs font-mono text-blue-400 break-all select-all">{currentUrl}/challenge-random</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40 mb-6">
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-bold text-primary">Live Players</CardTitle>
             <p className="text-muted-foreground mt-2">Tap any player to challenge them</p>
-            <div className="mt-3 p-2 bg-primary/10 rounded-lg">
-              <p className="text-xs text-muted-foreground">
-                Your ID: <span className="text-primary font-mono">{shortId}</span> | 
-                Total in Queue: <span className="text-green-400 font-bold">{totalInQueue}</span> | 
-                Available for you: <span className="text-yellow-400 font-bold">{players.length}</span>
-              </p>
-            </div>
           </CardHeader>
         </Card>
 
