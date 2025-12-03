@@ -113,9 +113,6 @@ export default function Home() {
               <p>&copy; 2025 {t('appTitle', language)}. All rights reserved.</p>
             </div>
             <div className="flex gap-4 flex-wrap">
-              <Link href="/rules" className="text-primary hover:text-primary/80 transition-colors" data-testid="link-game-rules">
-                Game Rules
-              </Link>
               <Link href="/terms" className="text-primary hover:text-primary/80 transition-colors" data-testid="link-terms">
                 Terms & Conditions
               </Link>
