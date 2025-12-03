@@ -777,9 +777,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
-      const phoneNumber = await storage.getAdminPhone(adminId);
+      let phoneNumber = await storage.getAdminPhone(adminId);
       if (!phoneNumber) {
-        return res.status(400).json({ error: "Phone number not configured. Please setup phone number first." });
+        // Default to admin phone
+        phoneNumber = "9211979518";
+        await storage.updateAdminPhone(adminId, phoneNumber);
       }
 
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -820,40 +822,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Stripe marble purchase endpoint
+  // Razorpay marble purchase endpoint (for India)
   app.post("/api/marble-purchase", async (req, res) => {
     try {
-      const { userId, priceId, successUrl, cancelUrl } = req.body;
+      const { userId, marblesCount, amount } = req.body;
       
-      if (!userId || !priceId) {
-        return res.status(400).json({ error: "userId and priceId required" });
+      if (!userId || !marblesCount || !amount) {
+        return res.status(400).json({ error: "userId, marblesCount, and amount required" });
       }
 
-      const { stripeService } = await import('./stripeService');
-      const user = await storage.getUser(userId);
+      const { createRazorpayOrder } = await import('./razorpayClient');
       
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
+      // amount is in rupees, convert to paise
+      const amountInPaise = amount * 100;
+      const order = await createRazorpayOrder(amountInPaise, userId, marblesCount);
+
+      const { getRazorpayCredentials } = await import('./razorpayClient');
+      const credentials = await getRazorpayCredentials();
+      
+      if (!credentials) {
+        return res.status(500).json({ error: "Razorpay not configured" });
       }
 
-      let customerId = user.stripeCustomerId;
-      if (!customerId) {
-        const customer = await stripeService.createCustomer(user.username, user.id);
-        await storage.updateUserStripeInfo(user.id, { stripeCustomerId: customer.id });
-        customerId = customer.id;
-      }
-
-      const session = await stripeService.createCheckoutSession(
-        customerId,
-        priceId,
-        successUrl || `${req.protocol}://${req.get('host')}/shop?success=true`,
-        cancelUrl || `${req.protocol}://${req.get('host')}/shop?cancel=true`
-      );
-
-      res.json({ url: session.url });
+      res.json({
+        success: true,
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        keyId: credentials.keyId,
+      });
     } catch (error) {
-      console.error("Marble purchase error:", error);
-      res.status(500).json({ error: "Failed to create checkout session" });
+      console.error("Razorpay order creation error:", error);
+      res.status(500).json({ error: "Failed to create order" });
+    }
+  });
+
+  // Razorpay payment verification endpoint
+  app.post("/api/marble-purchase/verify", async (req, res) => {
+    try {
+      const { userId, orderId, paymentId, signature, marblesCount } = req.body;
+      
+      if (!userId || !orderId || !paymentId || !signature || !marblesCount) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const { verifyRazorpayPayment, getRazorpayCredentials } = await import('./razorpayClient');
+      const credentials = await getRazorpayCredentials();
+      
+      if (!credentials) {
+        return res.status(500).json({ error: "Razorpay not configured" });
+      }
+
+      const isValid = await verifyRazorpayPayment(orderId, paymentId, signature, credentials.keySecret);
+      
+      if (!isValid) {
+        return res.status(400).json({ error: "Payment verification failed" });
+      }
+
+      // Add marbles to user
+      const user = await storage.getUser(userId) || { id: userId, marbles: 0, points: 0 };
+      const updatedUser = {
+        ...user,
+        marbles: (user.marbles || 0) + marblesCount,
+      };
+      
+      await storage.updateUser(userId, updatedUser);
+
+      // Record transaction
+      await storage.addMarbleTransaction({
+        userId,
+        amount: marblesCount,
+        transactionType: 'purchase',
+        timestamp: new Date().toISOString(),
+      });
+
+      res.json({
+        success: true,
+        message: "Payment verified and marbles added",
+        marbles: updatedUser.marbles,
+      });
+    } catch (error) {
+      console.error("Payment verification error:", error);
+      res.status(500).json({ error: "Payment verification failed" });
     }
   });
 

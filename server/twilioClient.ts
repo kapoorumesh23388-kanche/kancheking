@@ -87,14 +87,27 @@ export async function sendOTPSMS(phoneNumber: string, otp: string): Promise<bool
     }
 
     const { client, phoneNumber: fromNumber } = twilioCredentials;
+    
+    // Format phone number for India if not already formatted
+    let toPhoneNumber = phoneNumber;
+    if (!phoneNumber.startsWith('+')) {
+      // Add +91 for India if it's a 10-digit number
+      if (phoneNumber.length === 10) {
+        toPhoneNumber = '+91' + phoneNumber;
+      } else if (phoneNumber.length === 12 && phoneNumber.startsWith('91')) {
+        toPhoneNumber = '+' + phoneNumber;
+      }
+    }
+
+    console.log(`Sending SMS to: ${toPhoneNumber} from: ${fromNumber}`);
 
     await client.messages.create({
       body: `Your Kanche King Admin OTP is: ${otp}. Valid for 5 minutes.`,
       from: fromNumber,
-      to: phoneNumber,
+      to: toPhoneNumber,
     });
 
-    console.log(`SMS sent to ${phoneNumber}`);
+    console.log(`SMS sent successfully to ${toPhoneNumber}`);
     return true;
   } catch (error) {
     console.error('Error sending OTP SMS:', error);

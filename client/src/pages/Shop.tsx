@@ -49,12 +49,12 @@ export default function Shop() {
   });
 
   const marblePacks = [
-    { price: 10, marbles: 100, savings: 0, priceId: "price_test_100" },
-    { price: 20, marbles: 250, savings: 0, priceId: "price_test_250" },
-    { price: 30, marbles: 400, savings: 0, priceId: "price_test_400" },
-    { price: 40, marbles: 550, savings: 0, priceId: "price_test_550" },
-    { price: 50, marbles: 700, savings: 0, priceId: "price_test_700" },
-    { price: 100, marbles: 1500, savings: 0, priceId: "price_test_1500" },
+    { price: 10, marbles: 100, savings: 0 },
+    { price: 20, marbles: 250, savings: 0 },
+    { price: 30, marbles: 400, savings: 0 },
+    { price: 40, marbles: 550, savings: 0 },
+    { price: 50, marbles: 700, savings: 0 },
+    { price: 100, marbles: 1500, savings: 0 },
   ];
 
   const copyReferralCode = () => {
@@ -63,7 +63,7 @@ export default function Shop() {
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
-  const handleBuyMarbles = async (priceId: string) => {
+  const handleBuyMarbles = async (pack: typeof marblePacks[0]) => {
     if (!isAgeVerified) {
       setShowAgeDialog(true);
       return;
@@ -73,16 +73,63 @@ export default function Shop() {
     try {
       const res = await apiRequest("POST", "/api/marble-purchase", {
         userId,
-        priceId,
+        marblesCount: pack.marbles,
+        amount: pack.price,
       });
       const data = await res.json();
       
-      if (data.url) {
-        window.location.href = data.url;
+      if (data.orderId && data.keyId) {
+        // Initialize Razorpay checkout
+        const options = {
+          key: data.keyId,
+          amount: data.amount,
+          currency: data.currency,
+          order_id: data.orderId,
+          handler: async (response: any) => {
+            // Verify payment with backend
+            const verifyRes = await apiRequest("POST", "/api/marble-purchase/verify", {
+              userId,
+              orderId: data.orderId,
+              paymentId: response.razorpay_payment_id,
+              signature: response.razorpay_signature,
+              marblesCount: pack.marbles,
+            });
+            const verifyData = await verifyRes.json();
+            
+            if (verifyData.success) {
+              setMarbleCount(verifyData.marbles);
+              localStorage.setItem("playerMarbles", verifyData.marbles.toString());
+              toast({
+                title: "Success!",
+                description: `${pack.marbles} marbles added to your account!`,
+              });
+            } else {
+              toast({
+                title: "Error",
+                description: verifyData.error || "Payment verification failed",
+                variant: "destructive",
+              });
+            }
+          },
+          prefill: {
+            name: localStorage.getItem("playerName") || "Player",
+            contact: "9999999999",
+          },
+        };
+        
+        // Load Razorpay script
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.onload = () => {
+          // @ts-ignore
+          const rzp1 = new window.Razorpay(options);
+          rzp1.open();
+        };
+        document.body.appendChild(script);
       } else {
         toast({
           title: "Error",
-          description: data.error || "Failed to create checkout session",
+          description: data.error || "Failed to create order",
           variant: "destructive",
         });
       }
@@ -221,7 +268,7 @@ export default function Shop() {
                     <p className="text-sm text-green-500 font-semibold mb-4">Save {pack.savings}%</p>
                   )}
                   <Button 
-                    onClick={() => handleBuyMarbles(pack.priceId)}
+                    onClick={() => handleBuyMarbles(pack)}
                     className="w-full"
                     disabled={isLoading}
                     data-testid={`button-buy-${pack.marbles}`}
