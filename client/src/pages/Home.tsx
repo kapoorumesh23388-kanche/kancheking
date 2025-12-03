@@ -48,32 +48,32 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen pt-20 pb-20 flex flex-col">
+    <div className="min-h-screen pt-8 md:pt-20 pb-8 md:pb-20 flex flex-col">
       <FloatingMarbles />
-      <div className="container max-w-6xl mx-auto px-5 flex-1">
-        <div className="text-center mb-8 p-10 backdrop-blur-lg bg-primary/10 rounded-3xl border-2 border-primary/30 shadow-[0_10px_40px_rgba(255,215,0,0.2)]">
+      <div className="container max-w-6xl mx-auto px-3 md:px-5 flex-1">
+        <div className="text-center mb-4 md:mb-8 p-4 md:p-10 backdrop-blur-lg bg-primary/10 rounded-2xl md:rounded-3xl border-2 border-primary/30 shadow-[0_10px_40px_rgba(255,215,0,0.2)]">
           <h1
-            className={`${language !== 'en' ? 'text-7xl leading-tight' : 'text-6xl'} font-bold mb-3 bg-gradient-to-r from-primary via-[#FFA500] to-primary bg-clip-text text-transparent lang-${language}`}
+            className={`${language !== 'en' ? 'text-4xl md:text-7xl leading-tight' : 'text-3xl md:text-6xl'} font-bold mb-2 md:mb-3 bg-gradient-to-r from-primary via-[#FFA500] to-primary bg-clip-text text-transparent lang-${language}`}
             style={{ textShadow: '0 0 30px #FFD700' }}
             lang={language}
           >
             {t('appTitle', language)}
           </h1>
-          <p className={`${language !== 'en' ? 'text-3xl leading-relaxed' : 'text-2xl'} text-primary/90 mb-8 lang-${language}`} lang={language}>
+          <p className={`${language !== 'en' ? 'text-lg md:text-3xl leading-relaxed' : 'text-sm md:text-2xl'} text-primary/90 mb-3 md:mb-8 lang-${language}`} lang={language}>
             {t('appSubtitle', language)}
           </p>
           
-          <div className="mb-6 flex justify-center" data-testid="language-selector">
+          <div className="mb-3 md:mb-6 flex justify-center" data-testid="language-selector">
             <Select value={language} onValueChange={(value) => setLanguage(value as Language)}>
-              <SelectTrigger className={`w-96 bg-primary/20 border-2 border-primary/40 text-primary font-semibold px-4 py-3 h-auto ${language !== 'en' ? 'text-lg' : 'text-base'} lang-${language}`} lang={language}>
+              <SelectTrigger className={`w-full md:w-96 bg-primary/20 border-2 border-primary/40 text-primary font-semibold px-2 md:px-4 py-2 md:py-3 h-auto text-xs md:text-base ${language !== 'en' ? 'text-sm md:text-lg' : ''} lang-${language}`} lang={language}>
                 <SelectValue placeholder={t('selectLanguage', language)} />
               </SelectTrigger>
-              <SelectContent className={`bg-black border-2 border-primary/40 w-96 min-w-max lang-${language}`} lang={language}>
+              <SelectContent className={`bg-black border-2 border-primary/40 min-w-full md:w-96 lang-${language}`} lang={language}>
                 {(Object.entries(LANGUAGES) as Array<[Language, { nativeName: string; marblesName: string }]>).map(([code, { nativeName, marblesName }]) => (
-                  <SelectItem key={code} value={code} className={`text-primary hover:bg-primary/20 font-semibold py-4 px-3 whitespace-normal ${code !== 'en' ? 'text-base' : 'text-sm'} lang-${code}`} lang={code}>
-                    <div className="flex flex-col gap-2">
-                      <span className={`block font-bold ${code !== 'en' ? 'text-2xl leading-relaxed' : 'text-xl'}`}>{nativeName}</span>
-                      <span className={`block text-primary/70 ${code !== 'en' ? 'text-lg' : 'text-sm'}`}>{marblesName}</span>
+                  <SelectItem key={code} value={code} className={`text-primary hover:bg-primary/20 font-semibold py-2 md:py-4 px-2 md:px-3 whitespace-normal ${code !== 'en' ? 'text-xs md:text-base' : 'text-xs md:text-sm'} lang-${code}`} lang={code}>
+                    <div className="flex flex-col gap-1 md:gap-2">
+                      <span className={`block font-bold ${code !== 'en' ? 'text-sm md:text-2xl leading-relaxed' : 'text-sm md:text-xl'}`}>{nativeName}</span>
+                      <span className={`block text-primary/70 text-xs md:text-sm ${code !== 'en' ? 'md:text-lg' : ''}`}>{marblesName}</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -82,7 +82,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="mb-10">
+        <div className="mb-4 md:mb-10">
           <PlayerProfile
             name={playerName}
             avatar={playerImage || undefined}
@@ -95,11 +95,11 @@ export default function Home() {
         <div className="flex justify-center items-center w-full">
           <Link href="/kanchey-king" className="w-full flex justify-center">
             <Button
-              className={`bg-gradient-to-r from-[#FF6B6B] to-[#FF8E53] hover:from-[#FF6B6B]/80 hover:to-[#FF8E53]/80 text-white px-15 py-8 font-bold rounded-full shadow-[0_10px_30px_rgba(255,107,107,0.4)] hover:shadow-[0_15px_40px_rgba(255,107,107,0.6)] hover:-translate-y-1 transition-all uppercase tracking-wider flex items-center justify-center gap-3 h-24 ${language !== 'en' ? 'text-2xl leading-relaxed' : 'text-3xl leading-none'} lang-${language}`}
+              className={`bg-gradient-to-r from-[#FF6B6B] to-[#FF8E53] hover:from-[#FF6B6B]/80 hover:to-[#FF8E53]/80 text-white px-6 md:px-15 py-3 md:py-8 font-bold rounded-full shadow-[0_10px_30px_rgba(255,107,107,0.4)] hover:shadow-[0_15px_40px_rgba(255,107,107,0.6)] hover:-translate-y-1 transition-all uppercase tracking-wider flex items-center justify-center gap-2 md:gap-3 h-12 md:h-24 text-sm md:text-3xl lang-${language}`}
               data-testid="button-start-game"
               lang={language}
             >
-              <span className="text-4xl">🎮</span> <span>{t('startGame', language)}</span>
+              <span className="text-xl md:text-4xl">🎮</span> <span>{t('startGame', language)}</span>
             </Button>
           </Link>
         </div>
