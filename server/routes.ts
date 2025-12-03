@@ -880,16 +880,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Add marbles to user
-      const user = await storage.getUser(userId) || { id: userId, marbles: 0, points: 0 };
-      const updatedUser = {
-        ...user,
-        marbles: (user.marbles || 0) + marblesCount,
-      };
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
       
-      await storage.updateUser(userId, updatedUser);
+      const newMarbleCount = (user.marbles || 0) + marblesCount;
+      await storage.updateUserMarbles(userId, newMarbleCount);
 
       // Record transaction
-      await storage.addMarbleTransaction({
+      await storage.recordTransaction({
         userId,
         amount: marblesCount,
         transactionType: 'purchase',
@@ -899,7 +899,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         message: "Payment verified and marbles added",
-        marbles: updatedUser.marbles,
+        marbles: newMarbleCount,
       });
     } catch (error) {
       console.error("Payment verification error:", error);
