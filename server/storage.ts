@@ -35,6 +35,7 @@ export interface IStorage {
   findMatchingPlayer(userId: string): Promise<{ roomCode: string; player: User } | null>;
   addToMatchQueue(userId: string, username: string, marbles: number): Promise<void>;
   removeFromMatchQueue(userId: string): Promise<void>;
+  getUsersInMatchQueue(): Promise<Array<{ userId: string; username: string; marbles: number }>>;
 
   addFeedbackSubmission(feedback: Omit<FeedbackSubmission, 'id' | 'createdAt'>): Promise<FeedbackSubmission>;
   getFeedbackSubmissions(): Promise<FeedbackSubmission[]>;
@@ -366,6 +367,14 @@ export class MemStorage implements IStorage {
 
   async removeFromMatchQueue(userId: string): Promise<void> {
     this.matchQueue.delete(userId);
+  }
+
+  async getUsersInMatchQueue(): Promise<Array<{ userId: string; username: string; marbles: number }>> {
+    return Array.from(this.matchQueue.values()).map(entry => ({
+      userId: entry.userId,
+      username: entry.username,
+      marbles: entry.marbles,
+    }));
   }
 
   async addFeedbackSubmission(feedback: Omit<FeedbackSubmission, 'id' | 'createdAt'>): Promise<FeedbackSubmission> {

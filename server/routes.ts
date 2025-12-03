@@ -934,6 +934,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/match-queue/add", async (req, res) => {
+    try {
+      const { userId, username, marbles, profileImage, gender } = req.body;
+      if (!userId || !username) return res.status(400).json({ error: "userId and username required" });
+      
+      await storage.addToMatchQueue(userId, username, marbles || 0);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Add to queue error:", error);
+      res.status(500).json({ error: "Failed to add to queue" });
+    }
+  });
+
+  app.post("/api/match-queue/list", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ error: "userId required" });
+
+      // Get all queue entries except current user
+      const allUsers = await storage.getUsersInMatchQueue();
+      const players = allUsers
+        .filter(p => p.userId !== userId)
+        .map(p => ({
+          id: p.userId,
+          name: p.username,
+          marbles: p.marbles,
+        }));
+
+      res.json({ success: true, players });
+    } catch (error) {
+      console.error("List queue error:", error);
+      res.status(500).json({ error: "Failed to list queue" });
+    }
+  });
+
+  app.post("/api/game-room/challenge", async (req, res) => {
+    try {
+      const { player1Id, player2Id } = req.body;
+      if (!player1Id || !player2Id) return res.status(400).json({ error: "Both player IDs required" });
+
+      const room = await storage.createGameRoom(player1Id, "random");
+      await storage.joinGameRoom(room.roomCode, player2Id);
+
+      // Remove both players from queue
+      await storage.removeFromMatchQueue(player1Id);
+      await storage.removeFromMatchQueue(player2Id);
+
+      res.json({
+        success: true,
+        roomCode: room.roomCode,
+        message: "Game room created and players matched",
+      });
+    } catch (error) {
+      console.error("Challenge error:", error);
+      res.status(500).json({ error: "Failed to create challenge" });
+    }
+  });
+
   app.post("/api/match-queue/remove", async (req, res) => {
     try {
       const { userId } = req.body;

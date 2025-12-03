@@ -1,157 +1,139 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, X } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Loader2, X, Swords } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
-export default function ChallengeRandom() {
-  const [location, setLocation] = useLocation();
-  const { toast } = useToast();
-  const [matchFound, setMatchFound] = useState(false);
-  const [searchTime, setSearchTime] = useState(0);
-  const [opponentName, setOpponentName] = useState("");
-  const [opponentMarbles, setOpponentMarbles] = useState(0);
-  const [gameStarting, setGameStarting] = useState(false);
-  const [roomCode, setRoomCode] = useState<string>("");
-  const userId = localStorage.getItem("userId") || `player_${Date.now()}`;
+interface LivePlayer {
+  id: string;
+  name: string;
+  marbles: number;
+  profileImage?: string;
+  gender?: string;
+}
 
+export default function ChallengeRandom() {
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const [players, setPlayers] = useState<LivePlayer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedPlayer, setSelectedPlayer] = useState<LivePlayer | null>(null);
+  const [isChallenging, setIsChallenging] = useState(false);
+  const userId = localStorage.getItem("userId") || `player_${Date.now()}`;
+  const playerName = localStorage.getItem("playerDisplayName") || `Player_${userId.slice(-6)}`;
+  const playerMarbles = parseInt(localStorage.getItem("playerMarbles") || "150");
+
+  // Fetch live players
   useEffect(() => {
     let isMounted = true;
-    let pollInterval: NodeJS.Timeout;
+    let refreshInterval: NodeJS.Timeout;
 
-    const startMatching = async () => {
+    const fetchPlayers = async () => {
       try {
-        // Try to find a match
-        const res = await apiRequest("POST", "/api/game-room/find-random", { userId });
+        const res = await apiRequest("POST", "/api/match-queue/list", { userId });
         const data = await res.json();
-
-        if (!isMounted) return;
-
-        if (data.matchFound && data.roomCode) {
-          // Match found immediately
-          setRoomCode(data.roomCode);
-          setOpponentName(data.opponent?.name || "Opponent");
-          setOpponentMarbles(data.opponent?.marbles || 100);
-          setMatchFound(true);
-
-          // Start game after 2 seconds
-          setTimeout(() => {
-            if (isMounted) {
-              setGameStarting(true);
-              setTimeout(() => {
-                if (isMounted) {
-                  setLocation(`/multiplayer-game/${data.roomCode}`);
-                }
-              }, 1500);
-            }
-          }, 2000);
-        } else if (data.queued) {
-          // In queue, start polling for match
-          pollInterval = setInterval(async () => {
-            try {
-              const pollRes = await apiRequest("POST", "/api/game-room/find-random", { userId });
-              const pollData = await pollRes.json();
-
-              if (isMounted && pollData.matchFound && pollData.roomCode) {
-                clearInterval(pollInterval);
-                setRoomCode(pollData.roomCode);
-                setOpponentName(pollData.opponent?.name || "Opponent");
-                setOpponentMarbles(pollData.opponent?.marbles || 100);
-                setMatchFound(true);
-
-                setTimeout(() => {
-                  if (isMounted) {
-                    setGameStarting(true);
-                    setTimeout(() => {
-                      if (isMounted) {
-                        setLocation(`/multiplayer-game/${pollData.roomCode}`);
-                      }
-                    }, 1500);
-                  }
-                }, 2000);
-              }
-            } catch (error) {
-              console.error("Error polling for match:", error);
-            }
-          }, 2000); // Poll every 2 seconds
+        if (isMounted && data.players) {
+          setPlayers(data.players.filter((p: LivePlayer) => p.id !== userId));
         }
+        setIsLoading(false);
       } catch (error) {
-        if (isMounted) {
-          toast({
-            title: "Error",
-            description: "Failed to start matchmaking",
-            variant: "destructive",
-          });
-        }
+        console.error("Error fetching players:", error);
       }
     };
 
-    startMatching();
+    fetchPlayers();
+    
+    // Refresh every 2 seconds
+    refreshInterval = setInterval(fetchPlayers, 2000);
 
     return () => {
       isMounted = false;
-      if (pollInterval) clearInterval(pollInterval);
+      clearInterval(refreshInterval);
     };
-  }, [setLocation, userId, toast]);
+  }, [userId]);
 
+  // Add player to queue on mount
   useEffect(() => {
-    if (matchFound) return;
+    const addToQueue = async () => {
+      try {
+        await apiRequest("POST", "/api/match-queue/add", {
+          userId,
+          username: playerName,
+          marbles: playerMarbles,
+          profileImage: localStorage.getItem("playerProfileImageUpdate"),
+          gender: localStorage.getItem("playerGender"),
+        });
+      } catch (error) {
+        console.error("Error adding to queue:", error);
+      }
+    };
 
-    const interval = setInterval(() => {
-      setSearchTime((t) => t + 1);
-    }, 1000);
+    addToQueue();
 
-    return () => clearInterval(interval);
-  }, [matchFound]);
+    return () => {
+      // Remove from queue on unmount
+      apiRequest("POST", "/api/match-queue/remove", { userId }).catch(() => {});
+    };
+  }, [userId, playerName, playerMarbles]);
 
-  const handleCancel = async () => {
-    await apiRequest("POST", "/api/match-queue/remove", { userId });
-    setLocation("/modes");
+  const challengePlayer = async (opponent: LivePlayer) => {
+    setIsChallenging(true);
+    setSelectedPlayer(opponent);
+
+    try {
+      // Create a game room
+      const roomRes = await apiRequest("POST", "/api/game-room/challenge", {
+        player1Id: userId,
+        player2Id: opponent.id,
+      });
+
+      const roomData = await roomRes.json();
+
+      if (roomData.success && roomData.roomCode) {
+        toast({
+          title: "Challenge Sent!",
+          description: `Connecting to ${opponent.name}...`,
+        });
+
+        // Simulate connection delay, then redirect
+        setTimeout(() => {
+          navigate(`/multiplayer-game/${roomData.roomCode}`);
+        }, 1500);
+      } else {
+        throw new Error(roomData.error || "Failed to create room");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to challenge player",
+        variant: "destructive",
+      });
+      setIsChallenging(false);
+      setSelectedPlayer(null);
+    }
   };
 
-  if (gameStarting) {
-    return (
-      <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-6 animate-bounce">⚔️</div>
-          <h1 className="text-4xl font-bold text-primary mb-4">Game Starting...</h1>
-          <p className="text-muted-foreground">Get ready to play!</p>
-        </div>
-      </div>
-    );
-  }
+  const handleCancel = () => {
+    navigate("/modes");
+  };
 
-  if (matchFound) {
+  if (isChallenging && selectedPlayer) {
     return (
       <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black flex items-center justify-center">
         <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40 max-w-md w-full mx-5">
           <CardContent className="p-8 text-center space-y-6">
-            <div className="animate-pulse">
-              <h2 className="text-3xl font-bold text-primary mb-2">Opponent Found! 🎉</h2>
+            <div className="text-5xl">⚔️</div>
+            <h2 className="text-3xl font-bold text-primary">Challenging</h2>
+            <div className="bg-primary/20 rounded-lg p-4">
+              <p className="text-xl font-bold text-primary">{selectedPlayer.name}</p>
+              <p className="text-yellow-400">{selectedPlayer.marbles} marbles</p>
             </div>
-
-            <div className="bg-primary/20 rounded-lg p-6 space-y-3">
-              <div>
-                <p className="text-sm text-muted-foreground">Opponent</p>
-                <p className="text-2xl font-bold text-primary">{opponentName}</p>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground">Marbles</p>
-                  <p className="text-xl font-bold text-yellow-400">{opponentMarbles}</p>
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground">Status</p>
-                  <p className="text-xl font-bold text-green-400">Ready</p>
-                </div>
-              </div>
-            </div>
-
             <div className="flex items-center justify-center gap-2 text-primary">
               <Loader2 className="w-5 h-5 animate-spin" />
-              <p className="font-bold">Starting game...</p>
+              <p className="font-bold">Connecting...</p>
             </div>
           </CardContent>
         </Card>
@@ -160,48 +142,89 @@ export default function ChallengeRandom() {
   }
 
   return (
-    <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black flex items-center justify-center">
-      <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40 max-w-md w-full mx-5">
-        <CardContent className="p-8 text-center space-y-8">
-          <div>
-            <h1 className="text-4xl font-bold text-primary mb-2" style={{ textShadow: '0 0 30px rgba(255,215,0,0.5)' }}>
-              Finding Opponent
-            </h1>
-            <p className="text-muted-foreground">Wait while we find a match for you...</p>
+    <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black">
+      <div className="container max-w-2xl mx-auto px-5">
+        <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40 mb-6">
+          <CardHeader className="text-center">
+            <CardTitle className="text-3xl font-bold text-primary">Live Players</CardTitle>
+            <p className="text-muted-foreground mt-2">Tap any player to challenge them</p>
+          </CardHeader>
+        </Card>
+
+        {isLoading ? (
+          <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40">
+            <CardContent className="p-8 text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+              <p className="text-muted-foreground">Finding players...</p>
+            </CardContent>
+          </Card>
+        ) : players.length === 0 ? (
+          <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40">
+            <CardContent className="p-8 text-center space-y-4">
+              <p className="text-lg text-muted-foreground">No players available right now</p>
+              <p className="text-sm text-muted-foreground">Try again in a moment...</p>
+              <Button
+                onClick={handleCancel}
+                variant="outline"
+                className="w-full"
+                data-testid="button-cancel"
+              >
+                Go Back
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-3 mb-6">
+            {players.map((player) => (
+              <Card
+                key={player.id}
+                className="bg-gradient-to-r from-primary/20 to-transparent border-2 border-primary/40 hover:border-primary/60 transition cursor-pointer hover-elevate"
+                onClick={() => !isChallenging && challengePlayer(player)}
+                data-testid={`card-player-${player.id}`}
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="w-12 h-12 border-2 border-primary/50">
+                      <AvatarImage src={player.profileImage} />
+                      <AvatarFallback className="bg-primary/20 text-primary">
+                        {player.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-bold text-primary">{player.name}</p>
+                      <p className="text-sm text-yellow-400">{player.marbles} marbles</p>
+                    </div>
+                  </div>
+
+                  <Button
+                    size="icon"
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      challengePlayer(player);
+                    }}
+                    disabled={isChallenging}
+                    data-testid={`button-challenge-${player.id}`}
+                  >
+                    <Swords className="w-4 h-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
           </div>
+        )}
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-center">
-              <div className="relative w-20 h-20">
-                <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
-                <div className="absolute inset-2 bg-gradient-to-r from-primary to-[#FFA500] rounded-full flex items-center justify-center">
-                  <span className="text-3xl">🔍</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-primary/20 rounded-lg p-4">
-              <p className="text-3xl font-black text-primary">{searchTime}s</p>
-              <p className="text-sm text-muted-foreground mt-1">Searching...</p>
-            </div>
-          </div>
-
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <p>✓ Matching by marble count</p>
-            <p>✓ Finding skilled players</p>
-            <p>✓ Balancing teams</p>
-          </div>
-
-          <Button
-            variant="outline"
-            className="w-full flex items-center justify-center gap-2"
-            onClick={handleCancel}
-            data-testid="button-cancel-search"
-          >
-            <X className="w-4 h-4" /> Cancel Search
-          </Button>
-        </CardContent>
-      </Card>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={handleCancel}
+          disabled={isChallenging}
+          data-testid="button-cancel-main"
+        >
+          <X className="w-4 h-4 mr-2" />
+          Cancel
+        </Button>
+      </div>
     </div>
   );
 }
