@@ -108,13 +108,21 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-primary/20 bg-black/40 backdrop-blur-sm mt-10 py-6">
         <div className="container max-w-6xl mx-auto px-5">
-          <div className="flex justify-between items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap justify-between items-center gap-4 text-sm text-muted-foreground">
             <div>
               <p>&copy; 2025 {t('appTitle', language)}. All rights reserved.</p>
             </div>
-            <Link href="/privacy" className="text-primary hover:text-primary/80 transition-colors" data-testid="link-privacy-policy">
-              {t('privacyPolicy', language)}
-            </Link>
+            <div className="flex gap-4 flex-wrap">
+              <Link href="/rules" className="text-primary hover:text-primary/80 transition-colors" data-testid="link-game-rules">
+                Game Rules
+              </Link>
+              <Link href="/terms" className="text-primary hover:text-primary/80 transition-colors" data-testid="link-terms">
+                Terms & Conditions
+              </Link>
+              <Link href="/privacy" className="text-primary hover:text-primary/80 transition-colors" data-testid="link-privacy-policy">
+                {t('privacyPolicy', language)}
+              </Link>
+            </div>
           </div>
         </div>
       </footer>

@@ -220,28 +220,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // STRICT: Tournament entry REQUIRES 2500 EARNED marbles ONLY (from player-vs-player wins)
-      // Does NOT count: purchased marbles, AI wins, or ad rewards
+      // Tournament entry: Requires 2500 marbles from EARNED (player wins) + PURCHASED combined
+      // Does NOT count: AI wins or ad rewards
       const earnedFromPlayers = user.earnedMarbles || 0;
-      if (earnedFromPlayers < 2500) {
+      const purchasedMarbles = user.purchasedMarbles || 0;
+      const validMarblesForTournament = earnedFromPlayers + purchasedMarbles;
+      
+      if (validMarblesForTournament < 2500) {
         return res.status(400).json({ 
-          error: "Insufficient earned marbles. Tournament entry requires 2500 marbles earned from defeating other players only (not purchased, not AI wins, not ads).",
+          error: "Insufficient marbles for tournament entry. You need 2500 marbles from earned (player wins) or purchased marbles (AI wins and ad rewards don't count).",
           earnedMarblesAvailable: earnedFromPlayers,
+          purchasedMarblesAvailable: purchasedMarbles,
+          totalValidMarbles: validMarblesForTournament,
           requiredMarbles: 2500,
-          message: `You need ${2500 - earnedFromPlayers} more marbles from player-vs-player wins`
+          message: `You need ${2500 - validMarblesForTournament} more marbles from player wins or purchases`
         });
       }
 
-      // Deduct from total marbles (but earnedMarbles remains as a record)
+      // Deduct 2500 from total marbles
       const newMarbles = user.marbles - 2500;
-      
       await storage.updateUserMarbles(userId, newMarbles);
 
       await storage.recordTransaction({
         userId,
         amount: -2500,
         type: "tournament_entry",
-        description: "Tournament entry fee (2500 PURCHASED marbles only)",
+        description: "Tournament entry fee (2500 marbles from earned/purchased)",
         transactionId: null,
       });
 
@@ -254,8 +258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         success: true, 
         marbles: newMarbles,
-        purchasedMarbles: newPurchasedMarbles,
-        message: "Tournament entry confirmed. Entry fee (2500 purchased marbles) deducted."
+        message: "Tournament entry confirmed. 2500 marbles deducted (from earned/purchased)."
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to join tournament" });
@@ -836,7 +839,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Tournament entry validation endpoint
-  // STRICT: Only player-vs-player earned marbles count (NOT AI, NOT purchased, NOT ads)
+  // Tournament allows: EARNED (player wins) + PURCHASED marbles (NOT AI wins or ads)
   app.post("/api/tournament/can-enter", async (req, res) => {
     try {
       const { userId } = req.body;
@@ -845,22 +848,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ error: "User not found" });
       
-      // Tournament entry REQUIRES 2500 earned marbles (ONLY from player-vs-player wins)
-      // Does NOT count: AI wins, purchased marbles, or ad rewards
       const earnedFromPlayers = user.earnedMarbles || 0;
-      const canEnter = earnedFromPlayers >= 2500;
+      const purchasedMarbles = user.purchasedMarbles || 0;
+      const validMarblesForTournament = earnedFromPlayers + purchasedMarbles;
+      const canEnter = validMarblesForTournament >= 2500;
       
       res.json({
         success: true,
         canEnter,
         message: canEnter 
           ? "You can enter the tournament!" 
-          : `Need ${2500 - earnedFromPlayers} more marbles from player wins`,
+          : `Need ${2500 - validMarblesForTournament} more marbles (from player wins or purchases)`,
         earnedMarblesFromPlayers: earnedFromPlayers,
-        purchasedMarbles: user.purchasedMarbles || 0,
+        purchasedMarbles: purchasedMarbles,
+        totalValidMarbles: validMarblesForTournament,
         aiWins: user.aiWins || 0,
         requiredMarbles: 2500,
-        note: "Only marbles earned from defeating other players count (not AI, not purchased, not ads)",
+        note: "Tournament requires 2500 marbles from earned (player wins) + purchased (AI wins and ad rewards don't count)",
       });
     } catch (error) {
       console.error("Tournament entry check error:", error);
