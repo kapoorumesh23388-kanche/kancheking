@@ -218,11 +218,7 @@ export default function GameRules() {
             <ul className="space-y-3 text-gray-200">
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
-                <span>Cannot hide 0 marbles - minimum is 1</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="text-primary">•</span>
-                <span>Cannot hide more than 10 marbles at once</span>
+                <span><strong>Marble Range:</strong> Must hide between 1-10 marbles (no more, no less)</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
