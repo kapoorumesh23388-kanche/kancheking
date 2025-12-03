@@ -46,13 +46,7 @@ export default function OnboardingProfile() {
       const userId = localStorage.getItem("userId");
       if (!userId) throw new Error("No user ID");
 
-      // Save profile to localStorage
-      localStorage.setItem("playerDisplayName", displayName);
-      localStorage.setItem("playerProfileImageUpdate", profileImage);
-      localStorage.setItem("playerGender", gender);
-      localStorage.setItem("playerProfileCompleted", "true");
-
-      // Update backend
+      // Update backend first
       const response = await fetch("/api/profile/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -64,7 +58,20 @@ export default function OnboardingProfile() {
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to update profile");
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error("Profile update failed:", data);
+        throw new Error(data.error || "Failed to update profile");
+      }
+
+      console.log("Profile updated successfully:", data);
+
+      // Save profile to localStorage ONLY after backend succeeds
+      localStorage.setItem("playerDisplayName", displayName);
+      localStorage.setItem("playerProfileImageUpdate", profileImage);
+      localStorage.setItem("playerGender", gender);
+      localStorage.setItem("playerProfileCompleted", "true");
 
       // Dispatch event to update Header
       window.dispatchEvent(new Event("profileUpdated"));
@@ -77,11 +84,12 @@ export default function OnboardingProfile() {
       // Redirect to home
       setTimeout(() => {
         navigate("/");
-      }, 1000);
+      }, 500);
     } catch (error) {
+      console.error("Profile save error:", error);
       toast({
         title: "Error",
-        description: "Failed to save profile",
+        description: error instanceof Error ? error.message : "Failed to save profile",
         variant: "destructive",
       });
     } finally {

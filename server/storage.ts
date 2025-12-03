@@ -9,7 +9,7 @@ export interface IStorage {
   updateUserMarbles(userId: string, marbles: number): Promise<User | undefined>;
   updateUserPoints(userId: string, points: number): Promise<User | undefined>;
   updateUserStats(userId: string, stats: { gamesWon?: number; gamesPlayed?: number }): Promise<User | undefined>;
-  updateUserProfile(userId: string, profile: { displayName?: string; profileImage?: string }): Promise<User | undefined>;
+  updateUserProfile(userId: string, profile: { displayName?: string; profileImage?: string; gender?: string }): Promise<User | undefined>;
   incrementAiWins(userId: string): Promise<User | undefined>;
   addEarnedMarbles(userId: string, amount: number): Promise<User | undefined>;
   updateEarnedMarbles(userId: string, earnedMarbles: number): Promise<User | undefined>;
