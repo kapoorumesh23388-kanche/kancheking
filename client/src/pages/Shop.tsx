@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Copy, Check, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import AgeVerificationDialog from "@/components/AgeVerificationDialog";
 import type { CatalogItem } from "@shared/schema";
 
 export default function Shop() {
   const { toast } = useToast();
   const [copiedCode, setCopiedCode] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [marbleCount, setMarbleCount] = useState(() => {
     const saved = localStorage.getItem("playerMarbles");
     return saved ? parseInt(saved) : 1000;
@@ -20,6 +22,7 @@ export default function Shop() {
   );
   const [showAgeDialog, setShowAgeDialog] = useState(false);
   const referralCode = "RAJESH123";
+  const userId = localStorage.getItem("userId") || "test-user";
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -41,17 +44,17 @@ export default function Shop() {
     };
   }, [toast]);
 
-  const { data: catalogItems = [], isLoading } = useQuery<CatalogItem[]>({
+  const { data: catalogItems = [], isLoading: isLoadingCatalog } = useQuery<CatalogItem[]>({
     queryKey: ["/api/catalog"],
   });
 
   const marblePacks = [
-    { price: 10, marbles: 100, savings: 0 },
-    { price: 20, marbles: 250, savings: 0 },
-    { price: 30, marbles: 400, savings: 0 },
-    { price: 40, marbles: 550, savings: 0 },
-    { price: 50, marbles: 700, savings: 0 },
-    { price: 100, marbles: 1500, savings: 0 },
+    { price: 10, marbles: 100, savings: 0, priceId: "price_test_100" },
+    { price: 20, marbles: 250, savings: 0, priceId: "price_test_250" },
+    { price: 30, marbles: 400, savings: 0, priceId: "price_test_400" },
+    { price: 40, marbles: 550, savings: 0, priceId: "price_test_550" },
+    { price: 50, marbles: 700, savings: 0, priceId: "price_test_700" },
+    { price: 100, marbles: 1500, savings: 0, priceId: "price_test_1500" },
   ];
 
   const copyReferralCode = () => {
@@ -60,15 +63,38 @@ export default function Shop() {
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
-  const handleBuyMarbles = () => {
+  const handleBuyMarbles = async (priceId: string) => {
     if (!isAgeVerified) {
       setShowAgeDialog(true);
       return;
     }
-    toast({
-      title: "Payment",
-      description: "Payment integration coming soon!",
-    });
+    
+    setIsLoading(true);
+    try {
+      const res = await apiRequest("POST", "/api/marble-purchase", {
+        userId,
+        priceId,
+      });
+      const data = await res.json();
+      
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to create checkout session",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to process payment",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -195,10 +221,12 @@ export default function Shop() {
                     <p className="text-sm text-green-500 font-semibold mb-4">Save {pack.savings}%</p>
                   )}
                   <Button 
-                    onClick={handleBuyMarbles}
+                    onClick={() => handleBuyMarbles(pack.priceId)}
                     className="w-full"
+                    disabled={isLoading}
                     data-testid={`button-buy-${pack.marbles}`}
                   >
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                     {isAgeVerified ? "Buy Now" : "Verify Age to Buy"}
                   </Button>
                 </CardContent>
