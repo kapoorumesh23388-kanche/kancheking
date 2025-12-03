@@ -1,5 +1,8 @@
 import twilio from 'twilio';
 
+// Twilio client for sending SMS OTP messages
+// Gracefully handles missing configuration for development mode
+
 let twilioClient: any = null;
 let twilioPhoneNumber: string = '';
 

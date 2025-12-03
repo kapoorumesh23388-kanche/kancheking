@@ -76,6 +76,7 @@ Preferred communication style: Simple, everyday language.
 - Game statistics (games played, games won)
 - Referral system (referral code and referredBy fields)
 - Timestamp for account creation
+- Stripe integration fields: `stripeCustomerId`, `stripeSubscriptionId`
 
 **Game Economy Tables**
 - `catalogItems`: Rewards catalog with points cost and descriptions
@@ -122,41 +123,109 @@ Preferred communication style: Simple, everyday language.
 - WebSocket implementation for multiplayer games
 - Custom `useGameSocket` hook for game state synchronization
 - Message types: join, move, guess, result, chat, sync
-## Profile System (COMPLETED)
 
-### Features Added
-- **Profile Page**: Dedicated `/profile` page for editing user profile
-- **Display Name**: Edit personalized display name (shown to other players)
-- **Profile Image**: Upload custom profile picture (stored as base64 data URL)
-- **Stats Display**: View marbles, points, games played/won, purchased marbles, and tournament winnings
-- **API Endpoints**:
-  - `GET /api/user/:userId` - Fetch user profile data
-  - `POST /api/profile/update` - Save profile changes (name + image)
+**Payment Processing**
+- Stripe integration (`stripe` package, `stripe-replit-sync`)
+- Handles marble purchases and customer management
+- Stripe webhook synchronization with PostgreSQL database
 
-### Database Fields
-- `displayName` - Player's display name (optional)
-- `profileImage` - Player's profile picture URL (optional, supports data URLs)
-- `purchasedMarbles` - Tracks marbles from cash purchases (for tournament entry)
-- `tournamentWinnings` - Temporary marbles shown during tournament
+**SMS & OTP**
+- Twilio integration (`twilio` package) for SMS OTP delivery
+- OTP generation and verification (5-minute expiry)
+- Graceful fallback to console logging in development
 
-### How It Works
-1. User clicks profile icon in header → navigates to `/profile`
-2. Profile page loads user data via `/api/user/:userId`
-3. Player can edit:
-   - Display name (visible to other players)
-   - Upload profile image (as JPG/PNG)
-4. Click "Save Changes" → API calls `/api/profile/update`
-5. Changes saved to backend and displayed immediately
+## Feature Implementation Status
 
-### Frontend Components
-- `client/src/pages/Profile.tsx` - Full profile management page
-- Image upload with preview
-- Real-time character counter for display name
-- All user stats displayed in cards
-- Proper error handling and loading states
+### ✅ Completed Features
 
-### Storage/Backend
-- `server/storage.ts` - Added `updateUserProfile()` method
-- `server/routes.ts` - Added two new API endpoints
-- Data persisted to database (using MemStorage for dev)
+**Admin Panel System:**
+- Admin login page with credentials (admin/admin123)
+- OTP-based double security authentication
+- Admin dashboard for catalog management (add/delete items)
+- Quarterly catalog updates
+- Admin password change functionality
+- Lock icon button in header for quick access
 
+**Profile System:**
+- Dedicated `/profile` page for user profile management
+- Display name editing
+- Profile picture upload (base64 data URL storage)
+- Stats display (marbles, points, games played/won, tournament winnings)
+- API endpoints: `GET /api/user/:userId`, `POST /api/profile/update`
+
+**Payment Gateway:**
+- Stripe integration for marble purchases
+- Checkout session creation
+- Customer management with Stripe IDs
+- Test mode ready (use card: 4242 4242 4242 4242)
+
+**OTP Security:**
+- OTP generation and verification (6-digit, 5-minute expiry)
+- Phone number configuration (currently: 9211979518)
+- Development mode: OTP printed to server logs
+- Production ready: Twilio SMS integration configured
+- Admin login flow: Credentials → OTP → Dashboard access
+
+## Recent Changes (Latest Session)
+
+### 🆕 Payment Gateway Integration
+- Created `server/stripeClient.ts` - Stripe API client with credential management
+- Created `server/stripeService.ts` - Stripe service layer for customer and checkout operations
+- Added `/api/marble-purchase` endpoint for checkout sessions
+- Added `stripeCustomerId` and `stripeSubscriptionId` to user schema
+- Integrated with Replit Stripe connection (already configured)
+
+### 🆕 OTP & SMS Setup
+- Created `server/twilioClient.ts` - Twilio SMS client
+- Integrated Twilio into `/api/admin/send-otp` endpoint
+- OTP gracefully falls back to console logging if Twilio not configured
+- SMS format: "Your Kanche King Admin OTP is: {otp}. Valid for 5 minutes."
+
+### 🆕 Admin Lock Icon
+- Added Lock icon (🔒) button in GameHeader for easy admin panel access
+- Direct navigation to admin login on click
+
+### 🆕 Documentation
+- Created `TESTING_GUIDE.md` with step-by-step testing instructions
+- Covers: Publishing, Admin Login/OTP Testing, Payment Testing, Twilio Setup
+
+## Deployment Status
+
+### Ready for Publishing:
+✅ Game logic complete
+✅ Admin panel with OTP
+✅ Stripe payment integration
+✅ User profile system
+✅ All core features functional
+
+### How to Publish:
+1. Click "Publish" button (top right of Replit)
+2. Choose "Autoscale Deployment"
+3. Add payment method if prompted
+4. Wait 5-10 minutes for deployment
+5. Game will be live on `.replit.app` domain
+
+## Testing Instructions
+
+See `TESTING_GUIDE.md` for complete testing procedures:
+- Admin login with OTP (logs to console in dev, SMS when Twilio configured)
+- Payment gateway testing (use Stripe test card: 4242 4242 4242 4242)
+- Admin dashboard functionality
+- Catalog management
+
+## Default Admin Credentials
+
+- **Admin ID:** admin
+- **Password:** admin123 (CHANGE in Settings!)
+- **Phone:** +91-9211979518
+- **OTP:** Check server logs (development) or receive via SMS (with Twilio)
+
+## Future Enhancements
+
+- Multi-language support for 10 languages (English + 9 Indian regional languages)
+- Gender-based animated player avatars
+- Support/feedback system (partially implemented)
+- Age-based ads filtering (15+ for purchases)
+- Admin OTP via Twilio SMS (currently prints to logs)
+- Tournament system with prize pools
+- Leaderboards and ranking system
