@@ -6,6 +6,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/lib/LanguageContext";
 import GameHeader from "@/components/GameHeader";
+import ChallengePopup from "@/components/ChallengePopup";
+import { usePresence } from "@/hooks/usePresence";
 import Home from "@/pages/Home";
 import OnboardingProfile from "@/pages/OnboardingProfile";
 import KancheyKing from "@/pages/KancheyKing";
@@ -60,35 +62,51 @@ function Router({ needsOnboarding }: { needsOnboarding: boolean }) {
   );
 }
 
+function AppContent({ needsOnboarding }: { needsOnboarding: boolean }) {
+  const { pendingChallenge, respondToChallenge } = usePresence();
+  
+  return (
+    <>
+      {!needsOnboarding && <GameHeader />}
+      <Toaster />
+      <Router needsOnboarding={needsOnboarding} />
+      <ChallengePopup
+        challenge={pendingChallenge}
+        onAccept={() => respondToChallenge(true)}
+        onDecline={() => respondToChallenge(false)}
+      />
+    </>
+  );
+}
+
 function App() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   useEffect(() => {
-    // Initialize userId if not present
     let userId = localStorage.getItem("userId");
     if (!userId) {
-      // Clear ALL localStorage for new user (data isolation)
       localStorage.clear();
       
       userId = `player-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       localStorage.setItem("userId", userId);
+      localStorage.setItem("playerId", userId);
       localStorage.setItem("playerProfileCompleted", "false");
       localStorage.setItem("playerMarbles", "150");
       localStorage.setItem("playerRewardPoints", "0");
       localStorage.setItem("gamesPlayed", "0");
       localStorage.setItem("gamesWon", "0");
       
-      // Create user in backend
       fetch("/api/user/init", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, username: userId }),
-      }).catch(() => {
-        // Silently fail if backend not ready
-      });
+      }).catch(() => {});
+    } else {
+      if (!localStorage.getItem("playerId")) {
+        localStorage.setItem("playerId", userId);
+      }
     }
 
-    // Check if player profile is completed
     const profileCompleted = localStorage.getItem("playerProfileCompleted");
     const profileName = localStorage.getItem("playerDisplayName");
     
@@ -98,7 +116,6 @@ function App() {
       setNeedsOnboarding(false);
     }
 
-    // Listen for profile updates
     const handleProfileUpdated = () => {
       setNeedsOnboarding(false);
     };
@@ -111,9 +128,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
         <TooltipProvider>
-          {!needsOnboarding && <GameHeader />}
-          <Toaster />
-          <Router needsOnboarding={needsOnboarding} />
+          <AppContent needsOnboarding={needsOnboarding} />
         </TooltipProvider>
       </LanguageProvider>
     </QueryClientProvider>

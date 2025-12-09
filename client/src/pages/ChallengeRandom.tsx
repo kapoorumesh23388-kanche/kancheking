@@ -1,309 +1,121 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, X, Swords, Wifi, WifiOff, RefreshCw, Copy, Check } from "lucide-react";
+import { Loader2, X, Swords, Wifi, WifiOff, Users, Gamepad2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-
-interface LivePlayer {
-  id: string;
-  name: string;
-  marbles: number;
-  profileImage?: string;
-  gender?: string;
-}
+import { usePresence } from "@/hooks/usePresence";
+import { Badge } from "@/components/ui/badge";
 
 export default function ChallengeRandom() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [players, setPlayers] = useState<LivePlayer[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedPlayer, setSelectedPlayer] = useState<LivePlayer | null>(null);
-  const [isChallenging, setIsChallenging] = useState(false);
-  const [totalInQueue, setTotalInQueue] = useState(0);
-  const [isConnected, setIsConnected] = useState<boolean | null>(null);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [copiedUrl, setCopiedUrl] = useState(false);
-  
-  // Generate a unique match session ID for this page load
-  // Each time you visit Challenge Random, you get a fresh ID
-  const [matchSessionId] = useState(() => {
-    // Generate a completely random ID - no dependency on localStorage
-    const randomPart = Math.random().toString(36).slice(2, 10);
-    const timePart = Date.now().toString(36).slice(-4);
-    return `device_${randomPart}_${timePart}`;
-  });
-  
-  const userId = matchSessionId;
-  const playerName = localStorage.getItem("playerDisplayName") || `Player_${userId.slice(-6)}`;
-  const playerMarbles = parseInt(localStorage.getItem("playerMarbles") || "150");
-  const shortId = userId.slice(-8);
-  
-  // Get the current page URL to share with other device
-  const currentUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  const shareUrl = `${currentUrl}/challenge-random`;
-  
-  // Copy URL to clipboard
-  const copyShareUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopiedUrl(true);
-      setTimeout(() => setCopiedUrl(false), 2000);
-      toast({ title: "URL Copied!", description: "Share this with your friend" });
-    } catch (e) {
-      toast({ title: "Copy Failed", description: "Please copy the URL manually", variant: "destructive" });
-    }
-  };
+  const { isConnected, onlinePlayers, totalOnline, challengePlayer } = usePresence();
+  const [challengingPlayer, setChallengingPlayer] = useState<string | null>(null);
 
-  // Fetch live players with connectivity check
-  useEffect(() => {
-    let isMounted = true;
-    let refreshInterval: NodeJS.Timeout;
-
-    const fetchPlayers = async () => {
-      try {
-        // Get list of other players
-        const res = await apiRequest("POST", "/api/match-queue/list", { userId });
-        const data = await res.json();
-        
-        // Also get total queue count for debugging (gracefully handle errors)
-        let totalPlayers = 0;
-        try {
-          const debugRes = await fetch("/api/match-queue/debug");
-          if (debugRes.ok) {
-            const debugData = await debugRes.json();
-            totalPlayers = debugData.totalPlayers || 0;
-          }
-        } catch (debugError) {
-          console.log("Debug endpoint not available, using fallback");
-          totalPlayers = (data.players?.length || 0) + 1; // Estimate: others + self
-        }
-        
-        if (isMounted) {
-          setIsConnected(true);
-          setConnectionError(null);
-          if (data.players) {
-            console.log(`[CHALLENGE RANDOM] My ID: ${shortId}, Total in queue: ${totalPlayers}, Available for me: ${data.players.length}`);
-            setPlayers(data.players.filter((p: LivePlayer) => p.id !== userId));
-          }
-          setTotalInQueue(totalPlayers);
-        }
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error fetching players:", error);
-        if (isMounted) {
-          setIsConnected(false);
-          setConnectionError(error instanceof Error ? error.message : "Connection failed");
-        }
-        setIsLoading(false);
-      }
-    };
-
-    fetchPlayers();
+  const handleChallenge = (playerId: string, playerName: string) => {
+    setChallengingPlayer(playerId);
+    challengePlayer(playerId);
     
-    // Refresh every 2 seconds
-    refreshInterval = setInterval(fetchPlayers, 2000);
-
-    return () => {
-      isMounted = false;
-      clearInterval(refreshInterval);
-    };
-  }, [userId, shortId]);
-
-  // Add player to queue on mount
-  useEffect(() => {
-    const addToQueue = async () => {
-      try {
-        await apiRequest("POST", "/api/match-queue/add", {
-          userId,
-          username: playerName,
-          marbles: playerMarbles,
-          profileImage: localStorage.getItem("playerProfileImageUpdate"),
-          gender: localStorage.getItem("playerGender"),
-        });
-      } catch (error) {
-        console.error("Error adding to queue:", error);
-      }
-    };
-
-    addToQueue();
-
-    return () => {
-      // Remove from queue on unmount
-      apiRequest("POST", "/api/match-queue/remove", { userId }).catch(() => {});
-    };
-  }, [userId, playerName, playerMarbles]);
-
-  const challengePlayer = async (opponent: LivePlayer) => {
-    setIsChallenging(true);
-    setSelectedPlayer(opponent);
-
-    try {
-      // Create a game room
-      const roomRes = await apiRequest("POST", "/api/game-room/challenge", {
-        player1Id: userId,
-        player2Id: opponent.id,
-      });
-
-      const roomData = await roomRes.json();
-
-      if (roomData.success && roomData.roomCode) {
-        toast({
-          title: "Challenge Sent!",
-          description: `Connecting to ${opponent.name}...`,
-        });
-
-        // Simulate connection delay, then redirect
-        setTimeout(() => {
-          navigate(`/multiplayer-game/${roomData.roomCode}`);
-        }, 1500);
-      } else {
-        throw new Error(roomData.error || "Failed to create room");
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to challenge player",
-        variant: "destructive",
-      });
-      setIsChallenging(false);
-      setSelectedPlayer(null);
-    }
+    toast({
+      title: "Challenge Sent!",
+      description: `Waiting for ${playerName} to accept...`,
+    });
+    
+    setTimeout(() => {
+      setChallengingPlayer(null);
+    }, 10000);
   };
 
   const handleCancel = () => {
     navigate("/modes");
   };
 
-  if (isChallenging && selectedPlayer) {
-    return (
-      <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black flex items-center justify-center">
-        <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40 max-w-md w-full mx-5">
-          <CardContent className="p-8 text-center space-y-6">
-            <div className="text-5xl">⚔️</div>
-            <h2 className="text-3xl font-bold text-primary">Challenging</h2>
-            <div className="bg-primary/20 rounded-lg p-4">
-              <p className="text-xl font-bold text-primary">{selectedPlayer.name}</p>
-              <p className="text-yellow-400">{selectedPlayer.marbles} marbles</p>
-            </div>
-            <div className="flex items-center justify-center gap-2 text-primary">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <p className="font-bold">Connecting...</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const getModeLabel = (mode?: string) => {
+    if (!mode) return "Online";
+    if (mode.includes("ai")) return "Playing AI";
+    if (mode.includes("friend")) return "With Friend";
+    if (mode.includes("random")) return "Looking for Match";
+    if (mode.includes("tournament")) return "Tournament";
+    if (mode.includes("shop")) return "In Shop";
+    if (mode.includes("modes")) return "Browsing";
+    return "Online";
+  };
+
+  const getModeColor = (mode?: string) => {
+    if (!mode) return "bg-gray-500/50";
+    if (mode.includes("ai")) return "bg-purple-500/50";
+    if (mode.includes("friend")) return "bg-blue-500/50";
+    if (mode.includes("random")) return "bg-green-500/50";
+    if (mode.includes("tournament")) return "bg-yellow-500/50";
+    return "bg-cyan-500/50";
+  };
 
   return (
-    <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black">
+    <div className="min-h-screen pt-24 pb-10">
       <div className="container max-w-2xl mx-auto px-5">
-        {/* CONNECTION STATUS & DEBUG PANEL */}
-        <Card className={`mb-4 border-2 ${isConnected === false ? 'bg-gradient-to-b from-red-900/50 to-red-950/50 border-red-500/60' : 'bg-gradient-to-b from-green-900/50 to-green-950/50 border-green-500/60'}`}>
+        <Card className="bg-[#0C0418]/90 border-2 border-[#00D9FF]/40 mb-4">
           <CardContent className="p-4 space-y-3">
-            {/* Connection Status */}
             <div className="flex items-center justify-center gap-2 mb-2">
-              {isConnected === null ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin text-yellow-400" />
-                  <span className="text-sm text-yellow-400 font-bold">Connecting...</span>
-                </>
-              ) : isConnected ? (
+              {isConnected ? (
                 <>
                   <Wifi className="w-4 h-4 text-green-400" />
-                  <span className="text-sm text-green-400 font-bold">Connected to Server</span>
+                  <span className="text-sm text-green-400 font-bold">Connected</span>
                 </>
               ) : (
                 <>
                   <WifiOff className="w-4 h-4 text-red-400" />
-                  <span className="text-sm text-red-400 font-bold">Connection Failed</span>
+                  <span className="text-sm text-red-400 font-bold">Connecting...</span>
                 </>
               )}
             </div>
             
-            {connectionError && (
-              <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 text-center">
-                <p className="text-sm text-red-400">{connectionError}</p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-2"
-                  onClick={() => window.location.reload()}
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" /> Retry
-                </Button>
+            <div className="flex items-center justify-center gap-4">
+              <div className="bg-black/50 rounded-lg px-4 py-2 flex items-center gap-2">
+                <Users className="w-5 h-5 text-[#00D9FF]" />
+                <span className="text-2xl font-bold text-[#00D9FF]" data-testid="text-total-online">
+                  {totalOnline}
+                </span>
+                <span className="text-sm text-[#C8E6F0]">Online</span>
               </div>
-            )}
-            
-            <div className="text-center">
-              <div className="bg-black/50 rounded-lg p-3 mb-2">
-                <p className="text-xs text-muted-foreground mb-1">Your Device ID:</p>
-                <p className="text-xl font-bold text-green-400 font-mono" data-testid="text-device-id">{shortId}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-center">
-                <div className="bg-black/30 rounded p-2">
-                  <p className="text-xs text-muted-foreground">Total in Queue</p>
-                  <p className="text-2xl font-bold text-yellow-400" data-testid="text-total-queue">{totalInQueue}</p>
-                </div>
-                <div className="bg-black/30 rounded p-2">
-                  <p className="text-xs text-muted-foreground">Can Challenge</p>
-                  <p className="text-2xl font-bold text-primary" data-testid="text-available-players">{players.length}</p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Share URL Section */}
-            <div className="bg-black/50 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground mb-2 text-center">
-                Share this URL with your friend to play together:
-              </p>
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  readOnly 
-                  value={shareUrl}
-                  className="flex-1 bg-black/50 border border-primary/30 rounded px-2 py-1 text-xs font-mono text-blue-400"
-                  data-testid="input-share-url"
-                />
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={copyShareUrl}
-                  data-testid="button-copy-url"
-                >
-                  {copiedUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                </Button>
+              <div className="bg-black/50 rounded-lg px-4 py-2 flex items-center gap-2">
+                <Gamepad2 className="w-5 h-5 text-[#E91E8C]" />
+                <span className="text-2xl font-bold text-[#E91E8C]" data-testid="text-available-players">
+                  {onlinePlayers.length}
+                </span>
+                <span className="text-sm text-[#C8E6F0]">Can Challenge</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40 mb-6">
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-bold text-primary">Live Players</CardTitle>
-            <p className="text-muted-foreground mt-2">Tap any player to challenge them</p>
+        <Card className="bg-[#0C0418]/90 border-2 border-[#00D9FF]/40 mb-6">
+          <CardHeader className="text-center pb-2">
+            <CardTitle className="text-3xl font-bold text-[#00E5FF] drop-shadow-[0_0_10px_rgba(0,229,255,0.5)]">
+              Live Players
+            </CardTitle>
+            <p className="text-[#C8E6F0] mt-2">Challenge any online player!</p>
           </CardHeader>
         </Card>
 
-        {isLoading ? (
-          <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40">
+        {!isConnected ? (
+          <Card className="bg-[#0C0418]/90 border-2 border-[#00D9FF]/40">
             <CardContent className="p-8 text-center">
-              <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
-              <p className="text-muted-foreground">Finding players...</p>
+              <Loader2 className="w-8 h-8 animate-spin text-[#00D9FF] mx-auto mb-4" />
+              <p className="text-[#C8E6F0]">Connecting to server...</p>
             </CardContent>
           </Card>
-        ) : players.length === 0 ? (
-          <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40">
+        ) : onlinePlayers.length === 0 ? (
+          <Card className="bg-[#0C0418]/90 border-2 border-[#00D9FF]/40">
             <CardContent className="p-8 text-center space-y-4">
-              <p className="text-lg text-muted-foreground">No players available right now</p>
-              <p className="text-sm text-muted-foreground">Try again in a moment...</p>
+              <Users className="w-16 h-16 text-[#00D9FF]/50 mx-auto" />
+              <p className="text-lg text-[#C8E6F0]">No other players online right now</p>
+              <p className="text-sm text-[#8AA8B8]">Share the game with friends to play together!</p>
               <Button
                 onClick={handleCancel}
                 variant="outline"
-                className="w-full"
+                className="w-full border-[#00D9FF]/50 text-[#00D9FF]"
                 data-testid="button-cancel"
               >
                 Go Back
@@ -312,38 +124,47 @@ export default function ChallengeRandom() {
           </Card>
         ) : (
           <div className="grid gap-3 mb-6">
-            {players.map((player) => (
+            {onlinePlayers.map((player) => (
               <Card
                 key={player.id}
-                className="bg-gradient-to-r from-primary/20 to-transparent border-2 border-primary/40 hover:border-primary/60 transition cursor-pointer hover-elevate"
-                onClick={() => !isChallenging && challengePlayer(player)}
+                className="bg-[#0C0418]/90 border-2 border-[#00D9FF]/40 hover:border-[#00D9FF]/80 transition cursor-pointer"
+                onClick={() => !challengingPlayer && handleChallenge(player.id, player.name)}
                 data-testid={`card-player-${player.id}`}
               >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <Avatar className="w-12 h-12 border-2 border-primary/50">
+                    <Avatar className="w-12 h-12 border-2 border-[#00D9FF]/50">
                       <AvatarImage src={player.profileImage} />
-                      <AvatarFallback className="bg-primary/20 text-primary">
+                      <AvatarFallback className="bg-[#00D9FF]/20 text-[#00D9FF]">
                         {player.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-bold text-primary">{player.name}</p>
-                      <p className="text-sm text-yellow-400">{player.marbles} marbles</p>
+                      <p className="font-bold text-white">{player.name}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-[#FFD700]">{player.marbles} marbles</span>
+                        <Badge className={`text-xs ${getModeColor(player.currentMode)}`}>
+                          {getModeLabel(player.currentMode)}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
 
                   <Button
                     size="icon"
-                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                    className="bg-gradient-to-r from-[#00D9FF] to-[#00FF88] text-black hover:opacity-90"
                     onClick={(e) => {
                       e.stopPropagation();
-                      challengePlayer(player);
+                      handleChallenge(player.id, player.name);
                     }}
-                    disabled={isChallenging}
+                    disabled={challengingPlayer === player.id}
                     data-testid={`button-challenge-${player.id}`}
                   >
-                    <Swords className="w-4 h-4" />
+                    {challengingPlayer === player.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Swords className="w-4 h-4" />
+                    )}
                   </Button>
                 </CardContent>
               </Card>
@@ -353,9 +174,9 @@ export default function ChallengeRandom() {
 
         <Button
           variant="outline"
-          className="w-full"
+          className="w-full border-[#E91E8C]/50 text-[#E91E8C]"
           onClick={handleCancel}
-          disabled={isChallenging}
+          disabled={!!challengingPlayer}
           data-testid="button-cancel-main"
         >
           <X className="w-4 h-4 mr-2" />
