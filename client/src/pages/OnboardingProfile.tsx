@@ -115,7 +115,13 @@ export default function OnboardingProfile() {
       localStorage.setItem("playerDateOfBirth", dateOfBirth);
       localStorage.setItem("playerAge", String(age));
       localStorage.setItem("playerAdInterests", JSON.stringify(adInterests));
-      localStorage.setItem("playerIsAgeVerified", "true");
+      // Only mark as age verified for purchases if 15+
+      // Players 10-14 can play but cannot make purchases
+      if (age >= 15) {
+        localStorage.setItem("playerIsAgeVerified", "true");
+      } else {
+        localStorage.setItem("playerIsAgeVerified", "false");
+      }
       localStorage.setItem("playerProfileCompleted", "true");
 
       // Then update backend
@@ -144,7 +150,10 @@ export default function OnboardingProfile() {
 
       // Dispatch events to update Header and other components
       window.dispatchEvent(new Event("profileUpdated"));
-      window.dispatchEvent(new Event("ageVerified"));
+      // Only dispatch ageVerified if user is 15+ (eligible for purchases)
+      if (age >= 15) {
+        window.dispatchEvent(new Event("ageVerified"));
+      }
 
       // Redirect immediately - don't wait
       navigate("/");

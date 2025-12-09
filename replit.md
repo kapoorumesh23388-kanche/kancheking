@@ -168,6 +168,21 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (Latest Session)
 
+### 🆕 Enhanced Onboarding with Age Verification & Ad Interests
+- Updated `client/src/pages/OnboardingProfile.tsx` with:
+  - **Date of Birth field** - Required for age verification
+  - **Age calculation** - Players must be 10+ to play
+  - **Age-gated purchases** - Only 15+ users are marked as verified for purchases
+  - **Ad Interests Selection** - 9 categories with icons:
+    - Share Market & Finance, Electronics & Gadgets, Gaming & Entertainment
+    - Fashion & Lifestyle, Automobiles & Vehicles, Real Estate & Property
+    - Food & Restaurants, Travel & Tourism, Health & Fitness
+- **localStorage keys:** `playerDateOfBirth`, `playerAge`, `playerAdInterests` (JSON array)
+- **Two-tier age system:**
+  - 10+ can play games
+  - 15+ can make in-app purchases (auto-verified during onboarding)
+  - 10-14 year olds will see AgeVerificationDialog when trying to purchase
+
 ### 🆕 Marble Accounting System (Four-Bucket Model)
 - Created `client/src/lib/marbleStorage.ts` - Marble accounting utility
 - **Four marble buckets:**
