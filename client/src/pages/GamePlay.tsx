@@ -14,6 +14,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { 
+  addMarbles, 
+  loseMarbles,
+  getTotalMarbles, 
+  initializeMarbles,
+  recordGameResult 
+} from "@/lib/marbleStorage";
 
 type GamePhase = "selecting" | "guessing" | "revealing" | "result";
 
@@ -30,8 +37,8 @@ export default function GamePlay() {
   const [fistOpen, setFistOpen] = useState(false);
   const [isHiderPlayer1, setIsHiderPlayer1] = useState(true);
   const [player1Marbles, setPlayer1Marbles] = useState(() => {
-    const saved = localStorage.getItem("playerMarbles");
-    return saved ? parseInt(saved) : 150;
+    initializeMarbles();
+    return getTotalMarbles();
   });
   const [player2Marbles, setPlayer2Marbles] = useState(120);
   const [player1Name, setPlayer1Name] = useState(() => localStorage.getItem("playerDisplayName") || "You");
@@ -103,10 +110,10 @@ export default function GamePlay() {
     }
   }, [isMusicEnabled]);
 
-  // Sync marbles to localStorage and trigger header update
+  // Trigger header update when marbles change
   useEffect(() => {
-    localStorage.setItem("playerMarbles", player1Marbles.toString());
     window.dispatchEvent(new Event("marbleUpdate"));
+    window.dispatchEvent(new Event("storage"));
   }, [player1Marbles]);
 
   // Load player profile from API and localStorage
@@ -312,33 +319,34 @@ export default function GamePlay() {
         message = won ? "Jotta Hai! 🎉" : "Kali Hai! 😢";
       }
       
-      // Update marble counts
+      // Determine if player won or lost this round
+      let playerWon = false;
+      if (isHiderPlayer1) {
+        // Player 1 is hider, AI is guesser - if AI guess was wrong, player wins
+        playerWon = !won;
+      } else {
+        // AI is hider, Player 1 is guesser - if player guess was correct, player wins
+        playerWon = won;
+      }
+      
+      // Update marble counts using marble storage utility
       let newPlayer1Marbles = player1Marbles;
       let newPlayer2Marbles = player2Marbles;
 
-      if (isHiderPlayer1) {
-        // Player 1 is hider, AI is guesser
-        if (won) {
-          // AI (guesser) won: AI gets marbles from Player 1
-          newPlayer1Marbles = player1Marbles - lastBet;
-          newPlayer2Marbles = player2Marbles + lastBet;
-        } else {
-          // Player 1 (hider) won: Player 1 gets marbles from AI
-          newPlayer1Marbles = player1Marbles + lastBet;
-          newPlayer2Marbles = player2Marbles - lastBet;
-        }
+      if (playerWon) {
+        // Player won against AI - add to 'ai' bucket (gameplay only, not tournament eligible)
+        addMarbles('ai', lastBet);
+        newPlayer1Marbles = getTotalMarbles();
+        newPlayer2Marbles = player2Marbles - lastBet;
       } else {
-        // AI is hider, Player 1 is guesser
-        if (won) {
-          // Player 1 (guesser) won: Player 1 gets marbles from AI
-          newPlayer1Marbles = player1Marbles + lastBet;
-          newPlayer2Marbles = player2Marbles - lastBet;
-        } else {
-          // AI (hider) won: AI gets marbles from Player 1
-          newPlayer1Marbles = player1Marbles - lastBet;
-          newPlayer2Marbles = player2Marbles + lastBet;
-        }
+        // Player lost to AI - lose marbles (cascades through all buckets)
+        loseMarbles(lastBet);
+        newPlayer1Marbles = getTotalMarbles();
+        newPlayer2Marbles = player2Marbles + lastBet;
       }
+      
+      // Record game result for stats
+      recordGameResult(playerWon);
 
       // Check for zero marbles and show ads
       if (newPlayer1Marbles <= 0) {

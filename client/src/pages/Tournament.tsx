@@ -2,36 +2,44 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Loader2, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  getEligibleMarbles, 
+  getRewardPoints, 
+  getTotalMarbles,
+  isTournamentEligible,
+  getMarblesNeededForTournament,
+  spendMarbles,
+  initializeMarbles
+} from "@/lib/marbleStorage";
 
 export default function Tournament() {
   const { toast } = useToast();
   const [activeWindow, setActiveWindow] = useState(1);
   const [isJoining, setIsJoining] = useState(false);
   
-  // Real-time player stats from localStorage with live updates
-  const [userMarbles, setUserMarbles] = useState(() => 
-    parseInt(localStorage.getItem("playerMarbles") || "150")
-  );
-  const [userPoints, setUserPoints] = useState(() => 
-    parseInt(localStorage.getItem("playerRewardPoints") || "0")
-  );
-  const [gamesWon, setGamesWon] = useState(() => 
-    parseInt(localStorage.getItem("gamesWon") || "0")
-  );
-  const [gamesPlayed, setGamesPlayed] = useState(() => 
-    parseInt(localStorage.getItem("gamesPlayed") || "0")
-  );
+  // Eligible marbles (purchased + pvp wins only) for tournament
+  const [eligibleMarbles, setEligibleMarbles] = useState(0);
+  const [totalMarbles, setTotalMarbles] = useState(0);
+  const [userPoints, setUserPoints] = useState(0);
+  const [gamesWon, setGamesWon] = useState(0);
+  const [gamesPlayed, setGamesPlayed] = useState(0);
   
   const entryFee = 2500;
   const winnerPoints = 250000;
   const pointValue = 25000;
   
+  // Initialize marbles on first load
+  useEffect(() => {
+    initializeMarbles();
+  }, []);
+  
   // Real-time update of player stats
   const updatePlayerStats = useCallback(() => {
-    setUserMarbles(parseInt(localStorage.getItem("playerMarbles") || "150"));
-    setUserPoints(parseInt(localStorage.getItem("playerRewardPoints") || "0"));
+    setEligibleMarbles(getEligibleMarbles());
+    setTotalMarbles(getTotalMarbles());
+    setUserPoints(getRewardPoints());
     setGamesWon(parseInt(localStorage.getItem("gamesWon") || "0"));
     setGamesPlayed(parseInt(localStorage.getItem("gamesPlayed") || "0"));
   }, []);
@@ -69,10 +77,11 @@ export default function Tournament() {
   ];
 
   const handleJoinTournament = async () => {
-    if (userMarbles < entryFee) {
+    if (!isTournamentEligible()) {
+      const needed = getMarblesNeededForTournament();
       toast({
-        title: "Not Enough Marbles",
-        description: `You need ${entryFee} marbles to join. You have ${userMarbles}.`,
+        title: "Not Eligible",
+        description: `You need ${needed.toLocaleString()} more eligible marbles (purchased or PvP wins). AI wins don't count.`,
         variant: "destructive",
       });
       return;
@@ -91,10 +100,17 @@ export default function Tournament() {
       });
       
       if (response.ok) {
-        // Deduct marbles locally
-        const newMarbles = userMarbles - entryFee;
-        localStorage.setItem("playerMarbles", newMarbles.toString());
-        setUserMarbles(newMarbles);
+        // Deduct marbles using proper accounting
+        const deducted = spendMarbles(entryFee);
+        if (!deducted) {
+          toast({
+            title: "Deduction Failed",
+            description: "Could not deduct entry fee. You may not have enough eligible marbles.",
+            variant: "destructive",
+          });
+          return;
+        }
+        updatePlayerStats();
         
         toast({
           title: "Tournament Joined!",
@@ -130,10 +146,14 @@ export default function Tournament() {
           <Card className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/30">
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-muted-foreground mb-2 text-xs">Your Marbles</p>
-                <p className="text-2xl font-bold text-yellow-500" data-testid="text-user-marbles">
-                  {userMarbles.toLocaleString()}
+                <p className="text-muted-foreground mb-2 text-xs flex items-center justify-center gap-1">
+                  Eligible Marbles
+                  <Info className="w-3 h-3 text-muted-foreground" />
                 </p>
+                <p className="text-2xl font-bold text-yellow-500" data-testid="text-eligible-marbles">
+                  {eligibleMarbles.toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Purchased + PvP Wins</p>
               </div>
             </CardContent>
           </Card>
@@ -160,33 +180,34 @@ export default function Tournament() {
           <Card className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-500/30">
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-muted-foreground mb-2 text-xs">Games Played</p>
-                <p className="text-2xl font-bold text-blue-500" data-testid="text-games-played">
-                  {gamesPlayed}
+                <p className="text-muted-foreground mb-2 text-xs">Total Marbles</p>
+                <p className="text-2xl font-bold text-blue-500" data-testid="text-total-marbles">
+                  {totalMarbles.toLocaleString()}
                 </p>
+                <p className="text-xs text-muted-foreground mt-1">For Gameplay</p>
               </div>
             </CardContent>
           </Card>
         </div>
         
         {/* Entry Fee & Eligibility */}
-        <Card className={`mb-8 ${userMarbles >= entryFee ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30' : 'bg-gradient-to-r from-red-500/10 to-pink-500/10 border-red-500/30'}`}>
+        <Card className={`mb-8 ${eligibleMarbles >= entryFee ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30' : 'bg-gradient-to-r from-red-500/10 to-pink-500/10 border-red-500/30'}`}>
           <CardContent className="py-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Entry Fee</p>
+                  <p className="text-sm text-muted-foreground">Entry Fee (Eligible Marbles Only)</p>
                   <p className="text-xl font-bold text-primary">{entryFee.toLocaleString()} Marbles</p>
                 </div>
               </div>
               <div className="text-right">
-                {userMarbles >= entryFee ? (
+                {eligibleMarbles >= entryFee ? (
                   <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
                     Eligible to Join
                   </Badge>
                 ) : (
                   <Badge variant="destructive">
-                    Need {(entryFee - userMarbles).toLocaleString()} more marbles
+                    Need {(entryFee - eligibleMarbles).toLocaleString()} more eligible marbles
                   </Badge>
                 )}
               </div>
@@ -269,7 +290,7 @@ export default function Tournament() {
                         className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground font-bold"
                         size="lg"
                         data-testid="button-join-tournament"
-                        disabled={userMarbles < entryFee || isJoining}
+                        disabled={eligibleMarbles < entryFee || isJoining}
                         onClick={handleJoinTournament}
                       >
                         {isJoining ? (
@@ -307,7 +328,7 @@ export default function Tournament() {
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">2.</span>
-                <span>Entry fee: 2500 marbles per player</span>
+                <span>Entry fee: 2500 eligible marbles (Purchased + PvP wins only)</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">3.</span>
@@ -322,6 +343,15 @@ export default function Tournament() {
                 <span>Points earned can be redeemed in the Shop catalog</span>
               </li>
             </ul>
+            <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+              <p className="text-sm text-yellow-400 font-semibold mb-2">Marble Types:</p>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                <li>• <span className="text-green-400">Purchased Marbles</span> - Count for tournament</li>
+                <li>• <span className="text-green-400">PvP Win Marbles</span> - Count for tournament</li>
+                <li>• <span className="text-yellow-400">AI Win Marbles</span> - Gameplay only</li>
+                <li>• <span className="text-yellow-400">Free Marbles (150)</span> - Gameplay only</li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
       </div>

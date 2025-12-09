@@ -168,24 +168,40 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (Latest Session)
 
-### 🆕 Payment Gateway Integration
+### 🆕 Marble Accounting System (Four-Bucket Model)
+- Created `client/src/lib/marbleStorage.ts` - Marble accounting utility
+- **Four marble buckets:**
+  - `freeMarbles` (150) - Starting marbles, gameplay only
+  - `purchasedMarbles` - Bought via in-app purchase, tournament eligible
+  - `pvpWinMarbles` - Won from real players, tournament eligible
+  - `aiWinMarbles` - Won from AI games, gameplay only
+- **Tournament eligibility:** `purchasedMarbles + pvpWinMarbles >= 2500`
+- **localStorage keys:** `freeMarbles`, `purchasedMarbles`, `pvpWinMarbles`, `aiWinMarbles`, `playerMarbles` (total)
+- **Functions:** `initializeMarbles()`, `addMarbles(source, amount)`, `loseMarbles(amount)`, `spendMarbles(amount)`, `getEligibleMarbles()`, `getTotalMarbles()`
+- Updated Tournament page to show "Eligible Marbles" instead of total
+- Updated GamePlay.tsx to categorize AI wins to 'ai' bucket
+- Updated MultiplayerGame.tsx to categorize PvP wins to 'pvp' bucket
+
+### Previous Session Changes
+
+**Payment Gateway Integration**
 - Created `server/stripeClient.ts` - Stripe API client with credential management
 - Created `server/stripeService.ts` - Stripe service layer for customer and checkout operations
 - Added `/api/marble-purchase` endpoint for checkout sessions
 - Added `stripeCustomerId` and `stripeSubscriptionId` to user schema
 - Integrated with Replit Stripe connection (already configured)
 
-### 🆕 OTP & SMS Setup
+**OTP & SMS Setup**
 - Created `server/twilioClient.ts` - Twilio SMS client
 - Integrated Twilio into `/api/admin/send-otp` endpoint
 - OTP gracefully falls back to console logging if Twilio not configured
 - SMS format: "Your Kanche King Admin OTP is: {otp}. Valid for 5 minutes."
 
-### 🆕 Admin Lock Icon
-- Added Lock icon (🔒) button in GameHeader for easy admin panel access
+**Admin Lock Icon**
+- Added Lock icon button in GameHeader for easy admin panel access
 - Direct navigation to admin login on click
 
-### 🆕 Documentation
+**Documentation**
 - Created `TESTING_GUIDE.md` with step-by-step testing instructions
 - Covers: Publishing, Admin Login/OTP Testing, Payment Testing, Twilio Setup
 

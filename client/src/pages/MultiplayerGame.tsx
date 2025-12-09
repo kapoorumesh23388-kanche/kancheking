@@ -9,6 +9,13 @@ import GameChat from "@/components/GameChat";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Volume2, VolumeX } from "lucide-react";
 import { useGameSocket } from "@/hooks/useGameSocket";
+import { 
+  addMarbles, 
+  loseMarbles, 
+  getTotalMarbles, 
+  initializeMarbles,
+  recordGameResult 
+} from "@/lib/marbleStorage";
 
 interface ChatMessage {
   id: string;
@@ -39,7 +46,10 @@ export default function MultiplayerGame() {
   const [player1Image, setPlayer1Image] = useState<string | null>(() => localStorage.getItem("playerProfileImageUpdate"));
   const [player2Name, setPlayer2Name] = useState("Opponent");
   const [player2Image, setPlayer2Image] = useState<string | null>(null);
-  const [player1Marbles, setPlayer1Marbles] = useState(150);
+  const [player1Marbles, setPlayer1Marbles] = useState(() => {
+    initializeMarbles();
+    return getTotalMarbles();
+  });
   const [player2Marbles, setPlayer2Marbles] = useState(150);
   const [isPlayer1, setIsPlayer1] = useState(true);
   const [selectedMarbleIds, setSelectedMarbleIds] = useState<number[]>([]);
@@ -97,13 +107,32 @@ export default function MultiplayerGame() {
     
     // Simulate game result
     const won = Math.random() > 0.5;
-    const change = won ? 10 : -10;
+    const change = 10; // Bet amount
     
     if (isPlayer1) {
-      setPlayer1Marbles(prev => prev + change);
+      if (won) {
+        // PvP win - add to 'pvp' bucket (tournament eligible!)
+        addMarbles('pvp', change);
+        setPlayer1Marbles(getTotalMarbles());
+        setPlayer2Marbles(prev => Math.max(0, prev - change));
+      } else {
+        // PvP loss - lose marbles (cascades through all buckets)
+        loseMarbles(change);
+        setPlayer1Marbles(getTotalMarbles());
+        setPlayer2Marbles(prev => prev + change);
+      }
     } else {
-      setPlayer2Marbles(prev => prev + change);
+      if (won) {
+        addMarbles('pvp', change);
+        setPlayer1Marbles(getTotalMarbles());
+      } else {
+        loseMarbles(change);
+        setPlayer1Marbles(getTotalMarbles());
+      }
     }
+    
+    // Record game result for stats
+    recordGameResult(won);
     
     setGameResult({ won, change, details: won ? "Correct guess!" : "Wrong guess!" });
     setPhase("result");
