@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, X, Swords } from "lucide-react";
+import { Loader2, X, Swords, Wifi, WifiOff, RefreshCw, Copy, Check } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -23,6 +23,9 @@ export default function ChallengeRandom() {
   const [selectedPlayer, setSelectedPlayer] = useState<LivePlayer | null>(null);
   const [isChallenging, setIsChallenging] = useState(false);
   const [totalInQueue, setTotalInQueue] = useState(0);
+  const [isConnected, setIsConnected] = useState<boolean | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [copiedUrl, setCopiedUrl] = useState(false);
   
   // Generate a unique match session ID for this page load
   // Each time you visit Challenge Random, you get a fresh ID
@@ -40,8 +43,21 @@ export default function ChallengeRandom() {
   
   // Get the current page URL to share with other device
   const currentUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const shareUrl = `${currentUrl}/challenge-random`;
+  
+  // Copy URL to clipboard
+  const copyShareUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopiedUrl(true);
+      setTimeout(() => setCopiedUrl(false), 2000);
+      toast({ title: "URL Copied!", description: "Share this with your friend" });
+    } catch (e) {
+      toast({ title: "Copy Failed", description: "Please copy the URL manually", variant: "destructive" });
+    }
+  };
 
-  // Fetch live players
+  // Fetch live players with connectivity check
   useEffect(() => {
     let isMounted = true;
     let refreshInterval: NodeJS.Timeout;
@@ -52,20 +68,36 @@ export default function ChallengeRandom() {
         const res = await apiRequest("POST", "/api/match-queue/list", { userId });
         const data = await res.json();
         
-        // Also get total queue count for debugging
-        const debugRes = await fetch("/api/match-queue/debug");
-        const debugData = await debugRes.json();
+        // Also get total queue count for debugging (gracefully handle errors)
+        let totalPlayers = 0;
+        try {
+          const debugRes = await fetch("/api/match-queue/debug");
+          if (debugRes.ok) {
+            const debugData = await debugRes.json();
+            totalPlayers = debugData.totalPlayers || 0;
+          }
+        } catch (debugError) {
+          console.log("Debug endpoint not available, using fallback");
+          totalPlayers = (data.players?.length || 0) + 1; // Estimate: others + self
+        }
         
         if (isMounted) {
+          setIsConnected(true);
+          setConnectionError(null);
           if (data.players) {
-            console.log(`[CHALLENGE RANDOM] My ID: ${shortId}, Total in queue: ${debugData.totalPlayers}, Available for me: ${data.players.length}`);
+            console.log(`[CHALLENGE RANDOM] My ID: ${shortId}, Total in queue: ${totalPlayers}, Available for me: ${data.players.length}`);
             setPlayers(data.players.filter((p: LivePlayer) => p.id !== userId));
           }
-          setTotalInQueue(debugData.totalPlayers || 0);
+          setTotalInQueue(totalPlayers);
         }
         setIsLoading(false);
       } catch (error) {
         console.error("Error fetching players:", error);
+        if (isMounted) {
+          setIsConnected(false);
+          setConnectionError(error instanceof Error ? error.message : "Connection failed");
+        }
+        setIsLoading(false);
       }
     };
 
@@ -169,32 +201,83 @@ export default function ChallengeRandom() {
   return (
     <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black">
       <div className="container max-w-2xl mx-auto px-5">
-        {/* BIG DEBUG PANEL - Shows device ID and URL for testing */}
-        <Card className="bg-gradient-to-b from-green-900/50 to-green-950/50 border-2 border-green-500/60 mb-4">
+        {/* CONNECTION STATUS & DEBUG PANEL */}
+        <Card className={`mb-4 border-2 ${isConnected === false ? 'bg-gradient-to-b from-red-900/50 to-red-950/50 border-red-500/60' : 'bg-gradient-to-b from-green-900/50 to-green-950/50 border-green-500/60'}`}>
           <CardContent className="p-4 space-y-3">
+            {/* Connection Status */}
+            <div className="flex items-center justify-center gap-2 mb-2">
+              {isConnected === null ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-yellow-400" />
+                  <span className="text-sm text-yellow-400 font-bold">Connecting...</span>
+                </>
+              ) : isConnected ? (
+                <>
+                  <Wifi className="w-4 h-4 text-green-400" />
+                  <span className="text-sm text-green-400 font-bold">Connected to Server</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-4 h-4 text-red-400" />
+                  <span className="text-sm text-red-400 font-bold">Connection Failed</span>
+                </>
+              )}
+            </div>
+            
+            {connectionError && (
+              <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 text-center">
+                <p className="text-sm text-red-400">{connectionError}</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2"
+                  onClick={() => window.location.reload()}
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" /> Retry
+                </Button>
+              </div>
+            )}
+            
             <div className="text-center">
-              <p className="text-green-400 text-sm font-bold mb-2">DEVICE CONNECTION INFO</p>
               <div className="bg-black/50 rounded-lg p-3 mb-2">
-                <p className="text-xs text-muted-foreground mb-1">This Device ID:</p>
-                <p className="text-xl font-bold text-green-400 font-mono">{shortId}</p>
+                <p className="text-xs text-muted-foreground mb-1">Your Device ID:</p>
+                <p className="text-xl font-bold text-green-400 font-mono" data-testid="text-device-id">{shortId}</p>
               </div>
               <div className="grid grid-cols-2 gap-2 text-center">
                 <div className="bg-black/30 rounded p-2">
                   <p className="text-xs text-muted-foreground">Total in Queue</p>
-                  <p className="text-2xl font-bold text-yellow-400">{totalInQueue}</p>
+                  <p className="text-2xl font-bold text-yellow-400" data-testid="text-total-queue">{totalInQueue}</p>
                 </div>
                 <div className="bg-black/30 rounded p-2">
                   <p className="text-xs text-muted-foreground">Can Challenge</p>
-                  <p className="text-2xl font-bold text-primary">{players.length}</p>
+                  <p className="text-2xl font-bold text-primary" data-testid="text-available-players">{players.length}</p>
                 </div>
               </div>
             </div>
-            {currentUrl && (
-              <div className="bg-black/50 rounded-lg p-2 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Open this URL on other device:</p>
-                <p className="text-xs font-mono text-blue-400 break-all select-all">{currentUrl}/challenge-random</p>
+            
+            {/* Share URL Section */}
+            <div className="bg-black/50 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground mb-2 text-center">
+                Share this URL with your friend to play together:
+              </p>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={shareUrl}
+                  className="flex-1 bg-black/50 border border-primary/30 rounded px-2 py-1 text-xs font-mono text-blue-400"
+                  data-testid="input-share-url"
+                />
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={copyShareUrl}
+                  data-testid="button-copy-url"
+                >
+                  {copiedUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </Button>
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
 

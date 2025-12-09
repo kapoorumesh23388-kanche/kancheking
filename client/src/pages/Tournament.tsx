@@ -1,16 +1,55 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Tournament() {
+  const { toast } = useToast();
   const [activeWindow, setActiveWindow] = useState(1);
-  const playerCount = 85;
+  const [isJoining, setIsJoining] = useState(false);
+  
+  // Real-time player stats from localStorage with live updates
+  const [userMarbles, setUserMarbles] = useState(() => 
+    parseInt(localStorage.getItem("playerMarbles") || "150")
+  );
+  const [userPoints, setUserPoints] = useState(() => 
+    parseInt(localStorage.getItem("playerRewardPoints") || "0")
+  );
+  const [gamesWon, setGamesWon] = useState(() => 
+    parseInt(localStorage.getItem("gamesWon") || "0")
+  );
+  const [gamesPlayed, setGamesPlayed] = useState(() => 
+    parseInt(localStorage.getItem("gamesPlayed") || "0")
+  );
+  
   const entryFee = 2500;
-  const userMarbles = 10000;
-  const userPoints = 5000;
   const winnerPoints = 250000;
-  const pointValue = 25000; // ~25k rupees value
+  const pointValue = 25000;
+  
+  // Real-time update of player stats
+  const updatePlayerStats = useCallback(() => {
+    setUserMarbles(parseInt(localStorage.getItem("playerMarbles") || "150"));
+    setUserPoints(parseInt(localStorage.getItem("playerRewardPoints") || "0"));
+    setGamesWon(parseInt(localStorage.getItem("gamesWon") || "0"));
+    setGamesPlayed(parseInt(localStorage.getItem("gamesPlayed") || "0"));
+  }, []);
+  
+  // Update stats every 2 seconds for real-time display
+  useEffect(() => {
+    updatePlayerStats();
+    const interval = setInterval(updatePlayerStats, 2000);
+    
+    // Also listen for storage changes from other tabs
+    const handleStorageChange = () => updatePlayerStats();
+    window.addEventListener("storage", handleStorageChange);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, [updatePlayerStats]);
 
   const tournamentWindows = [
     {
@@ -30,23 +69,49 @@ export default function Tournament() {
   ];
 
   const handleJoinTournament = async () => {
-    if (userMarbles >= entryFee) {
-      // API call to join tournament
-      try {
-        const response = await fetch("/api/tournament/join", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: "current-user-id",
-            windowId: activeWindow,
-          }),
+    if (userMarbles < entryFee) {
+      toast({
+        title: "Not Enough Marbles",
+        description: `You need ${entryFee} marbles to join. You have ${userMarbles}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsJoining(true);
+    try {
+      const userId = localStorage.getItem("userId") || `player_${Date.now()}`;
+      const response = await fetch("/api/tournament/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          windowId: activeWindow,
+        }),
+      });
+      
+      if (response.ok) {
+        // Deduct marbles locally
+        const newMarbles = userMarbles - entryFee;
+        localStorage.setItem("playerMarbles", newMarbles.toString());
+        setUserMarbles(newMarbles);
+        
+        toast({
+          title: "Tournament Joined!",
+          description: `You've entered Window ${activeWindow}. ${entryFee} marbles deducted.`,
         });
-        if (response.ok) {
-          alert("Successfully joined tournament!");
-        }
-      } catch (error) {
-        console.error("Failed to join tournament:", error);
+      } else {
+        throw new Error("Failed to join tournament");
       }
+    } catch (error) {
+      console.error("Failed to join tournament:", error);
+      toast({
+        title: "Error",
+        description: "Failed to join tournament. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsJoining(false);
     }
   };
 
@@ -60,13 +125,15 @@ export default function Tournament() {
           <p className="text-xl text-muted-foreground">100-Player Battles | 2500 Marble Entry | 250,000 Points for Winner</p>
         </div>
 
-        {/* Entry Stats & Points Info */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {/* Real-time Player Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <Card className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/30">
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-muted-foreground mb-2 text-xs">Your Marbles</p>
-                <p className="text-2xl font-bold text-yellow-500">{userMarbles}</p>
+                <p className="text-2xl font-bold text-yellow-500" data-testid="text-user-marbles">
+                  {userMarbles.toLocaleString()}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -74,27 +141,58 @@ export default function Tournament() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-muted-foreground mb-2 text-xs">Your Points</p>
-                <p className="text-2xl font-bold text-purple-500">{userPoints}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-red-500/20 to-pink-500/20 border-red-500/30">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-muted-foreground mb-2 text-xs">Entry Fee</p>
-                <p className="text-2xl font-bold text-red-500">{entryFee}</p>
+                <p className="text-2xl font-bold text-purple-500" data-testid="text-user-points">
+                  {userPoints.toLocaleString()}
+                </p>
               </div>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-500/30">
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-muted-foreground mb-2 text-xs">Tournaments</p>
-                <p className="text-2xl font-bold text-green-500">Unlimited</p>
+                <p className="text-muted-foreground mb-2 text-xs">Games Won</p>
+                <p className="text-2xl font-bold text-green-500" data-testid="text-games-won">
+                  {gamesWon}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-500/30">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <p className="text-muted-foreground mb-2 text-xs">Games Played</p>
+                <p className="text-2xl font-bold text-blue-500" data-testid="text-games-played">
+                  {gamesPlayed}
+                </p>
               </div>
             </CardContent>
           </Card>
         </div>
+        
+        {/* Entry Fee & Eligibility */}
+        <Card className={`mb-8 ${userMarbles >= entryFee ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30' : 'bg-gradient-to-r from-red-500/10 to-pink-500/10 border-red-500/30'}`}>
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Entry Fee</p>
+                  <p className="text-xl font-bold text-primary">{entryFee.toLocaleString()} Marbles</p>
+                </div>
+              </div>
+              <div className="text-right">
+                {userMarbles >= entryFee ? (
+                  <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                    Eligible to Join
+                  </Badge>
+                ) : (
+                  <Badge variant="destructive">
+                    Need {(entryFee - userMarbles).toLocaleString()} more marbles
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Points System Info */}
         <Card className="mb-8 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/30">
@@ -171,10 +269,17 @@ export default function Tournament() {
                         className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground font-bold"
                         size="lg"
                         data-testid="button-join-tournament"
-                        disabled={userMarbles < entryFee}
+                        disabled={userMarbles < entryFee || isJoining}
                         onClick={handleJoinTournament}
                       >
-                        Join Tournament (2500 Marbles)
+                        {isJoining ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Joining...
+                          </>
+                        ) : (
+                          `Join Tournament (${entryFee.toLocaleString()} Marbles)`
+                        )}
                       </Button>
                     )}
                     {window.status === "Waiting" && (
