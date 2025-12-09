@@ -7,7 +7,20 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, Upload } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Upload, TrendingUp, Smartphone, Gamepad2, Shirt, Car, Home, Utensils, Plane, Heart } from "lucide-react";
+
+const AD_INTEREST_CATEGORIES = [
+  { id: "sharemarket", label: "Share Market & Finance", icon: TrendingUp },
+  { id: "electronics", label: "Electronics & Gadgets", icon: Smartphone },
+  { id: "gaming", label: "Gaming & Entertainment", icon: Gamepad2 },
+  { id: "fashion", label: "Fashion & Lifestyle", icon: Shirt },
+  { id: "automobiles", label: "Automobiles & Vehicles", icon: Car },
+  { id: "realestate", label: "Real Estate & Property", icon: Home },
+  { id: "food", label: "Food & Restaurants", icon: Utensils },
+  { id: "travel", label: "Travel & Tourism", icon: Plane },
+  { id: "health", label: "Health & Fitness", icon: Heart },
+];
 
 export default function OnboardingProfile() {
   const [, navigate] = useLocation();
@@ -16,7 +29,28 @@ export default function OnboardingProfile() {
   const [profileImage, setProfileImage] = useState("");
   const [imagePreview, setImagePreview] = useState("");
   const [gender, setGender] = useState<"boy" | "girl">("boy");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [adInterests, setAdInterests] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  const calculateAge = (dob: string): number => {
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const toggleAdInterest = (interestId: string) => {
+    setAdInterests(prev => 
+      prev.includes(interestId) 
+        ? prev.filter(id => id !== interestId)
+        : [...prev, interestId]
+    );
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -41,6 +75,34 @@ export default function OnboardingProfile() {
       return;
     }
 
+    if (!dateOfBirth) {
+      toast({
+        title: "Error",
+        description: "Please enter your date of birth",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const age = calculateAge(dateOfBirth);
+    if (age < 10) {
+      toast({
+        title: "Age Restriction",
+        description: "You must be at least 10 years old to play",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (adInterests.length === 0) {
+      toast({
+        title: "Select Interests",
+        description: "Please select at least one ad interest category",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const userId = localStorage.getItem("userId");
@@ -50,6 +112,10 @@ export default function OnboardingProfile() {
       localStorage.setItem("playerDisplayName", displayName);
       localStorage.setItem("playerProfileImageUpdate", profileImage);
       localStorage.setItem("playerGender", gender);
+      localStorage.setItem("playerDateOfBirth", dateOfBirth);
+      localStorage.setItem("playerAge", String(age));
+      localStorage.setItem("playerAdInterests", JSON.stringify(adInterests));
+      localStorage.setItem("playerIsAgeVerified", "true");
       localStorage.setItem("playerProfileCompleted", "true");
 
       // Then update backend
@@ -61,6 +127,9 @@ export default function OnboardingProfile() {
           displayName,
           profileImage,
           gender,
+          dateOfBirth,
+          age,
+          adInterests,
         }),
       });
 
@@ -71,10 +140,11 @@ export default function OnboardingProfile() {
         // Continue anyway since localStorage is saved
       }
 
-      console.log("✅ Profile saved:", { displayName, gender });
+      console.log("✅ Profile saved:", { displayName, gender, age, adInterests });
 
-      // Dispatch event to update Header
+      // Dispatch events to update Header and other components
       window.dispatchEvent(new Event("profileUpdated"));
+      window.dispatchEvent(new Event("ageVerified"));
 
       // Redirect immediately - don't wait
       navigate("/");
@@ -155,6 +225,61 @@ export default function OnboardingProfile() {
                 </SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Date of Birth - Age Verification */}
+          <div>
+            <Label htmlFor="dob" className="text-primary font-semibold mb-2 block">
+              Date of Birth
+            </Label>
+            <Input
+              id="dob"
+              type="date"
+              value={dateOfBirth}
+              onChange={(e) => setDateOfBirth(e.target.value)}
+              className="bg-primary/10 border-primary/30 text-white focus:border-primary"
+              data-testid="input-date-of-birth"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Required for age verification. Must be 10+ to play, 15+ for purchases.
+            </p>
+          </div>
+
+          {/* Ad Interests Selection */}
+          <div>
+            <Label className="text-primary font-semibold mb-3 block">
+              Ad Interests (Select categories you like)
+            </Label>
+            <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2">
+              {AD_INTEREST_CATEGORIES.map((category) => {
+                const Icon = category.icon;
+                const isSelected = adInterests.includes(category.id);
+                return (
+                  <div
+                    key={category.id}
+                    onClick={() => toggleAdInterest(category.id)}
+                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                      isSelected 
+                        ? "bg-primary/20 border-primary/60" 
+                        : "bg-white/5 border-white/20 hover:bg-white/10"
+                    }`}
+                    data-testid={`checkbox-interest-${category.id}`}
+                  >
+                    <Checkbox 
+                      checked={isSelected}
+                      className="border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                    <Icon className={`w-5 h-5 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className={`text-sm ${isSelected ? "text-primary font-medium" : "text-white/80"}`}>
+                      {category.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Select categories to see relevant ads. You can change this later in settings.
+            </p>
           </div>
 
           {/* Continue Button */}
