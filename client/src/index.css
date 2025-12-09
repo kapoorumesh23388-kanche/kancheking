@@ -4,47 +4,47 @@
 @tailwind components;
 @tailwind utilities;
 
-/* LIGHT MODE (Game uses dark theme primarily) */
+/* NEON GAMING THEME - Kanche King Marble Game */
 :root {
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
-  --opaque-button-border-intensity: 9;
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
-  --background: 200 35% 22%;
-  --foreground: 45 100% 95%;
-  --border: 200 20% 30%;
-  --card: 200 30% 18%;
-  --card-foreground: 45 100% 95%;
-  --card-border: 200 25% 25%;
-  --sidebar: 200 32% 20%;
-  --sidebar-foreground: 45 100% 95%;
-  --sidebar-border: 200 25% 28%;
-  --sidebar-primary: 45 100% 50%;
-  --sidebar-primary-foreground: 200 35% 10%;
-  --sidebar-accent: 200 25% 28%;
-  --sidebar-accent-foreground: 45 100% 88%;
-  --sidebar-ring: 45 100% 55%;
-  --popover: 200 30% 20%;
-  --popover-foreground: 45 100% 95%;
-  --popover-border: 200 25% 28%;
-  --primary: 45 100% 50%;
-  --primary-foreground: 200 35% 10%;
-  --secondary: 200 25% 30%;
-  --secondary-foreground: 45 100% 95%;
-  --muted: 200 20% 25%;
-  --muted-foreground: 200 10% 68%;
-  --accent: 200 25% 28%;
-  --accent-foreground: 45 100% 88%;
-  --destructive: 0 85% 58%;
+  --button-outline: rgba(0,217,255, .20);
+  --badge-outline: rgba(0,217,255, .10);
+  --opaque-button-border-intensity: 12;
+  --elevate-1: rgba(0,217,255, .08);
+  --elevate-2: rgba(0,217,255, .15);
+  --background: 270 50% 8%;
+  --foreground: 180 100% 95%;
+  --border: 280 40% 20%;
+  --card: 275 45% 12%;
+  --card-foreground: 180 100% 95%;
+  --card-border: 280 50% 25%;
+  --sidebar: 270 48% 10%;
+  --sidebar-foreground: 180 100% 95%;
+  --sidebar-border: 280 40% 22%;
+  --sidebar-primary: 185 100% 50%;
+  --sidebar-primary-foreground: 270 50% 8%;
+  --sidebar-accent: 280 40% 22%;
+  --sidebar-accent-foreground: 180 100% 88%;
+  --sidebar-ring: 185 100% 55%;
+  --popover: 275 45% 14%;
+  --popover-foreground: 180 100% 95%;
+  --popover-border: 280 40% 25%;
+  --primary: 185 100% 50%;
+  --primary-foreground: 270 50% 8%;
+  --secondary: 320 70% 45%;
+  --secondary-foreground: 180 100% 95%;
+  --muted: 275 30% 18%;
+  --muted-foreground: 270 15% 65%;
+  --accent: 320 60% 40%;
+  --accent-foreground: 180 100% 95%;
+  --destructive: 0 85% 55%;
   --destructive-foreground: 0 85% 98%;
-  --input: 210 15% 75%;
-  --ring: 45 90% 55%;
-  --chart-1: 200 75% 40%;
-  --chart-2: 160 70% 38%;
-  --chart-3: 30 80% 45%;
-  --chart-4: 280 70% 42%;
-  --chart-5: 340 75% 45%;
+  --input: 280 30% 25%;
+  --ring: 185 100% 55%;
+  --chart-1: 185 100% 50%;
+  --chart-2: 320 70% 50%;
+  --chart-3: 45 100% 50%;
+  --chart-4: 280 70% 55%;
+  --chart-5: 160 80% 45%;
   --font-sans: Open Sans, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
@@ -90,45 +90,45 @@
 }
 
 .dark {
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
-  --opaque-button-border-intensity: 9;
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
-  --background: 200 35% 15%;
-  --foreground: 45 100% 95%;
-  --border: 200 20% 24%;
-  --card: 200 30% 12%;
-  --card-foreground: 45 100% 95%;
-  --card-border: 200 25% 18%;
-  --sidebar: 200 32% 14%;
-  --sidebar-foreground: 45 100% 95%;
-  --sidebar-border: 200 25% 22%;
-  --sidebar-primary: 45 100% 50%;
-  --sidebar-primary-foreground: 200 35% 10%;
-  --sidebar-accent: 200 25% 22%;
-  --sidebar-accent-foreground: 45 100% 88%;
-  --sidebar-ring: 45 100% 55%;
-  --popover: 200 30% 16%;
-  --popover-foreground: 45 100% 95%;
-  --popover-border: 200 25% 22%;
-  --primary: 45 100% 50%;
-  --primary-foreground: 200 35% 10%;
-  --secondary: 200 25% 24%;
-  --secondary-foreground: 45 100% 95%;
-  --muted: 200 20% 20%;
-  --muted-foreground: 200 10% 68%;
-  --accent: 200 25% 22%;
-  --accent-foreground: 45 100% 88%;
-  --destructive: 0 85% 58%;
+  --button-outline: rgba(0,217,255, .25);
+  --badge-outline: rgba(0,217,255, .15);
+  --opaque-button-border-intensity: 12;
+  --elevate-1: rgba(0,217,255, .10);
+  --elevate-2: rgba(0,217,255, .18);
+  --background: 270 55% 6%;
+  --foreground: 180 100% 95%;
+  --border: 280 45% 18%;
+  --card: 275 50% 10%;
+  --card-foreground: 180 100% 95%;
+  --card-border: 280 55% 22%;
+  --sidebar: 270 52% 8%;
+  --sidebar-foreground: 180 100% 95%;
+  --sidebar-border: 280 45% 20%;
+  --sidebar-primary: 185 100% 50%;
+  --sidebar-primary-foreground: 270 55% 6%;
+  --sidebar-accent: 280 45% 20%;
+  --sidebar-accent-foreground: 180 100% 88%;
+  --sidebar-ring: 185 100% 55%;
+  --popover: 275 50% 12%;
+  --popover-foreground: 180 100% 95%;
+  --popover-border: 280 45% 22%;
+  --primary: 185 100% 50%;
+  --primary-foreground: 270 55% 6%;
+  --secondary: 320 75% 48%;
+  --secondary-foreground: 180 100% 95%;
+  --muted: 275 35% 15%;
+  --muted-foreground: 270 18% 62%;
+  --accent: 320 65% 42%;
+  --accent-foreground: 180 100% 95%;
+  --destructive: 0 85% 55%;
   --destructive-foreground: 0 85% 98%;
-  --input: 210 15% 28%;
-  --ring: 45 90% 55%;
-  --chart-1: 200 85% 65%;
-  --chart-2: 160 80% 62%;
-  --chart-3: 30 90% 68%;
-  --chart-4: 280 80% 65%;
-  --chart-5: 340 85% 68%;
+  --input: 280 35% 22%;
+  --ring: 185 100% 55%;
+  --chart-1: 185 100% 55%;
+  --chart-2: 320 75% 55%;
+  --chart-3: 45 100% 55%;
+  --chart-4: 280 75% 60%;
+  --chart-5: 160 85% 50%;
   --shadow-2xs: 0px 2px 0px 0px hsl(210 15% 95% / 0.00);
   --shadow-xs: 0px 2px 0px 0px hsl(210 15% 95% / 0.00);
   --shadow-sm: 0px 2px 0px 0px hsl(210 15% 95% / 0.00), 0px 1px 2px -1px hsl(210 15% 95% / 0.00);
@@ -174,8 +174,28 @@
 
   body {
     @apply font-sans antialiased text-foreground;
-    background: linear-gradient(135deg, #0F2027 0%, #203A43 50%, #2C5364 100%);
+    background: 
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,217,255,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(233,30,140,0.12) 0%, transparent 50%),
+      radial-gradient(ellipse 50% 30% at 20% 80%, rgba(138,43,226,0.10) 0%, transparent 50%),
+      linear-gradient(180deg, #0d0416 0%, #1a0a2e 25%, #150826 50%, #0f0520 75%, #0a0312 100%);
     min-height: 100vh;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      radial-gradient(circle at 20% 30%, rgba(0,217,255,0.03) 0%, transparent 25%),
+      radial-gradient(circle at 80% 70%, rgba(233,30,140,0.03) 0%, transparent 25%),
+      radial-gradient(circle at 50% 50%, rgba(138,43,226,0.02) 0%, transparent 30%);
+    pointer-events: none;
+    z-index: -1;
   }
 
   /* Indian Script Support */
@@ -360,4 +380,135 @@
 
 .animate-marble-jump {
   animation: marble-jump 3s ease-in-out infinite;
+}
+
+/* Neon Glow Effects for Kanche King - Subtle */
+@keyframes neon-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(0,217,255,0.3), 0 0 15px rgba(0,217,255,0.15);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(0,217,255,0.4), 0 0 20px rgba(0,217,255,0.2);
+  }
+}
+
+@keyframes neon-pulse-magenta {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(233,30,140,0.3), 0 0 15px rgba(233,30,140,0.15);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(233,30,140,0.4), 0 0 20px rgba(233,30,140,0.2);
+  }
+}
+
+@keyframes floating-marble {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.6;
+  }
+  25% {
+    transform: translateY(-15px) rotate(90deg);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(-8px) rotate(180deg);
+    opacity: 0.7;
+  }
+  75% {
+    transform: translateY(-20px) rotate(270deg);
+    opacity: 0.9;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes arena-glow {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Utility classes for neon effects */
+.neon-glow-cyan {
+  animation: neon-pulse 2s ease-in-out infinite;
+}
+
+.neon-glow-magenta {
+  animation: neon-pulse-magenta 2s ease-in-out infinite;
+}
+
+.neon-text-cyan {
+  text-shadow: 0 0 8px rgba(0,217,255,0.5), 0 0 15px rgba(0,217,255,0.25);
+}
+
+.neon-text-magenta {
+  text-shadow: 0 0 8px rgba(233,30,140,0.5), 0 0 15px rgba(233,30,140,0.25);
+}
+
+.marble-glass {
+  background: linear-gradient(135deg, rgba(0,217,255,0.1) 0%, rgba(233,30,140,0.05) 50%, rgba(138,43,226,0.1) 100%);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0,217,255,0.2);
+}
+
+.shimmer-effect {
+  background: linear-gradient(90deg, transparent, rgba(0,217,255,0.1), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Marble Arena Background Pattern */
+.arena-pattern {
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(0,217,255,0.08) 0%, transparent 20%),
+    radial-gradient(circle at 90% 80%, rgba(233,30,140,0.08) 0%, transparent 20%),
+    radial-gradient(circle at 50% 50%, rgba(138,43,226,0.05) 0%, transparent 30%);
+  animation: arena-glow 4s ease-in-out infinite;
+}
+
+/* Grid pattern for gaming arena feel */
+.arena-grid {
+  background-image: 
+    linear-gradient(rgba(0,217,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,217,255,0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* Marble orb decoration */
+.marble-orb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), rgba(0,217,255,0.6) 30%, rgba(0,150,200,0.8) 60%, rgba(0,100,150,1));
+  box-shadow: 
+    inset -3px -3px 6px rgba(0,0,0,0.3),
+    inset 2px 2px 4px rgba(255,255,255,0.3),
+    0 0 10px rgba(0,217,255,0.5);
+  animation: floating-marble 6s ease-in-out infinite;
+}
+
+.marble-orb-magenta {
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), rgba(233,30,140,0.6) 30%, rgba(180,20,100,0.8) 60%, rgba(120,10,80,1));
+  box-shadow: 
+    inset -3px -3px 6px rgba(0,0,0,0.3),
+    inset 2px 2px 4px rgba(255,255,255,0.3),
+    0 0 10px rgba(233,30,140,0.5);
+}
+
+.marble-orb-gold {
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,215,0,0.7) 30%, rgba(200,150,0,0.9) 60%, rgba(150,100,0,1));
+  box-shadow: 
+    inset -3px -3px 6px rgba(0,0,0,0.3),
+    inset 2px 2px 4px rgba(255,255,255,0.4),
+    0 0 15px rgba(255,215,0,0.6);
 }

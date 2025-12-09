@@ -117,13 +117,13 @@ export default function GameHeader() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 bg-black/30 backdrop-blur-lg z-50 border-b border-primary/30">
+      <header className="fixed top-0 left-0 right-0 bg-[#0d0416]/85 backdrop-blur-lg z-50 border-b border-[#00D9FF]/20">
         <div className="flex justify-between items-center px-5 py-3">
           <div className="flex gap-2 items-center">
             <Button
               size="icon"
               variant="ghost"
-              className="rounded-full bg-primary/20 hover:bg-primary/40 hover:scale-110 transition-all shadow-[0_0_20px_rgba(255,215,0,0.5)]"
+              className="rounded-full bg-[#00D9FF]/15 hover:bg-[#00D9FF]/30 hover:scale-105 transition-all"
               onClick={() => setLocation("/")}
               title="Kanche King"
               data-testid="button-home-icon"
@@ -134,7 +134,7 @@ export default function GameHeader() {
               <Button
                 size="icon"
                 variant="ghost"
-                className="rounded-full bg-primary/20 text-primary hover:bg-primary/40 hover:scale-110 transition-all shadow-[0_0_20px_rgba(255,215,0,0.5)]"
+                className="rounded-full bg-[#00D9FF]/15 text-[#00D9FF] hover:bg-[#00D9FF]/30 hover:scale-105 transition-all"
                 onClick={handleBack}
                 data-testid="button-back"
               >
@@ -147,7 +147,7 @@ export default function GameHeader() {
             <Button
               size="icon"
               variant="ghost"
-              className="rounded-full bg-primary/20 text-primary hover:bg-primary/40 hover:scale-110 transition-all shadow-[0_0_20px_rgba(255,215,0,0.5)]"
+              className="rounded-full bg-[#00D9FF]/15 text-[#00D9FF] hover:bg-[#00D9FF]/30 hover:scale-105 transition-all"
               onClick={() => setLocation("/support")}
               data-testid="button-support"
             >
@@ -156,7 +156,7 @@ export default function GameHeader() {
             <Button
               size="icon"
               variant="ghost"
-              className="rounded-full bg-primary/20 text-primary hover:bg-primary/40 hover:scale-110 transition-all shadow-[0_0_20px_rgba(255,215,0,0.5)]"
+              className="rounded-full bg-[#00D9FF]/15 text-[#00D9FF] hover:bg-[#00D9FF]/30 hover:scale-105 transition-all"
               onClick={() => setShowGameInfo(true)}
               data-testid="button-game-info"
             >
@@ -165,7 +165,7 @@ export default function GameHeader() {
             <Button
               size="icon"
               variant="ghost"
-              className="rounded-full bg-primary/20 text-primary hover:bg-primary/40 hover:scale-110 transition-all shadow-[0_0_20px_rgba(255,215,0,0.5)]"
+              className="rounded-full bg-[#00D9FF]/15 text-[#00D9FF] hover:bg-[#00D9FF]/30 hover:scale-105 transition-all"
               onClick={() => setLocation("/profile")}
               data-testid="button-profile"
             >
@@ -174,7 +174,7 @@ export default function GameHeader() {
             <Button
               size="icon"
               variant="ghost"
-              className="rounded-full bg-primary/20 text-primary hover:bg-primary/40 hover:scale-110 transition-all shadow-[0_0_20px_rgba(255,215,0,0.5)]"
+              className="rounded-full bg-[#E91E8C]/15 text-[#E91E8C] hover:bg-[#E91E8C]/30 hover:scale-105 transition-all"
               onClick={() => setLocation("/admin-login")}
               data-testid="button-admin"
               title="Admin Panel"
@@ -184,7 +184,7 @@ export default function GameHeader() {
             <Button
               size="icon"
               variant="ghost"
-              className="rounded-full bg-primary/20 text-primary hover:bg-primary/40 hover:scale-110 transition-all shadow-[0_0_20px_rgba(255,215,0,0.5)]"
+              className="rounded-full bg-[#00D9FF]/15 text-[#00D9FF] hover:bg-[#00D9FF]/30 hover:scale-105 transition-all"
               onClick={() => setShowSettings(true)}
               data-testid="button-settings"
             >

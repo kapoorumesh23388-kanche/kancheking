@@ -10,12 +10,11 @@ export default function ModeSelection() {
       <div className="container max-w-7xl mx-auto px-5">
         <div className="text-center mb-10">
           <h2
-            className="text-5xl font-bold text-primary mb-3"
-            style={{ textShadow: '0 0 20px rgba(255,215,0,0.5)' }}
+            className="text-5xl font-bold text-[#00D9FF] neon-text-cyan mb-3"
           >
             {t("chooseGameMode")}
           </h2>
-          <p className="text-xl text-muted-foreground">
+          <p className="text-xl text-[#00D9FF]/70">
             {t("selectHowToPlay")}
           </p>
         </div>

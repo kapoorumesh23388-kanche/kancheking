@@ -168,6 +168,25 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (Latest Session)
 
+### 🆕 Neon Gaming Theme (Kanche-Inspired)
+- Updated `client/src/index.css` with new neon color palette:
+  - **Primary:** Cyan (#00D9FF) - used for titles, buttons, highlights
+  - **Secondary:** Magenta (#E91E8C) - used for accents, admin elements
+  - **Background:** Dark purple gradient (#0d0416 → #1a0a2e → #0a0312)
+- **New CSS Utility Classes:**
+  - `.neon-glow-cyan`, `.neon-glow-magenta` - subtle pulsing glow animations
+  - `.neon-text-cyan`, `.neon-text-magenta` - text shadow effects
+  - `.marble-glass` - glassmorphism effect with cyan/magenta gradients
+  - `.arena-pattern`, `.arena-grid` - marble arena background patterns
+  - `.marble-orb`, `.marble-orb-magenta`, `.marble-orb-gold` - decorative marble CSS styles
+- **Updated Components:**
+  - Home.tsx - Hero section with neon glass effect, cyan/magenta title gradient
+  - ModeCard.tsx - Glass cards with cyan text, subtle hover glows
+  - PlayerProfile.tsx - Cyan avatar borders, neon badges
+  - GameHeader.tsx - Dark header with cyan icons, magenta admin button
+  - FloatingMarbles.tsx - 9 neon-colored floating marbles with glow effects
+  - ModeSelection.tsx - Cyan title with neon text shadow
+
 ### 🆕 Enhanced Onboarding with Age Verification & Ad Interests
 - Updated `client/src/pages/OnboardingProfile.tsx` with:
   - **Date of Birth field** - Required for age verification
