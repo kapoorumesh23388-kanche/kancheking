@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Check, Loader2 } from "lucide-react";
@@ -7,16 +7,15 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import AgeVerificationDialog from "@/components/AgeVerificationDialog";
 import type { CatalogItem } from "@shared/schema";
+import { getTotalMarbles, getRewardPoints, initializeMarbles, addMarbles } from "@/lib/marbleStorage";
 
 export default function Shop() {
   const { toast } = useToast();
   const [copiedCode, setCopiedCode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [marbleCount, setMarbleCount] = useState(() => {
-    const saved = localStorage.getItem("playerMarbles");
-    return saved ? parseInt(saved) : 1000;
-  });
-  const [pointCount, setPointCount] = useState(5000);
+  const [marbleCount, setMarbleCount] = useState(0);
+  const [pointCount, setPointCount] = useState(0);
+  const [gamesWon, setGamesWon] = useState(0);
   const [isAgeVerified, setIsAgeVerified] = useState(() => 
     localStorage.getItem("playerIsAgeVerified") === "true"
   );
@@ -24,11 +23,26 @@ export default function Shop() {
   const referralCode = "RAJESH123";
   const userId = localStorage.getItem("userId") || "test-user";
 
+  // Initialize marbles on first load
   useEffect(() => {
-    const handleStorageChange = () => {
-      const saved = localStorage.getItem("playerMarbles");
-      if (saved) setMarbleCount(parseInt(saved));
-    };
+    initializeMarbles();
+  }, []);
+
+  // Real-time update of stats
+  const updateStats = useCallback(() => {
+    setMarbleCount(getTotalMarbles());
+    setPointCount(getRewardPoints());
+    setGamesWon(parseInt(localStorage.getItem("gamesWon") || "0"));
+  }, []);
+
+  // Update stats every 2 seconds for real-time display
+  useEffect(() => {
+    updateStats();
+    const interval = setInterval(updateStats, 2000);
+    
+    const handleStorageChange = () => updateStats();
+    window.addEventListener("storage", handleStorageChange);
+    
     const handleAgeVerified = () => {
       setIsAgeVerified(true);
       toast({
@@ -36,13 +50,14 @@ export default function Shop() {
         description: "Age verified! You can now purchase marbles.",
       });
     };
-    window.addEventListener("marbleUpdate", handleStorageChange);
     window.addEventListener("ageVerified", handleAgeVerified);
+    
     return () => {
-      window.removeEventListener("marbleUpdate", handleStorageChange);
+      clearInterval(interval);
+      window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("ageVerified", handleAgeVerified);
     };
-  }, [toast]);
+  }, [toast, updateStats]);
 
   const { data: catalogItems = [], isLoading: isLoadingCatalog } = useQuery<CatalogItem[]>({
     queryKey: ["/api/catalog"],
@@ -97,8 +112,9 @@ export default function Shop() {
             const verifyData = await verifyRes.json();
             
             if (verifyData.success) {
-              setMarbleCount(verifyData.marbles);
-              localStorage.setItem("playerMarbles", verifyData.marbles.toString());
+              // Add marbles to the 'purchase' bucket for tournament eligibility
+              addMarbles('purchase', pack.marbles);
+              updateStats();
               toast({
                 title: "Success!",
                 description: `${pack.marbles} marbles added to your account!`,
@@ -180,7 +196,7 @@ export default function Shop() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-muted-foreground mb-2">Games Won</p>
-                <p className="text-3xl font-bold text-blue-500">15</p>
+                <p className="text-3xl font-bold text-blue-500" data-testid="text-games-won">{gamesWon}</p>
               </div>
             </CardContent>
           </Card>
