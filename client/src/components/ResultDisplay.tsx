@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/lib/LanguageContext";
 
 interface ResultDisplayProps {
   won: boolean;
@@ -18,6 +19,7 @@ export default function ResultDisplay({
   onPlayAgain,
   isPlayer1Hider = true
 }: ResultDisplayProps) {
+  const { t } = useLanguage();
   // Determine winner and loser with their roles
   const getWinnerInfo = () => {
     if (isPlayer1Hider) {
@@ -25,16 +27,16 @@ export default function ResultDisplay({
       if (won) {
         // Guesser (AI) won, hider (you) lost
         return {
-          winner: "🤖 AI (Guesser)",
-          loser: "You (Hider)",
-          winnerLabel: "AI Guessed Correctly!"
+          winner: `🤖 ${t("aiGuesser")}`,
+          loser: t("youHider"),
+          winnerLabel: t("aiGuessedCorrectly")
         };
       } else {
         // Hider (you) won, guesser (AI) lost
         return {
-          winner: "You (Hider)",
-          loser: "🤖 AI (Guesser)",
-          winnerLabel: "Your Marbles Safe!"
+          winner: t("youHider"),
+          loser: `🤖 ${t("aiGuesser")}`,
+          winnerLabel: t("yourMarblesSafe")
         };
       }
     } else {
@@ -42,16 +44,16 @@ export default function ResultDisplay({
       if (won) {
         // Guesser (you) won, hider (AI) lost
         return {
-          winner: "You (Guesser)",
-          loser: "🤖 AI (Hider)",
-          winnerLabel: "Perfect Guess!"
+          winner: t("youGuesser"),
+          loser: `🤖 ${t("aiHider")}`,
+          winnerLabel: t("perfectGuess")
         };
       } else {
         // Hider (AI) won, guesser (you) lost
         return {
-          winner: "🤖 AI (Hider)",
-          loser: "You (Guesser)",
-          winnerLabel: "Better Luck Next Time!"
+          winner: `🤖 ${t("aiHider")}`,
+          loser: t("youGuesser"),
+          winnerLabel: t("betterLuckNextTime")
         };
       }
     }
@@ -76,7 +78,7 @@ export default function ResultDisplay({
               ? "bg-[#00FF88]/20 border-[#00FF88]/50"
               : "bg-destructive/20 border-destructive/50"
           }`}>
-            <p className="text-sm text-muted-foreground mb-2">WINNER 👑</p>
+            <p className="text-sm text-muted-foreground mb-2">{t("winner")} 👑</p>
             <p className={`text-3xl font-bold ${
               won ? "text-[#00FF88]" : "text-destructive"
             }`}
@@ -90,10 +92,10 @@ export default function ResultDisplay({
             </p>
           </div>
 
-          <p className="text-2xl text-primary font-bold">vs</p>
+          <p className="text-2xl text-primary font-bold">{t("vs")}</p>
 
           <div className="inline-block px-8 py-4 rounded-2xl border-3 bg-muted/20 border-muted/50">
-            <p className="text-sm text-muted-foreground mb-2">LOSER</p>
+            <p className="text-sm text-muted-foreground mb-2">{t("loser")}</p>
             <p className="text-3xl font-bold text-muted-foreground" data-testid="text-loser">
               {info.loser}
             </p>
@@ -132,7 +134,7 @@ export default function ResultDisplay({
           >
             {won ? "+" : "-"}{Math.abs(marbleChange)} 💎
           </div>
-          <p className="text-xl font-semibold text-muted-foreground">Marbles {won ? "gained" : "lost"}</p>
+          <p className="text-xl font-semibold text-muted-foreground">{won ? t("marblesWon") : t("marblesLost")}</p>
         </div>
         
         <p className="text-3xl text-primary mb-8 font-bold" style={{ textShadow: '0 0 15px rgba(255,215,0,0.5)' }} data-testid="text-details">
@@ -142,7 +144,7 @@ export default function ResultDisplay({
         {aiChoice && (
           <div className="mb-8 p-6 bg-gradient-to-r from-primary/30 to-primary/10 px-8 py-5 rounded-2xl border-2 border-primary/40 inline-block" data-testid="text-ai-choice">
             <p className="text-xl text-primary font-bold">
-              🤖 <span className="text-[#FFA500]">AI revealed:</span> {aiChoice}
+              🤖 <span className="text-[#FFA500]">{t("aiLabel")}:</span> {aiChoice}
             </p>
           </div>
         )}
@@ -152,7 +154,7 @@ export default function ResultDisplay({
           onClick={onPlayAgain}
           data-testid="button-play-again"
         >
-          Play Again 🎮
+          {t("playAgain")} 🎮
         </Button>
       </CardContent>
     </Card>

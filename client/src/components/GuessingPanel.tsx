@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { useLanguage } from "@/lib/LanguageContext";
 
 interface GuessingPanelProps {
   onGuess?: (guess: string, bet: number) => void;
@@ -10,6 +11,7 @@ interface GuessingPanelProps {
 }
 
 export default function GuessingPanel({ onGuess, maxBet = 100 }: GuessingPanelProps) {
+  const { t } = useLanguage();
   const [bet, setBet] = useState(Math.min(10, maxBet));
 
   const handleBetChange = (value: string) => {
@@ -33,13 +35,13 @@ export default function GuessingPanel({ onGuess, maxBet = 100 }: GuessingPanelPr
           className="text-4xl font-bold text-primary text-center mb-8 uppercase tracking-wider"
           style={{ textShadow: '0 0 20px rgba(255,215,0,0.7)' }}
         >
-          Make Your Guess
+          {t("guessOddEven")}
         </h3>
         
         <div className="flex gap-6 items-center justify-center mb-10 flex-wrap">
           <div className="flex items-center gap-3">
             <Label htmlFor="bet-input" className="text-xl font-bold text-primary uppercase">
-              Bet:
+              {t("betAmount")}:
             </Label>
             <Input
               id="bet-input"
@@ -61,7 +63,7 @@ export default function GuessingPanel({ onGuess, maxBet = 100 }: GuessingPanelPr
             onClick={() => handleGuess("kali")}
             data-testid="button-guess-kali"
           >
-            ⬆️ Odd
+            ⬆️ {t("odd")}
             <div className="text-sm">Kali</div>
           </Button>
           <Button
@@ -69,7 +71,7 @@ export default function GuessingPanel({ onGuess, maxBet = 100 }: GuessingPanelPr
             onClick={() => handleGuess("jotta")}
             data-testid="button-guess-jotta"
           >
-            ⬇️ Even
+            ⬇️ {t("even")}
             <div className="text-sm">Jotta</div>
           </Button>
         </div>

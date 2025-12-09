@@ -1,7 +1,10 @@
 import ModeCard from "@/components/ModeCard";
 import { Link } from "wouter";
+import { useLanguage } from "@/lib/LanguageContext";
 
 export default function ModeSelection() {
+  const { t } = useLanguage();
+  
   return (
     <div className="min-h-screen pt-20 pb-10">
       <div className="container max-w-7xl mx-auto px-5">
@@ -10,10 +13,10 @@ export default function ModeSelection() {
             className="text-5xl font-bold text-primary mb-3"
             style={{ textShadow: '0 0 20px rgba(255,215,0,0.5)' }}
           >
-            Choose Your Game Mode
+            {t("chooseGameMode")}
           </h2>
           <p className="text-xl text-muted-foreground">
-            Select how you want to play
+            {t("selectHowToPlay")}
           </p>
         </div>
 
@@ -21,49 +24,49 @@ export default function ModeSelection() {
           <Link href="/game/ai">
             <ModeCard
               icon="🤖"
-              title="Play with AI"
-              description="Test your skills against an intelligent computer opponent. Great for practice!"
+              title={t("playWithAI")}
+              description={t("vsAI")}
             />
           </Link>
 
           <Link href="/game/friend">
             <ModeCard
               icon="👥"
-              title="Challenge Friend"
-              description="Invite your friend with a room code or link. Play together in real-time!"
+              title={t("friendChallenge")}
+              description={t("createRoom")}
             />
           </Link>
 
           <Link href="/game/random">
             <ModeCard
               icon="🌐"
-              title="Challenge Random Player"
-              description="Challenge a random player from around the world. No marble limit required!"
+              title={t("randomChallenge")}
+              description={t("searchingForOpponent")}
             />
           </Link>
 
           <Link href="/tournament">
             <ModeCard
               icon="🏆"
-              title="Tournament"
-              description="100-player tournament bracket. 2500 marble entry fee. Win big prizes!"
-              requirement="2500 Marbles Entry"
+              title={t("tournament")}
+              description={t("tournamentEntryBarrier")}
+              requirement={t("entryFee")}
             />
           </Link>
 
           <Link href="/shop">
             <ModeCard
               icon="💎"
-              title="Shop"
-              description="Purchase marbles, view points catalog, and manage referrals."
+              title={t("shop")}
+              description={t("purchaseMarbles")}
             />
           </Link>
 
           <Link href="/leaderboard">
             <ModeCard
               icon="📊"
-              title="Leaderboard"
-              description="View top players and see where you rank globally."
+              title={t("leaderboard")}
+              description={t("stats")}
             />
           </Link>
         </div>

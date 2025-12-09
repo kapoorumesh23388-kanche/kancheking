@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import greenMarbleImage from "@assets/image_1764089214310.png";
+import { useLanguage } from "@/lib/LanguageContext";
 
 interface MarbleSelectorProps {
   selectedMarbleIds: number[];
@@ -45,6 +46,7 @@ export default function MarbleSelector({
   onClearAll,
   maxMarbles = 20
 }: MarbleSelectorProps) {
+  const { t } = useLanguage();
   const marbles = Array.from({ length: maxMarbles }, (_, i) => i);
   
   return (
@@ -52,7 +54,7 @@ export default function MarbleSelector({
       <div className="flex justify-between items-center gap-4 flex-wrap">
         <div>
           <h3 className="text-2xl font-bold text-primary uppercase tracking-wider">
-            Select Your Marbles
+            {t("selectMarbles")}
           </h3>
           <p className="text-lg text-[#00FF88] mt-1" style={{ textShadow: '0 0 10px rgba(0,255,136,0.5)' }}>
             {selectedMarbleIds.length} / {maxMarbles} selected
