@@ -470,18 +470,111 @@
 /* Marble Arena Background Pattern */
 .arena-pattern {
   background-image: 
-    radial-gradient(circle at 10% 20%, rgba(0,217,255,0.08) 0%, transparent 20%),
-    radial-gradient(circle at 90% 80%, rgba(233,30,140,0.08) 0%, transparent 20%),
-    radial-gradient(circle at 50% 50%, rgba(138,43,226,0.05) 0%, transparent 30%);
+    radial-gradient(circle at 10% 20%, rgba(0,217,255,0.15) 0%, transparent 25%),
+    radial-gradient(circle at 90% 80%, rgba(233,30,140,0.15) 0%, transparent 25%),
+    radial-gradient(circle at 50% 50%, rgba(138,43,226,0.1) 0%, transparent 35%),
+    radial-gradient(circle at 20% 70%, rgba(0,255,136,0.08) 0%, transparent 20%),
+    radial-gradient(circle at 80% 30%, rgba(255,215,0,0.08) 0%, transparent 20%);
   animation: arena-glow 4s ease-in-out infinite;
 }
 
-/* Grid pattern for gaming arena feel */
+/* Neon Grid pattern for gaming arena feel */
 .arena-grid {
   background-image: 
-    linear-gradient(rgba(0,217,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,217,255,0.03) 1px, transparent 1px);
-  background-size: 50px 50px;
+    linear-gradient(rgba(0,217,255,0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,217,255,0.08) 1px, transparent 1px),
+    linear-gradient(rgba(233,30,140,0.03) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(233,30,140,0.03) 2px, transparent 2px);
+  background-size: 40px 40px, 40px 40px, 200px 200px, 200px 200px;
+}
+
+/* Animated energy vortex */
+@keyframes vortex-spin {
+  0% { transform: rotate(0deg) scale(1); opacity: 0.3; }
+  50% { transform: rotate(180deg) scale(1.1); opacity: 0.5; }
+  100% { transform: rotate(360deg) scale(1); opacity: 0.3; }
+}
+
+@keyframes vortex-pulse {
+  0%, 100% { opacity: 0.2; transform: scale(0.9); }
+  50% { opacity: 0.4; transform: scale(1.1); }
+}
+
+.neon-vortex {
+  position: fixed;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent, rgba(0,217,255,0.3), transparent, rgba(233,30,140,0.3), transparent);
+  animation: vortex-spin 20s linear infinite;
+  pointer-events: none;
+}
+
+.neon-vortex-2 {
+  position: fixed;
+  border-radius: 50%;
+  background: conic-gradient(from 180deg, transparent, rgba(138,43,226,0.2), transparent, rgba(0,255,136,0.2), transparent);
+  animation: vortex-spin 25s linear infinite reverse;
+  pointer-events: none;
+}
+
+/* Neon light pillars */
+@keyframes pillar-glow {
+  0%, 100% { opacity: 0.3; height: 100%; }
+  50% { opacity: 0.6; height: 120%; }
+}
+
+.neon-pillar {
+  position: absolute;
+  width: 2px;
+  background: linear-gradient(to top, transparent, rgba(0,217,255,0.8), rgba(233,30,140,0.5), transparent);
+  animation: pillar-glow 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Orbit animation for marbles */
+@keyframes orbit {
+  0% { transform: rotate(0deg) translateX(150px) rotate(0deg); }
+  100% { transform: rotate(360deg) translateX(150px) rotate(-360deg); }
+}
+
+@keyframes orbit-reverse {
+  0% { transform: rotate(0deg) translateX(100px) rotate(0deg); }
+  100% { transform: rotate(-360deg) translateX(100px) rotate(360deg); }
+}
+
+.marble-orbit {
+  animation: orbit 15s linear infinite;
+}
+
+.marble-orbit-reverse {
+  animation: orbit-reverse 12s linear infinite;
+}
+
+/* Parallax marble layer - slow background */
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  25% { transform: translateY(-30px) translateX(10px); }
+  50% { transform: translateY(-15px) translateX(-10px); }
+  75% { transform: translateY(-25px) translateX(5px); }
+}
+
+.parallax-slow {
+  animation: float-slow 12s ease-in-out infinite;
+}
+
+/* Parallax marble layer - fast foreground */
+@keyframes float-fast {
+  0%, 100% { transform: translateY(0) translateX(0) scale(1); }
+  33% { transform: translateY(-20px) translateX(15px) scale(1.05); }
+  66% { transform: translateY(-10px) translateX(-15px) scale(0.95); }
+}
+
+.parallax-fast {
+  animation: float-fast 6s ease-in-out infinite;
+}
+
+/* Hexagonal pattern overlay */
+.hex-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%2300d9ff' fill-opacity='0.04'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
 /* Marble orb decoration */
