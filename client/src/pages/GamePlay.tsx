@@ -21,6 +21,16 @@ import {
   initializeMarbles,
   recordGameResult 
 } from "@/lib/marbleStorage";
+import {
+  initializeDailyRewards,
+  updatePlaytime,
+  recordAiDefeat,
+  checkAndClaimLoginReward,
+  checkAndClaimHourlyRewards,
+  checkAndClaimDefeatBonuses,
+} from "@/lib/rewardsStorage";
+import { useToast } from "@/hooks/use-toast";
+import { RotateCcw, Home } from "lucide-react";
 
 type GamePhase = "selecting" | "guessing" | "revealing" | "result";
 
@@ -32,12 +42,14 @@ type GameState = {
 const gameState: GameState = {};
 
 export default function GamePlay() {
+  const { toast } = useToast();
   const [phase, setPhase] = useState<GamePhase>("selecting");
   const [selectedMarbleIds, setSelectedMarbleIds] = useState<number[]>([]);
   const [fistOpen, setFistOpen] = useState(false);
   const [isHiderPlayer1, setIsHiderPlayer1] = useState(true);
   const [player1Marbles, setPlayer1Marbles] = useState(() => {
     initializeMarbles();
+    initializeDailyRewards();
     return getTotalMarbles();
   });
   const [player2Marbles, setPlayer2Marbles] = useState(120);
@@ -255,11 +267,44 @@ export default function GamePlay() {
   // Show celebration when AI loses all marbles
   useEffect(() => {
     if (player2Marbles === 0) {
+      recordAiDefeat();
       setTimeout(() => {
         setShowCelebration(true);
+        const defeatBonus = checkAndClaimDefeatBonuses();
+        if (defeatBonus.claimed) {
+          toast({
+            title: "Bonus Points Earned!",
+            description: `+${defeatBonus.points} points for defeating AI!`,
+          });
+        }
       }, 1000);
     }
-  }, [player2Marbles]);
+  }, [player2Marbles, toast]);
+
+  // Track playtime every minute and check for rewards
+  useEffect(() => {
+    const interval = setInterval(() => {
+      updatePlaytime();
+      
+      const loginReward = checkAndClaimLoginReward();
+      if (loginReward.claimed) {
+        toast({
+          title: "Daily Login Reward!",
+          description: `+${loginReward.points} points for playing 10+ minutes!`,
+        });
+      }
+      
+      const hourlyReward = checkAndClaimHourlyRewards();
+      if (hourlyReward.claimed) {
+        toast({
+          title: "Hourly Reward!",
+          description: `+${hourlyReward.points} points for ${hourlyReward.hours} hour(s) of gameplay!`,
+        });
+      }
+    }, 60000);
+    
+    return () => clearInterval(interval);
+  }, [toast]);
 
   const handleToggleMarble = (id: number) => {
     setSelectedMarbleIds(prev => {
@@ -663,20 +708,40 @@ export default function GamePlay() {
             <div className="bg-primary/20 border-2 border-primary/50 rounded-lg p-6">
               <p className="text-sm text-muted-foreground mb-2">VICTORY BONUS</p>
               <p className="text-3xl font-black text-[#00FF88]">
-                +100 Points
+                +25 Points
               </p>
             </div>
-            <Button
-              className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground font-bold py-6 text-lg"
-              onClick={() => {
-                setShowCelebration(false);
-                // Reset game or go back to home
-                window.location.href = "/";
-              }}
-              data-testid="button-victory-continue"
-            >
-              Continue 🎮
-            </Button>
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                className="bg-gradient-to-r from-[#00D9FF] to-[#00FF88] hover:opacity-90 text-black font-bold py-6 text-lg"
+                onClick={() => {
+                  setShowCelebration(false);
+                  setPlayer2Marbles(120);
+                  setPhase("selecting");
+                  setSelectedMarbleIds([]);
+                  setFistOpen(false);
+                  setGameResult(null);
+                  setShowRevealButton(false);
+                  setIsHiderPlayer1(true);
+                }}
+                data-testid="button-play-again"
+              >
+                <RotateCcw className="w-5 h-5 mr-2" />
+                Play Again
+              </Button>
+              <Button
+                variant="outline"
+                className="border-primary text-primary font-bold py-6 text-lg"
+                onClick={() => {
+                  setShowCelebration(false);
+                  window.location.href = "/modes";
+                }}
+                data-testid="button-victory-home"
+              >
+                <Home className="w-5 h-5 mr-2" />
+                Home
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
