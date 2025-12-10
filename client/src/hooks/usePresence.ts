@@ -36,7 +36,17 @@ export function usePresence(): UsePresenceResult {
   
   const playerId = localStorage.getItem("playerId") || `player_${Date.now()}`;
   const playerName = localStorage.getItem("playerDisplayName") || `Player_${playerId.slice(-6)}`;
-  const playerMarbles = parseInt(localStorage.getItem("playerMarbles") || "150");
+  
+  // Get total marbles from all buckets
+  const getPlayerMarbles = () => {
+    const free = parseInt(localStorage.getItem("freeMarbles") || "150");
+    const purchased = parseInt(localStorage.getItem("purchasedMarbles") || "0");
+    const pvp = parseInt(localStorage.getItem("pvpWinMarbles") || "0");
+    const ai = parseInt(localStorage.getItem("aiWinMarbles") || "0");
+    return free + purchased + pvp + ai;
+  };
+  
+  const playerMarbles = getPlayerMarbles();
   const profileImage = localStorage.getItem("playerProfileImageUpdate") || "";
 
   if (!localStorage.getItem("playerId")) {
@@ -114,6 +124,19 @@ export function usePresence(): UsePresenceResult {
     
     const interval = setInterval(() => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
+        // Refresh presence with updated marble count
+        const currentMarbles = getPlayerMarbles();
+        wsRef.current.send(JSON.stringify({
+          type: "presence",
+          playerId,
+          data: {
+            name: playerName,
+            marbles: currentMarbles,
+            profileImage,
+            currentMode: window.location.pathname,
+          }
+        }));
+        
         wsRef.current.send(JSON.stringify({
           type: "get_online_players",
           playerId,

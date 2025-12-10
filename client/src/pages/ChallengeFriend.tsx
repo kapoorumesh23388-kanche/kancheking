@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,7 @@ import { Copy, Check, Share2, Loader2, ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { getTotalMarbles } from "@/lib/marbleStorage";
 
 export default function ChallengeFriend() {
   const [location, setLocation] = useLocation();
@@ -15,15 +16,89 @@ export default function ChallengeFriend() {
   const [joinCode, setJoinCode] = useState("");
   const [isJoining, setIsJoining] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const userId = localStorage.getItem("userId") || `player_${Date.now()}`;
+  const [waitingForOpponent, setWaitingForOpponent] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+  
+  const playerId = localStorage.getItem("playerId") || `player_${Date.now()}`;
+  const playerName = localStorage.getItem("playerDisplayName") || `Player_${playerId.slice(-6)}`;
+  const playerMarbles = getTotalMarbles();
+  const profileImage = localStorage.getItem("playerProfileImageUpdate") || "";
+
+  // Connect to WebSocket when room is created
+  useEffect(() => {
+    if (roomCode && waitingForOpponent) {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      
+      try {
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+        
+        ws.onopen = () => {
+          console.log("Room creator connected to WebSocket");
+          // Join the room as creator
+          ws.send(JSON.stringify({
+            type: "join_room",
+            roomCode,
+            playerId,
+            data: {
+              playerName,
+              marbles: playerMarbles,
+              profileImage,
+              isCreator: true,
+            }
+          }));
+        };
+        
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            console.log("Creator received:", message);
+            
+            if (message.type === "player_joined") {
+              // Opponent joined - navigate to game
+              toast({
+                title: "Opponent Connected!",
+                description: `${message.data.playerName} has joined the game`,
+              });
+              setLocation(`/multiplayer-game/${roomCode}`);
+            } else if (message.type === "room_ready") {
+              // Both players ready - navigate to game
+              setLocation(`/multiplayer-game/${roomCode}`);
+            }
+          } catch (e) {
+            console.error("Parse error:", e);
+          }
+        };
+        
+        ws.onclose = () => {
+          console.log("WebSocket disconnected");
+        };
+        
+        ws.onerror = (err) => {
+          console.error("WebSocket error:", err);
+        };
+      } catch (error) {
+        console.error("Failed to connect:", error);
+      }
+    }
+    
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, [roomCode, waitingForOpponent, playerId, playerName, playerMarbles, profileImage, setLocation, toast]);
 
   const createRoom = async () => {
     setIsCreating(true);
     try {
-      const res = await apiRequest("POST", "/api/game-room/create", { userId });
+      const res = await apiRequest("POST", "/api/game-room/create", { userId: playerId });
       const data = await res.json();
       if (data.success && data.roomCode) {
         setRoomCode(data.roomCode);
+        setWaitingForOpponent(true);
       } else {
         toast({
           title: "Error",
@@ -58,7 +133,10 @@ export default function ChallengeFriend() {
       });
     } else {
       await navigator.clipboard.writeText(url);
-      alert("Link copied to clipboard!");
+      toast({
+        title: "Link Copied!",
+        description: "Share link copied to clipboard",
+      });
     }
   };
 
@@ -68,7 +146,7 @@ export default function ChallengeFriend() {
     try {
       const res = await apiRequest("POST", "/api/game-room/join", { 
         roomCode: joinCode.toUpperCase(), 
-        userId 
+        userId: playerId 
       });
       const data = await res.json();
       if (data.success) {
@@ -91,6 +169,15 @@ export default function ChallengeFriend() {
     }
   };
 
+  const cancelRoom = () => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    setRoomCode("");
+    setWaitingForOpponent(false);
+  };
+
   // Show room code and share options after creating room
   if (roomCode) {
     return (
@@ -99,7 +186,7 @@ export default function ChallengeFriend() {
           <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40">
             <CardHeader className="text-center">
               <CardTitle className="text-4xl font-bold text-primary mb-2">
-                Room Created! 🎮
+                Room Created!
               </CardTitle>
               <CardDescription>Share this with your friend</CardDescription>
             </CardHeader>
@@ -164,10 +251,10 @@ export default function ChallengeFriend() {
               <Button
                 variant="ghost"
                 className="w-full"
-                onClick={() => setRoomCode("")}
+                onClick={cancelRoom}
                 data-testid="button-cancel-room"
               >
-                Create New Room
+                Cancel & Create New Room
               </Button>
             </CardContent>
           </Card>
@@ -192,7 +279,7 @@ export default function ChallengeFriend() {
           <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-green-500/30 hover-elevate" data-testid="card-create-room">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-2xl">
-                <span>➕</span> Create Room
+                <span>+</span> Create Room
               </CardTitle>
               <CardDescription>Invite your friend to play</CardDescription>
             </CardHeader>
