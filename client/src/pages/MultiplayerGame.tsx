@@ -204,10 +204,12 @@ export default function MultiplayerGame() {
         // Record game result for stats
         recordGameResult(won);
         
-        // Add round points (+5 per round)
+        // +5 points on win, -5 points on lose
         const currentPoints = parseInt(localStorage.getItem("playerRewardPoints") || "0");
-        localStorage.setItem("playerRewardPoints", (currentPoints + 5).toString());
-        setRoundPoints(prev => prev + 5);
+        const pointChange = won ? 5 : -5;
+        const newPoints = Math.max(0, currentPoints + pointChange); // Don't go below 0
+        localStorage.setItem("playerRewardPoints", newPoints.toString());
+        setRoundPoints(prev => prev + pointChange);
         
         setGameResult({
           won,
@@ -215,13 +217,14 @@ export default function MultiplayerGame() {
           details: won 
             ? `You guessed correctly! Hidden: ${message.data.hiddenCount}` 
             : `Wrong guess! Hidden: ${message.data.hiddenCount}`,
-          pointsEarned: 5,
+          pointsEarned: pointChange,
         });
         setPhase("result");
         
         toast({
-          title: "+5 Points!",
-          description: "You earned 5 points for this round",
+          title: won ? "+5 Points!" : "-5 Points",
+          description: won ? "You won this round!" : "Better luck next round!",
+          variant: won ? "default" : "destructive",
         });
         break;
         
@@ -391,11 +394,15 @@ export default function MultiplayerGame() {
       </div>
 
       <div className="container max-w-7xl mx-auto px-5">
-        {/* Points earned this session */}
-        {roundPoints > 0 && (
+        {/* Points earned/lost this session */}
+        {roundPoints !== 0 && (
           <div className="text-center mb-4">
-            <span className="bg-green-500/20 text-green-400 px-4 py-2 rounded-full text-sm font-bold">
-              +{roundPoints} Points Earned This Session
+            <span className={`px-4 py-2 rounded-full text-sm font-bold ${
+              roundPoints > 0 
+                ? "bg-green-500/20 text-green-400" 
+                : "bg-red-500/20 text-red-400"
+            }`}>
+              {roundPoints > 0 ? `+${roundPoints}` : roundPoints} Points This Session
             </span>
           </div>
         )}
@@ -517,9 +524,17 @@ export default function MultiplayerGame() {
                   details={gameResult.details}
                   onPlayAgain={handlePlayAgain}
                 />
-                <div className="bg-green-500/20 border border-green-500/40 rounded-lg p-4">
-                  <p className="text-green-400 font-bold">+5 Points Earned!</p>
-                  <p className="text-sm text-muted-foreground">Keep playing to earn more rewards</p>
+                <div className={`border rounded-lg p-4 ${
+                  gameResult.won 
+                    ? "bg-green-500/20 border-green-500/40" 
+                    : "bg-red-500/20 border-red-500/40"
+                }`}>
+                  <p className={`font-bold ${gameResult.won ? "text-green-400" : "text-red-400"}`}>
+                    {gameResult.won ? "+5 Points Earned!" : "-5 Points Lost"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {gameResult.won ? "Keep up the winning streak!" : "Try again to earn points back!"}
+                  </p>
                 </div>
               </div>
             )}
