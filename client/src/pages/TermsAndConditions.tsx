@@ -105,15 +105,23 @@ export default function TermsAndConditions() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">5. Reward Points System</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">5. Daily Reward Points System</h2>
             <ul className="space-y-3 text-gray-200">
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
-                <span><strong>Daily Login Bonus:</strong> 10 reward points</span>
+                <span><strong>Daily Login Reward:</strong> 50 reward points (after 10 minutes of gameplay)</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
-                <span><strong>Playtime Bonus:</strong> 60 reward points per hour of gameplay</span>
+                <span><strong>Hourly Playtime Bonus:</strong> 50 reward points for every hour of gameplay</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-primary">•</span>
+                <span><strong>AI Defeat Bonus:</strong> 25 reward points for each AI opponent defeated</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-primary">•</span>
+                <span><strong>Daily Leaderboard #1:</strong> 50 bonus points for being #1 on leaderboard each day</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
@@ -121,13 +129,39 @@ export default function TermsAndConditions() {
               </li>
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
-                <span>Reward points can be redeemed from our catalog for exclusive items</span>
+                <span>Reward points can be redeemed from our catalog for exclusive items worth Rs. 500-5000</span>
               </li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">6. Fair Play Policy</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">6. Reward Points Eligibility</h2>
+            <ul className="space-y-3 text-gray-200">
+              <li className="flex gap-3">
+                <span className="text-primary">•</span>
+                <span><strong>Login Reward:</strong> Must play for minimum 10 minutes to be eligible</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-primary">•</span>
+                <span><strong>Maximum Daily Points:</strong> Players who defeat AI most times daily get extra rewards</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-primary">•</span>
+                <span><strong>Leaderboard Ranking:</strong> Based on winning marbles from PvP (Player vs Player) matches</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-primary">•</span>
+                <span><strong>Point Value:</strong> Reward points can be redeemed for items worth Rs. 500-5000 depending on accumulated points</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-primary">•</span>
+                <span>All rewards reset daily at midnight IST</span>
+              </li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-primary mb-4">7. Fair Play Policy</h2>
             <ul className="space-y-3 text-gray-200">
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
@@ -149,7 +183,7 @@ export default function TermsAndConditions() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">7. Age Restrictions</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">8. Age Restrictions</h2>
             <ul className="space-y-3 text-gray-200">
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
@@ -167,7 +201,7 @@ export default function TermsAndConditions() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">8. Liability & Disputes</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">9. Liability & Disputes</h2>
             <ul className="space-y-3 text-gray-200">
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
@@ -185,7 +219,7 @@ export default function TermsAndConditions() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">9. Data Privacy</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">10. Data Privacy</h2>
             <ul className="space-y-3 text-gray-200">
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
