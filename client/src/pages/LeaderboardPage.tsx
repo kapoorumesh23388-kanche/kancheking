@@ -1,21 +1,84 @@
+import { useState, useEffect } from "react";
 import Leaderboard from "@/components/Leaderboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Trophy, Star, Clock, Target } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface LeaderboardEntry {
+  rank: number;
+  name: string;
+  avatar?: string;
+  marbles: number;
+  winRate: number;
+}
 
 export default function LeaderboardPage() {
-  const globalEntries = [
-    { rank: 1, name: "Priya Sharma", marbles: 5000, winRate: 87 },
-    { rank: 2, name: "Arjun Patel", marbles: 4500, winRate: 82 },
-    { rank: 3, name: "Kavya Singh", marbles: 4200, winRate: 79 },
-    { rank: 4, name: "Rohan Gupta", marbles: 3800, winRate: 75 },
-    { rank: 5, name: "Ananya Das", marbles: 3500, winRate: 71 },
-    { rank: 6, name: "Vikram Mehta", marbles: 3200, winRate: 68 },
-    { rank: 7, name: "Neha Reddy", marbles: 3000, winRate: 65 },
+  const { toast } = useToast();
+  const [currentPlayer, setCurrentPlayer] = useState({
+    name: "",
+    winningMarbles: 0,
+    rank: 0,
+  });
+
+  const getWinningMarbles = (): number => {
+    const pvpWins = parseInt(localStorage.getItem("pvpWinMarbles") || "0");
+    return pvpWins;
+  };
+
+  useEffect(() => {
+    const name = localStorage.getItem("playerDisplayName") || "You";
+    const winningMarbles = getWinningMarbles();
+    
+    setCurrentPlayer({
+      name,
+      winningMarbles,
+      rank: 0,
+    });
+
+    const today = new Date().toISOString().split("T")[0];
+    const lastBonusDate = localStorage.getItem("leaderboardBonusDate");
+    
+    if (lastBonusDate !== today) {
+      const playerRank = calculatePlayerRank(winningMarbles, globalEntries);
+      if (playerRank === 1 && winningMarbles > 0) {
+        const currentPoints = parseInt(localStorage.getItem("playerRewardPoints") || "0");
+        localStorage.setItem("playerRewardPoints", (currentPoints + 50).toString());
+        localStorage.setItem("leaderboardBonusDate", today);
+        
+        toast({
+          title: "Daily #1 Bonus!",
+          description: "+50 points for being #1 on the leaderboard!",
+        });
+      }
+    }
+  }, [toast]);
+
+  const calculatePlayerRank = (winningMarbles: number, entries: LeaderboardEntry[]): number => {
+    let rank = 1;
+    for (const entry of entries) {
+      if (entry.marbles > winningMarbles) {
+        rank++;
+      }
+    }
+    return rank;
+  };
+
+  const globalEntries: LeaderboardEntry[] = [
+    { rank: 1, name: "Priya Sharma", marbles: 8500, winRate: 87 },
+    { rank: 2, name: "Arjun Patel", marbles: 7200, winRate: 82 },
+    { rank: 3, name: "Kavya Singh", marbles: 6800, winRate: 79 },
+    { rank: 4, name: "Rohan Gupta", marbles: 5500, winRate: 75 },
+    { rank: 5, name: "Ananya Das", marbles: 4800, winRate: 71 },
+    { rank: 6, name: "Vikram Mehta", marbles: 4200, winRate: 68 },
+    { rank: 7, name: "Neha Reddy", marbles: 3600, winRate: 65 },
   ];
 
-  const tournamentEntries = [
-    { rank: 1, name: "Arjun Patel", marbles: 2500, winRate: 92 },
-    { rank: 2, name: "Kavya Singh", marbles: 2200, winRate: 88 },
-    { rank: 3, name: "Priya Sharma", marbles: 2000, winRate: 85 },
+  const tournamentEntries: LeaderboardEntry[] = [
+    { rank: 1, name: "Arjun Patel", marbles: 3500, winRate: 92 },
+    { rank: 2, name: "Kavya Singh", marbles: 3200, winRate: 88 },
+    { rank: 3, name: "Priya Sharma", marbles: 2800, winRate: 85 },
   ];
 
   return (
@@ -29,9 +92,62 @@ export default function LeaderboardPage() {
             Leaderboards
           </h1>
           <p className="text-xl text-muted-foreground">
-            Top players and rankings
+            Ranked by Winning Marbles (PvP Wins)
           </p>
         </div>
+
+        <Card className="bg-gradient-to-r from-[#00D9FF]/10 to-[#E91E8C]/10 border-2 border-[#00D9FF]/40 mb-6">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <Trophy className="w-8 h-8 text-[#FFD700]" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Your Winning Marbles</p>
+                  <p className="text-2xl font-bold text-[#00FF88]" data-testid="text-your-winning-marbles">
+                    {currentPlayer.winningMarbles}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3 flex-wrap">
+                <Badge className="bg-[#FFD700]/20 text-[#FFD700] border border-[#FFD700]/40 px-3 py-2">
+                  <Star className="w-4 h-4 mr-1" />
+                  Daily #1 = +50 pts
+                </Badge>
+                <Badge className="bg-[#00FF88]/20 text-[#00FF88] border border-[#00FF88]/40 px-3 py-2">
+                  <Target className="w-4 h-4 mr-1" />
+                  Beat Opponent = +25 pts
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-[#0C0418]/80 border-2 border-[#E91E8C]/30 mb-6">
+          <CardContent className="p-4">
+            <h3 className="text-lg font-bold text-[#E91E8C] mb-3 flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              Daily Rewards System
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              <div className="bg-black/30 rounded-lg p-3 text-center">
+                <p className="text-[#00D9FF] font-bold">10 min Login</p>
+                <p className="text-[#FFD700]">+50 pts</p>
+              </div>
+              <div className="bg-black/30 rounded-lg p-3 text-center">
+                <p className="text-[#00D9FF] font-bold">Every Hour</p>
+                <p className="text-[#FFD700]">+50 pts</p>
+              </div>
+              <div className="bg-black/30 rounded-lg p-3 text-center">
+                <p className="text-[#00D9FF] font-bold">Beat AI</p>
+                <p className="text-[#FFD700]">+25 pts</p>
+              </div>
+              <div className="bg-black/30 rounded-lg p-3 text-center">
+                <p className="text-[#00D9FF] font-bold">Daily #1</p>
+                <p className="text-[#FFD700]">+50 pts</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Tabs defaultValue="global" className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-6 bg-card/50 p-1">
@@ -40,21 +156,21 @@ export default function LeaderboardPage() {
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               data-testid="tab-global"
             >
-              🌍 Global
+              Global
             </TabsTrigger>
             <TabsTrigger
               value="tournament"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               data-testid="tab-tournament"
             >
-              🏆 Tournament
+              Tournament
             </TabsTrigger>
             <TabsTrigger
               value="friends"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               data-testid="tab-friends"
             >
-              👥 Friends
+              Friends
             </TabsTrigger>
           </TabsList>
 
