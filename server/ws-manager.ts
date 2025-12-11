@@ -447,21 +447,26 @@ export function handleNewConnection(ws: WebSocket) {
         }
         
       } else if (message.type === "marble_update") {
-        // Real-time marble update
+        // Real-time marble update - use message.roomCode if available
+        const marbleRoomCode = message.roomCode || currentRoomCode;
+        if (message.roomCode) {
+          currentRoomCode = message.roomCode;
+        }
+        
         const player = connectedPlayers.get(currentPlayerId);
         if (player) {
           player.marbles = message.data.marbles;
           
           // Update in room too
-          const room = rooms.get(currentRoomCode);
+          const room = rooms.get(marbleRoomCode);
           if (room && room.players.has(currentPlayerId)) {
             room.players.get(currentPlayerId)!.marbles = message.data.marbles;
           }
           
           // Broadcast to room
-          broadcastToRoom(currentRoomCode, {
+          broadcastToRoom(marbleRoomCode, {
             type: "marble_update",
-            roomCode: currentRoomCode,
+            roomCode: marbleRoomCode,
             playerId: currentPlayerId,
             data: {
               playerId: currentPlayerId,
@@ -471,9 +476,20 @@ export function handleNewConnection(ws: WebSocket) {
         }
         
       } else if (message.type === "chat") {
-        broadcastToRoom(currentRoomCode, message);
+        // Use message.roomCode if available
+        const chatRoomCode = message.roomCode || currentRoomCode;
+        if (message.roomCode) {
+          currentRoomCode = message.roomCode;
+        }
+        console.log(`[CHAT] Message in room ${chatRoomCode} from ${currentPlayerId}`);
+        broadcastToRoom(chatRoomCode, message);
       } else {
-        broadcastToRoom(currentRoomCode, message);
+        // For other message types, also check for roomCode
+        const msgRoomCode = message.roomCode || currentRoomCode;
+        if (message.roomCode) {
+          currentRoomCode = message.roomCode;
+        }
+        broadcastToRoom(msgRoomCode, message);
       }
     } catch (error) {
       console.error("WebSocket message error:", error);
