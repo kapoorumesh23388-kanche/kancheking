@@ -322,18 +322,27 @@ export function handleNewConnection(ws: WebSocket) {
         
       } else if (message.type === "game_action") {
         // Handle game actions (hide marbles, guess, etc.)
-        const room = rooms.get(currentRoomCode);
-        if (!room) return;
+        // Use message.roomCode if available, fallback to currentRoomCode
+        const roomCode = message.roomCode || currentRoomCode;
+        if (message.roomCode) {
+          currentRoomCode = message.roomCode;
+        }
+        const room = rooms.get(roomCode);
+        if (!room) {
+          console.log(`[GAME_ACTION] Room ${roomCode} not found`);
+          return;
+        }
         
         const action = message.data.action;
         
         if (action === "hide_marbles") {
           room.gameState.hiddenMarbles = message.data.count;
           room.gameState.phase = "guessing";
+          console.log(`[GAME] ${currentPlayerId} hid ${message.data.count} marbles in room ${roomCode}`);
           
-          broadcastToRoom(currentRoomCode, {
+          broadcastToRoom(roomCode, {
             type: "game_state_update",
-            roomCode: currentRoomCode,
+            roomCode: roomCode,
             playerId: currentPlayerId,
             data: {
               phase: "guessing",
@@ -370,9 +379,10 @@ export function handleNewConnection(ws: WebSocket) {
             const newHider = won ? guesser.playerId : hider.playerId;
             
             // Broadcast result
-            broadcastToRoom(currentRoomCode, {
+            console.log(`[GAME] Guess result in room ${roomCode}: ${won ? 'correct' : 'wrong'}, bet: ${bet}`);
+            broadcastToRoom(roomCode, {
               type: "round_result",
-              roomCode: currentRoomCode,
+              roomCode: roomCode,
               playerId: currentPlayerId,
               data: {
                 guess,
@@ -399,28 +409,35 @@ export function handleNewConnection(ws: WebSocket) {
             room.gameState.phase = "result";
             
             // Auto-start next round after 3 seconds
+            const savedRoomCode = roomCode;
+            console.log(`[AUTO-RESTART] Scheduling new round in 3 seconds for room ${savedRoomCode}`);
             setTimeout(() => {
-              const roomCheck = rooms.get(currentRoomCode);
+              const roomCheck = rooms.get(savedRoomCode);
+              console.log(`[AUTO-RESTART] Timer fired for room ${savedRoomCode}, players: ${roomCheck?.players.size || 0}`);
               if (roomCheck && roomCheck.players.size >= 2) {
                 roomCheck.gameState.phase = "selecting";
-                broadcastToRoom(currentRoomCode, {
+                roomCheck.gameState.hiddenMarbles = 0; // Reset hidden marbles
+                broadcastToRoom(savedRoomCode, {
                   type: "new_round",
-                  roomCode: currentRoomCode,
+                  roomCode: savedRoomCode,
                   playerId: "system",
                   data: {
                     phase: "selecting",
                     currentHider: roomCheck.gameState.currentHider,
                   }
                 });
+                console.log(`[AUTO-RESTART] New round started, hider: ${roomCheck.gameState.currentHider}`);
               }
             }, 3000);
           }
           
         } else if (action === "play_again") {
           room.gameState.phase = "selecting";
-          broadcastToRoom(currentRoomCode, {
+          room.gameState.hiddenMarbles = 0;
+          console.log(`[GAME] Manual play_again in room ${roomCode}`);
+          broadcastToRoom(roomCode, {
             type: "new_round",
-            roomCode: currentRoomCode,
+            roomCode: roomCode,
             playerId: "system",
             data: {
               phase: "selecting",
