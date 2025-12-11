@@ -518,23 +518,34 @@ export default function MultiplayerGame() {
 
             {phase === "result" && gameResult && (
               <div className="text-center space-y-6">
-                <ResultDisplay
-                  won={gameResult.won}
-                  marbleChange={gameResult.change}
-                  details={gameResult.details}
-                  onPlayAgain={handlePlayAgain}
-                />
-                <div className={`border rounded-lg p-4 ${
-                  gameResult.won 
-                    ? "bg-green-500/20 border-green-500/40" 
-                    : "bg-red-500/20 border-red-500/40"
+                <div className={`border-4 shadow-2xl rounded-2xl p-8 ${
+                  gameResult.won
+                    ? "bg-gradient-to-br from-[#00FF88]/20 via-primary/10 to-transparent border-[#00FF88]/60"
+                    : "bg-gradient-to-br from-red-500/20 via-primary/5 to-transparent border-red-500/60"
                 }`}>
-                  <p className={`font-bold ${gameResult.won ? "text-green-400" : "text-red-400"}`}>
-                    {gameResult.won ? "+5 Points Earned!" : "-5 Points Lost"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {gameResult.won ? "Keep up the winning streak!" : "Try again to earn points back!"}
-                  </p>
+                  <div className="text-7xl mb-4 animate-bounce">
+                    {gameResult.won ? "🎉" : "😢"}
+                  </div>
+                  <h2 className={`text-3xl font-bold mb-4 ${gameResult.won ? "text-[#00FF88]" : "text-red-400"}`}>
+                    {gameResult.won ? "YOU WON!" : "YOU LOST!"}
+                  </h2>
+                  <div className={`text-5xl font-bold mb-4 ${gameResult.won ? "text-[#00FF88]" : "text-red-400"}`}>
+                    {gameResult.won ? "+" : "-"}{Math.abs(gameResult.change)} 💎
+                  </div>
+                  <p className="text-lg text-muted-foreground mb-4">{gameResult.details}</p>
+                  <div className={`inline-block px-6 py-3 rounded-full ${
+                    gameResult.won 
+                      ? "bg-green-500/20 text-green-400" 
+                      : "bg-red-500/20 text-red-400"
+                  }`}>
+                    <p className="font-bold">
+                      {gameResult.won ? "+5 Points Earned!" : "-5 Points Lost"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <span>Next round starting in 3 seconds...</span>
                 </div>
               </div>
             )}

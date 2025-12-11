@@ -364,6 +364,11 @@ export function handleNewConnection(ws: WebSocket) {
               hider.marbles += bet;
             }
             
+            // Role switching logic:
+            // If guesser WINS (correct guess) → guesser becomes hider
+            // If guesser LOSES (wrong guess) → roles stay same (guesser stays guesser)
+            const newHider = won ? guesser.playerId : hider.playerId;
+            
             // Broadcast result
             broadcastToRoom(currentRoomCode, {
               type: "round_result",
@@ -384,13 +389,31 @@ export function handleNewConnection(ws: WebSocket) {
                   name: hider.playerName,
                   marbles: hider.marbles,
                 },
-                pointsEarned: 5, // +5 points per round
+                pointsEarned: won ? 5 : -5,
+                nextHider: newHider,
               }
             });
             
-            // Switch roles for next round
-            room.gameState.currentHider = guesser.playerId;
+            // Update hider for next round based on who won
+            room.gameState.currentHider = newHider;
             room.gameState.phase = "result";
+            
+            // Auto-start next round after 3 seconds
+            setTimeout(() => {
+              const roomCheck = rooms.get(currentRoomCode);
+              if (roomCheck && roomCheck.players.size >= 2) {
+                roomCheck.gameState.phase = "selecting";
+                broadcastToRoom(currentRoomCode, {
+                  type: "new_round",
+                  roomCode: currentRoomCode,
+                  playerId: "system",
+                  data: {
+                    phase: "selecting",
+                    currentHider: roomCheck.gameState.currentHider,
+                  }
+                });
+              }
+            }, 3000);
           }
           
         } else if (action === "play_again") {
