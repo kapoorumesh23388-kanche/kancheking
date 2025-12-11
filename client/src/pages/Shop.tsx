@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, Loader2 } from "lucide-react";
+import { Copy, Check, Loader2, Share2, Link, MessageCircle, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -9,9 +9,17 @@ import AgeVerificationDialog from "@/components/AgeVerificationDialog";
 import type { CatalogItem } from "@shared/schema";
 import { getTotalMarbles, getRewardPoints, initializeMarbles, addMarbles } from "@/lib/marbleStorage";
 
+// Generate unique referral code from player name
+function generateReferralCode(name: string): string {
+  const cleanName = name.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6);
+  const randomNum = Math.floor(1000 + Math.random() * 9000);
+  return `${cleanName || 'PLAYER'}${randomNum}`;
+}
+
 export default function Shop() {
   const { toast } = useToast();
   const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [marbleCount, setMarbleCount] = useState(0);
   const [pointCount, setPointCount] = useState(0);
@@ -20,8 +28,25 @@ export default function Shop() {
     localStorage.getItem("playerIsAgeVerified") === "true"
   );
   const [showAgeDialog, setShowAgeDialog] = useState(false);
-  const referralCode = "RAJESH123";
   const userId = localStorage.getItem("userId") || "test-user";
+  
+  // Generate and persist unique referral code per player
+  const [referralCode] = useState(() => {
+    const storedCode = localStorage.getItem("playerReferralCode");
+    if (storedCode) return storedCode;
+    
+    const playerName = localStorage.getItem("playerName") || "Player";
+    const newCode = generateReferralCode(playerName);
+    localStorage.setItem("playerReferralCode", newCode);
+    return newCode;
+  });
+  
+  // Track referral stats
+  const referralCount = parseInt(localStorage.getItem("referralCount") || "0");
+  const referralEarnings = referralCount * 50; // 50 marbles per referral
+  
+  // Get referral link
+  const referralLink = `${window.location.origin}?ref=${referralCode}`;
 
   // Initialize marbles on first load
   useEffect(() => {
@@ -75,7 +100,44 @@ export default function Shop() {
   const copyReferralCode = () => {
     navigator.clipboard.writeText(referralCode);
     setCopiedCode(true);
+    toast({
+      title: "Copied!",
+      description: "Referral code copied to clipboard",
+    });
     setTimeout(() => setCopiedCode(false), 2000);
+  };
+  
+  const copyReferralLink = () => {
+    navigator.clipboard.writeText(referralLink);
+    setCopiedLink(true);
+    toast({
+      title: "Link Copied!",
+      description: "Referral link copied to clipboard",
+    });
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+  
+  const shareViaWhatsApp = () => {
+    const message = `Hey! Join me on Kanchey King - the classic marble game! Use my code ${referralCode} to get bonus marbles. Download now: ${referralLink}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  };
+  
+  const shareNative = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Join Kanchey King!',
+          text: `Play the classic marble game with me! Use code ${referralCode} for bonus marbles.`,
+          url: referralLink,
+        });
+      } catch (err) {
+        // User cancelled or share failed, fallback to copy
+        copyReferralLink();
+      }
+    } else {
+      // Fallback for browsers without native share
+      copyReferralLink();
+    }
   };
 
   const handleBuyMarbles = async (pack: typeof marblePacks[0]) => {
@@ -204,33 +266,79 @@ export default function Shop() {
 
         <Card className="mb-8 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30">
           <CardHeader>
-            <CardTitle>🎁 Referral Program - Earn 50 Marbles per Friend</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-6 h-6 text-green-400" />
+              Referral Program - Earn 50 Marbles per Friend
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex gap-4 items-center">
-              <div className="flex-1">
-                <p className="text-muted-foreground mb-3">Share your referral code with friends. Get 50 marbles when they join!</p>
-                <div className="bg-background rounded-lg p-4 flex items-center justify-between">
-                  <code className="text-lg font-mono font-bold text-primary">{referralCode}</code>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={copyReferralCode}
-                    className="gap-2"
-                    data-testid="button-copy-referral"
-                  >
-                    {copiedCode ? (
-                      <>
-                        <Check className="w-4 h-4" /> Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4" /> Copy
-                      </>
-                    )}
-                  </Button>
-                </div>
+          <CardContent className="space-y-6">
+            {/* Stats Row */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-green-500/20 rounded-lg p-4 text-center">
+                <p className="text-sm text-muted-foreground">Friends Referred</p>
+                <p className="text-3xl font-bold text-green-400" data-testid="text-referral-count">{referralCount}</p>
               </div>
+              <div className="bg-yellow-500/20 rounded-lg p-4 text-center">
+                <p className="text-sm text-muted-foreground">Marbles Earned</p>
+                <p className="text-3xl font-bold text-yellow-400" data-testid="text-referral-earnings">{referralEarnings}</p>
+              </div>
+            </div>
+
+            {/* Referral Code */}
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Your Unique Referral Code</p>
+              <div className="bg-background rounded-lg p-4 flex items-center justify-between gap-2">
+                <code className="text-xl font-mono font-bold text-primary tracking-wider" data-testid="text-referral-code">{referralCode}</code>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={copyReferralCode}
+                  className="gap-2"
+                  data-testid="button-copy-referral"
+                >
+                  {copiedCode ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {copiedCode ? "Copied" : "Copy Code"}
+                </Button>
+              </div>
+            </div>
+
+            {/* Share Options */}
+            <div>
+              <p className="text-sm text-muted-foreground mb-3">Share with friends</p>
+              <div className="grid grid-cols-3 gap-3">
+                <Button
+                  onClick={shareViaWhatsApp}
+                  className="bg-green-600 hover:bg-green-700 gap-2"
+                  data-testid="button-share-whatsapp"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  WhatsApp
+                </Button>
+                <Button
+                  onClick={copyReferralLink}
+                  variant="outline"
+                  className="gap-2"
+                  data-testid="button-copy-link"
+                >
+                  {copiedLink ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
+                  {copiedLink ? "Copied!" : "Copy Link"}
+                </Button>
+                <Button
+                  onClick={shareNative}
+                  variant="secondary"
+                  className="gap-2"
+                  data-testid="button-share-native"
+                >
+                  <Share2 className="w-4 h-4" />
+                  Share
+                </Button>
+              </div>
+            </div>
+
+            {/* Referral Link Preview */}
+            <div className="bg-muted/50 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground mb-1">Your Referral Link</p>
+              <p className="text-sm font-mono text-muted-foreground truncate" data-testid="text-referral-link">{referralLink}</p>
             </div>
           </CardContent>
         </Card>

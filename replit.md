@@ -2,9 +2,7 @@
 
 ## Overview
 
-Kali Jhota is a traditional Indian marble guessing game built as a full-stack web application. Players compete by hiding marbles in their fist and challenging opponents to guess whether the count is odd or even. The application supports multiple game modes including AI opponents, friend challenges via room codes, random player matchmaking, and tournament play with entry fees and prize pools.
-
-The game features a marble-based economy where players can purchase marbles, earn points through gameplay, and redeem rewards from a catalog. It includes real-time multiplayer functionality, leaderboards, referral systems, and a premium gaming aesthetic inspired by platforms like Chess.com combined with traditional Indian cultural elements.
+Kali Jhota is a traditional Indian marble guessing game reimagined as a full-stack web application. Players engage in a marble-hiding and guessing game, competing against AI, friends, or random opponents in real-time. The application integrates a marble-based economy for purchases and rewards, leaderboards, referral systems, and tournament play with entry fees and prize pools. The project aims to blend a premium gaming experience, inspired by platforms like Chess.com, with rich traditional Indian cultural aesthetics.
 
 ## User Preferences
 
@@ -12,292 +10,39 @@ Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
+### UI/UX Decisions
 
-**Framework & Build System**
-- React with TypeScript for type-safe component development
-- Vite as the build tool and development server
-- Wouter for client-side routing (lightweight alternative to React Router)
-- Client-side code organized in `client/src/` directory
+The application features a dark gradient background theme with gold and neon accents for a premium and vibrant feel, inspired by "Kanche" (marbles) aesthetics. Success states are glowing green, errors red, and UI elements utilize translucent overlays with backdrop blur. Typography uses a system font stack, and spacing is based on Tailwind units. The design incorporates custom CSS for neon glows, glassmorphism, and decorative marble orb styles.
 
-**UI Component System**
-- shadcn/ui component library (Radix UI primitives with custom styling)
-- Design system based on "new-york" style variant
-- Tailwind CSS for utility-first styling with custom color variables
-- Component configuration in `components.json` with path aliases (`@/components`, `@/lib`, etc.)
+### Technical Implementations
 
-**State Management & Data Fetching**
-- TanStack Query (React Query) for server state management and API caching
-- Custom query client with disabled refetching by default (infinite stale time)
-- Local storage for persisting player data (marbles, game stats)
-- Custom hooks for game-specific logic (e.g., `useGameSocket` for WebSocket connections)
+The frontend is built with React and TypeScript, using Vite for development and Wouter for routing. UI components are from `shadcn/ui` (Radix UI primitives) styled with Tailwind CSS, following a "new-york" design variant. State management and data fetching are handled by TanStack Query, with local storage for player data.
 
-**Design System**
-- Dark gradient background theme (`#0F2027` → `#203A43` → `#2C5364`)
-- Gold accent colors (`#FFD700` primary, `#FFA500` secondary) for premium feel
-- Success states in glowing green (`#00FF88`), errors in red (`#FF4444`)
-- Translucent overlays with backdrop blur for cards and UI elements
-- Typography using system font stack for performance
-- Custom spacing system based on Tailwind units (2, 4, 6, 8, 10, 12, 15, 20, 25, 30)
+The backend uses Express.js for HTTP and API routes, with Drizzle ORM for type-safe interaction with a PostgreSQL database (Neon serverless). WebSocket support is configured for real-time multiplayer functionality. The API provides RESTful endpoints for catalog management, marble purchases, user transactions, game points, and tournament windows. Storage is designed with an interface to allow multiple backends, currently supporting an in-memory implementation.
 
-### Backend Architecture
+### Feature Specifications
 
-**Server Framework**
-- Express.js for HTTP server and API routes
-- HTTP server created for potential WebSocket upgrades
-- Custom middleware for request logging and JSON body parsing
-- Routes organized in `server/routes.ts` with async/await pattern
+*   **Admin Panel:** Secure login with OTP, dashboard for catalog management, quarterly updates, and password changes.
+*   **Profile System:** Dedicated page for display name editing, profile picture upload, and stats display (marbles, points, games played/won, tournament winnings).
+*   **Payment Gateway:** Stripe integration for marble purchases, checkout sessions, and customer management.
+*   **OTP Security:** 6-digit, 5-minute expiry OTP for admin login, leveraging Twilio for SMS delivery in production.
+*   **Multiplayer Game Improvements:** Catalog items stored in PostgreSQL, traditional role-switching rules, and 3-second auto-restart between rounds.
+*   **Referral System:** Unique per-player referral codes, share options, and tracking of referred friends and earned marbles.
+*   **Onboarding:** Age verification (10+ to play, 15+ for purchases) and ad interest selection with 9 categories.
+*   **Marble Accounting System:** A four-bucket model (`freeMarbles`, `purchasedMarbles`, `pvpWinMarbles`, `aiWinMarbles`) determining tournament eligibility and tracking sources of marbles.
+*   **Multi-Language Support:** Implemented for 9 Indian languages (English, Hindi, Tamil, Telugu, Kannada, Bengali, Marathi, Gujarati, Punjabi) with a context-based translation system.
 
-**Data Layer**
-- Drizzle ORM for type-safe database operations
-- PostgreSQL database via Neon serverless
-- Schema defined in `shared/schema.ts` (shared between client and server)
-- WebSocket support configured for real-time features
+### System Design Choices
 
-**Storage Implementation**
-- In-memory storage implementation (`MemStorage` class) for development/fallback
-- Interface-based design (`IStorage`) allowing multiple storage backends
-- Support for users, catalog items, transactions, game points, tournaments, and game rooms
+A shared schema (`shared/schema.ts`) is used for consistency between frontend and backend, validated with Drizzle-Zod. The system uses a modular approach for storage and services, enabling flexibility and scalability. WebSocket communication is central to real-time multiplayer, with custom hooks for game state synchronization.
 
-**API Structure**
-- RESTful endpoints under `/api` prefix
-- Catalog management (`GET/POST /api/catalog`)
-- Marble purchases (`POST /api/marbles/purchase`)
-- User transactions and game points tracking
-- Tournament window management
-- Real-time game room creation and matchmaking
+## External Dependencies
 
-### Database Schema
-
-**Users Table**
-- UUID primary keys with auto-generation
-- Username/password authentication fields
-- Marble and points balance tracking
-- Game statistics (games played, games won)
-- Referral system (referral code and referredBy fields)
-- Timestamp for account creation
-- Stripe integration fields: `stripeCustomerId`, `stripeSubscriptionId`
-
-**Game Economy Tables**
-- `catalogItems`: Rewards catalog with points cost and descriptions
-- `marbleTransactions`: Purchase history and transaction tracking
-- `gamePoints`: Points earned from individual games with opponent tracking
-
-**Multiplayer Tables**
-- `tournamentWindows`: Tournament brackets with player counts and prize pools
-- `gameRooms`: Room-based multiplayer sessions (implied from storage interface)
-
-**Schema Validation**
-- Drizzle-Zod integration for runtime type validation
-- Shared schema types between frontend and backend for consistency
-
-### External Dependencies
-
-**Database & Infrastructure**
-- Neon Serverless PostgreSQL (`@neondatabase/serverless`)
-- WebSocket support via `ws` package for Neon connection
-- Drizzle Kit for database migrations (`drizzle-kit push`)
-
-**UI & Component Libraries**
-- Radix UI primitives (18+ components: accordion, alert-dialog, avatar, checkbox, dialog, dropdown-menu, etc.)
-- shadcn/ui component system
-- Lucide React for icons
-- class-variance-authority for component variants
-- cmdk for command palette/search interfaces
-
-**Form & Validation**
-- React Hook Form with Hookform Resolvers
-- Zod for schema validation (via drizzle-zod)
-- date-fns for date formatting and manipulation
-
-**Development Tools**
-- tsx for TypeScript execution in development
-- esbuild for production builds
-- Replit-specific plugins (vite-plugin-runtime-error-modal, vite-plugin-cartographer, vite-plugin-dev-banner)
-
-**Session Management**
-- connect-pg-simple for PostgreSQL-based session storage
-- Configured for persistent sessions across server restarts
-
-**Real-time Communication**
-- WebSocket implementation for multiplayer games
-- Custom `useGameSocket` hook for game state synchronization
-- Message types: join, move, guess, result, chat, sync
-
-**Payment Processing**
-- Stripe integration (`stripe` package, `stripe-replit-sync`)
-- Handles marble purchases and customer management
-- Stripe webhook synchronization with PostgreSQL database
-
-**SMS & OTP**
-- Twilio integration (`twilio` package) for SMS OTP delivery
-- OTP generation and verification (5-minute expiry)
-- Graceful fallback to console logging in development
-
-## Feature Implementation Status
-
-### ✅ Completed Features
-
-**Admin Panel System:**
-- Admin login page with credentials (admin/admin123)
-- OTP-based double security authentication
-- Admin dashboard for catalog management (add/delete items)
-- Quarterly catalog updates
-- Admin password change functionality
-- Lock icon button in header for quick access
-
-**Profile System:**
-- Dedicated `/profile` page for user profile management
-- Display name editing
-- Profile picture upload (base64 data URL storage)
-- Stats display (marbles, points, games played/won, tournament winnings)
-- API endpoints: `GET /api/user/:userId`, `POST /api/profile/update`
-
-**Payment Gateway:**
-- Stripe integration for marble purchases
-- Checkout session creation
-- Customer management with Stripe IDs
-- Test mode ready (use card: 4242 4242 4242 4242)
-
-**OTP Security:**
-- OTP generation and verification (6-digit, 5-minute expiry)
-- Phone number configuration (currently: 9211979518)
-- Development mode: OTP printed to server logs
-- Production ready: Twilio SMS integration configured
-- Admin login flow: Credentials → OTP → Dashboard access
-
-## Recent Changes (Latest Session)
-
-### 🆕 Neon Gaming Theme (Kanche-Inspired)
-- Updated `client/src/index.css` with new neon color palette:
-  - **Primary:** Cyan (#00D9FF) - used for titles, buttons, highlights
-  - **Secondary:** Magenta (#E91E8C) - used for accents, admin elements
-  - **Background:** Dark purple gradient (#0d0416 → #1a0a2e → #0a0312)
-- **New CSS Utility Classes:**
-  - `.neon-glow-cyan`, `.neon-glow-magenta` - subtle pulsing glow animations
-  - `.neon-text-cyan`, `.neon-text-magenta` - text shadow effects
-  - `.marble-glass` - glassmorphism effect with cyan/magenta gradients
-  - `.arena-pattern`, `.arena-grid` - marble arena background patterns
-  - `.marble-orb`, `.marble-orb-magenta`, `.marble-orb-gold` - decorative marble CSS styles
-- **Updated Components:**
-  - Home.tsx - Hero section with neon glass effect, cyan/magenta title gradient
-  - ModeCard.tsx - Glass cards with cyan text, subtle hover glows
-  - PlayerProfile.tsx - Cyan avatar borders, neon badges
-  - GameHeader.tsx - Dark header with cyan icons, magenta admin button
-  - FloatingMarbles.tsx - 9 neon-colored floating marbles with glow effects
-  - ModeSelection.tsx - Cyan title with neon text shadow
-
-### 🆕 Enhanced Onboarding with Age Verification & Ad Interests
-- Updated `client/src/pages/OnboardingProfile.tsx` with:
-  - **Date of Birth field** - Required for age verification
-  - **Age calculation** - Players must be 10+ to play
-  - **Age-gated purchases** - Only 15+ users are marked as verified for purchases
-  - **Ad Interests Selection** - 9 categories with icons:
-    - Share Market & Finance, Electronics & Gadgets, Gaming & Entertainment
-    - Fashion & Lifestyle, Automobiles & Vehicles, Real Estate & Property
-    - Food & Restaurants, Travel & Tourism, Health & Fitness
-- **localStorage keys:** `playerDateOfBirth`, `playerAge`, `playerAdInterests` (JSON array)
-- **Two-tier age system:**
-  - 10+ can play games
-  - 15+ can make in-app purchases (auto-verified during onboarding)
-  - 10-14 year olds will see AgeVerificationDialog when trying to purchase
-
-### 🆕 Marble Accounting System (Four-Bucket Model)
-- Created `client/src/lib/marbleStorage.ts` - Marble accounting utility
-- **Four marble buckets:**
-  - `freeMarbles` (150) - Starting marbles, gameplay only
-  - `purchasedMarbles` - Bought via in-app purchase, tournament eligible
-  - `pvpWinMarbles` - Won from real players, tournament eligible
-  - `aiWinMarbles` - Won from AI games, gameplay only
-- **Tournament eligibility:** `purchasedMarbles + pvpWinMarbles >= 2500`
-- **localStorage keys:** `freeMarbles`, `purchasedMarbles`, `pvpWinMarbles`, `aiWinMarbles`, `playerMarbles` (total)
-- **Functions:** `initializeMarbles()`, `addMarbles(source, amount)`, `loseMarbles(amount)`, `spendMarbles(amount)`, `getEligibleMarbles()`, `getTotalMarbles()`
-- Updated Tournament page to show "Eligible Marbles" instead of total
-- Updated GamePlay.tsx to categorize AI wins to 'ai' bucket
-- Updated MultiplayerGame.tsx to categorize PvP wins to 'pvp' bucket
-
-### Previous Session Changes
-
-**Payment Gateway Integration**
-- Created `server/stripeClient.ts` - Stripe API client with credential management
-- Created `server/stripeService.ts` - Stripe service layer for customer and checkout operations
-- Added `/api/marble-purchase` endpoint for checkout sessions
-- Added `stripeCustomerId` and `stripeSubscriptionId` to user schema
-- Integrated with Replit Stripe connection (already configured)
-
-**OTP & SMS Setup**
-- Created `server/twilioClient.ts` - Twilio SMS client
-- Integrated Twilio into `/api/admin/send-otp` endpoint
-- OTP gracefully falls back to console logging if Twilio not configured
-- SMS format: "Your Kanche King Admin OTP is: {otp}. Valid for 5 minutes."
-
-**Admin Lock Icon**
-- Added Lock icon button in GameHeader for easy admin panel access
-- Direct navigation to admin login on click
-
-**Documentation**
-- Created `TESTING_GUIDE.md` with step-by-step testing instructions
-- Covers: Publishing, Admin Login/OTP Testing, Payment Testing, Twilio Setup
-
-## Deployment Status
-
-### Ready for Publishing:
-✅ Game logic complete
-✅ Admin panel with OTP
-✅ Stripe payment integration
-✅ User profile system
-✅ All core features functional
-
-### How to Publish:
-1. Click "Publish" button (top right of Replit)
-2. Choose "Autoscale Deployment"
-3. Add payment method if prompted
-4. Wait 5-10 minutes for deployment
-5. Game will be live on `.replit.app` domain
-
-## Testing Instructions
-
-See `TESTING_GUIDE.md` for complete testing procedures:
-- Admin login with OTP (logs to console in dev, SMS when Twilio configured)
-- Payment gateway testing (use Stripe test card: 4242 4242 4242 4242)
-- Admin dashboard functionality
-- Catalog management
-
-## Default Admin Credentials
-
-- **Admin ID:** admin
-- **Password:** admin123 (CHANGE in Settings!)
-- **Phone:** +91-9211979518
-- **OTP:** Check server logs (development) or receive via SMS (with Twilio)
-
-## Multi-Language Support (Completed)
-
-**9 Languages Implemented:**
-- English (en), Hindi (hi), Tamil (ta), Telugu (te), Kannada (kn), Bengali (bn), Marathi (mr), Gujarati (gu), Punjabi (pa)
-
-**Translation System:**
-- `client/src/lib/LanguageContext.tsx` - Provides `t(key)` translation helper via `useLanguage()` hook
-- `client/src/lib/translations.ts` - Contains all translation keys for all 9 languages (100+ keys each)
-- Language preference stored in localStorage as "gameLanguage"
-
-**Translated Components:**
-- GameModes.tsx, ModeSelection.tsx - Mode selection pages
-- GamePlay.tsx, MultiplayerGame.tsx - Gameplay screens
-- MarbleSelector.tsx, GuessingPanel.tsx, ResultDisplay.tsx - Game UI components
-- GameChat.tsx - Chat and voice messaging UI
-
-**Translation Keys Include:**
-- Common UI (app title, buttons, navigation)
-- Gameplay (marble selection, guessing, turns)
-- Results (winner/loser labels, marble changes)
-- Game modes (AI, friend, random, tournament)
-- Chat (send message, voice recording)
-
-## Future Enhancements
-
-- Gender-based animated player avatars
-- Support/feedback system (partially implemented)
-- Age-based ads filtering (15+ for purchases)
-- Admin OTP via Twilio SMS (currently prints to logs)
-- Tournament system with prize pools
-- Leaderboards and ranking system
+*   **Database:** Neon Serverless PostgreSQL (`@neondatabase/serverless`), Drizzle ORM, Drizzle Kit for migrations.
+*   **Real-time Communication:** `ws` package for WebSocket support.
+*   **UI & Components:** React, TypeScript, Vite, Wouter, `shadcn/ui`, Radix UI primitives, Tailwind CSS, Lucide React (icons), `class-variance-authority`, `cmdk`.
+*   **Form & Validation:** React Hook Form, Hookform Resolvers, Zod.
+*   **Date Handling:** `date-fns`.
+*   **Payment Processing:** Stripe (`stripe` package, `stripe-replit-sync`).
+*   **SMS & OTP:** Twilio (`twilio` package).
+*   **Session Management:** `connect-pg-simple` for PostgreSQL-based session storage.
