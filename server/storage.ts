@@ -1,5 +1,7 @@
-import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type GameRoom, type FeedbackSubmission, type AdminUser } from "@shared/schema";
+import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type GameRoom, type FeedbackSubmission, type AdminUser, catalogItems } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -220,21 +222,37 @@ export class MemStorage implements IStorage {
   }
 
   async getCatalogItems(): Promise<CatalogItem[]> {
-    return Array.from(this.catalogItems.values());
+    try {
+      const items = await db.select().from(catalogItems);
+      return items;
+    } catch (error) {
+      console.error("Error fetching catalog items from DB:", error);
+      return [];
+    }
   }
 
   async addCatalogItem(item: Omit<CatalogItem, 'id' | 'createdAt'>): Promise<CatalogItem> {
-    const catalogItem: CatalogItem = {
-      ...item,
-      id: randomUUID(),
-      createdAt: new Date(),
-    };
-    this.catalogItems.set(catalogItem.id, catalogItem);
-    return catalogItem;
+    try {
+      const [newItem] = await db.insert(catalogItems).values({
+        name: item.name,
+        description: item.description,
+        pointsCost: item.pointsCost,
+        imageUrl: item.imageUrl,
+      }).returning();
+      return newItem;
+    } catch (error) {
+      console.error("Error adding catalog item to DB:", error);
+      throw error;
+    }
   }
 
   async deleteCatalogItem(id: string): Promise<void> {
-    this.catalogItems.delete(id);
+    try {
+      await db.delete(catalogItems).where(eq(catalogItems.id, id));
+    } catch (error) {
+      console.error("Error deleting catalog item from DB:", error);
+      throw error;
+    }
   }
 
   async recordTransaction(tx: Omit<MarbleTransaction, 'id' | 'createdAt'>): Promise<MarbleTransaction> {
