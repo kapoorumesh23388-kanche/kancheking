@@ -190,6 +190,8 @@ export default function MultiplayerGame() {
         const won = iAmGuesser ? message.data.won : !message.data.won;
         const change = message.data.bet;
         
+        console.log(`[ROUND_RESULT] I am ${iAmGuesser ? 'guesser' : 'hider'}, won: ${won}`);
+        
         // Update marbles locally
         if (won) {
           addMarbles('pvp', change);
@@ -211,12 +213,22 @@ export default function MultiplayerGame() {
         localStorage.setItem("playerRewardPoints", newPoints.toString());
         setRoundPoints(prev => prev + pointChange);
         
+        // Different messages for hider vs guesser
+        let resultDetails = "";
+        if (iAmGuesser) {
+          resultDetails = won 
+            ? `You guessed correctly! Hidden: ${message.data.hiddenCount}` 
+            : `Wrong guess! Hidden: ${message.data.hiddenCount}`;
+        } else {
+          resultDetails = won 
+            ? `Opponent guessed wrong! You kept ${change} marbles!` 
+            : `Opponent guessed correctly! Hidden: ${message.data.hiddenCount}`;
+        }
+        
         setGameResult({
           won,
           change,
-          details: won 
-            ? `You guessed correctly! Hidden: ${message.data.hiddenCount}` 
-            : `Wrong guess! Hidden: ${message.data.hiddenCount}`,
+          details: resultDetails,
           pointsEarned: pointChange,
         });
         setPhase("result");
@@ -229,6 +241,7 @@ export default function MultiplayerGame() {
         break;
         
       case "new_round":
+        console.log(`[NEW_ROUND] Starting new round, hider: ${message.data.currentHider}, I am: ${playerId}`);
         setPhase("selecting");
         setIsHider(message.data.currentHider === playerId);
         setSelectedMarbleIds([]);
