@@ -352,12 +352,13 @@ export function handleNewConnection(ws: WebSocket) {
           });
           
         } else if (action === "guess") {
-          const guess = message.data.guess; // "kali" or "jotta"
+          const guess = message.data.guess; // "kali" = odd, "jotta" = even
           const bet = message.data.bet;
           const hiddenCount = room.gameState.hiddenMarbles;
-          const isOdd = hiddenCount % 2 === 1;
-          const guessedOdd = guess === "jotta";
+          const isOdd = hiddenCount % 2 === 1; // 1,3,5,7,9... = odd
+          const guessedOdd = guess === "kali"; // kali = odd (1,3,5,7,9...), jotta = even (2,4,6,8...)
           const won = isOdd === guessedOdd;
+          console.log(`[GAME] Hidden: ${hiddenCount}, isOdd: ${isOdd}, guess: ${guess}, guessedOdd: ${guessedOdd}, won: ${won}`);
           
           // Get players
           const guesser = connectedPlayers.get(currentPlayerId);
