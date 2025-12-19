@@ -442,7 +442,7 @@ export default function GamePlay() {
         won,
         change: lastBet,
         details: message,
-        roleSwitched: won, // If guesser won, they switch to hider
+        roleSwitched: true, // Traditional rules: roles ALWAYS switch after each round
         aiChoice: `${actualCount} marbles (${isOdd ? "Odd/Kali" : "Even/Jotta"})`
       });
       setPhase("result");

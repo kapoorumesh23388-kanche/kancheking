@@ -155,13 +155,62 @@ export default function Shop() {
       });
       const data = await res.json();
       
-      if (data.url) {
-        // Redirect to Stripe Checkout
-        window.location.href = data.url;
+      if (data.orderId && data.keyId) {
+        // Initialize Razorpay checkout
+        const options = {
+          key: data.keyId,
+          amount: data.amount,
+          currency: data.currency,
+          order_id: data.orderId,
+          name: "Kanchey King",
+          description: `Purchase ${pack.marbles} marbles`,
+          handler: async (response: any) => {
+            // Verify payment with backend
+            const verifyRes = await apiRequest("POST", "/api/marble-purchase/verify", {
+              userId,
+              orderId: data.orderId,
+              paymentId: response.razorpay_payment_id,
+              signature: response.razorpay_signature,
+              marblesCount: pack.marbles,
+            });
+            const verifyData = await verifyRes.json();
+            
+            if (verifyData.success) {
+              addMarbles('purchase', pack.marbles);
+              updateStats();
+              toast({
+                title: "Success!",
+                description: `${pack.marbles} marbles added to your account!`,
+              });
+            } else {
+              toast({
+                title: "Error",
+                description: verifyData.error || "Payment verification failed",
+                variant: "destructive",
+              });
+            }
+          },
+          prefill: {
+            name: localStorage.getItem("playerName") || "Player",
+          },
+          theme: {
+            color: "#FFD700",
+          },
+        };
+        
+        // Load Razorpay script dynamically
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.onload = () => {
+          // @ts-ignore
+          const rzp = new window.Razorpay(options);
+          rzp.open();
+        };
+        document.body.appendChild(script);
       } else {
         toast({
           title: "Error",
-          description: data.error || "Failed to create checkout session",
+          description: data.error || "Failed to create order",
           variant: "destructive",
         });
       }
@@ -175,34 +224,6 @@ export default function Shop() {
       setIsLoading(false);
     }
   };
-  
-  // Handle successful payment return from Stripe
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const success = urlParams.get('success');
-    const marbles = urlParams.get('marbles');
-    
-    if (success === 'true' && marbles) {
-      const marblesCount = parseInt(marbles);
-      if (!isNaN(marblesCount)) {
-        addMarbles('purchase', marblesCount);
-        updateStats();
-        toast({
-          title: "Payment Successful!",
-          description: `${marblesCount} marbles added to your account!`,
-        });
-        // Clear URL params
-        window.history.replaceState({}, '', '/shop');
-      }
-    } else if (urlParams.get('canceled') === 'true') {
-      toast({
-        title: "Payment Canceled",
-        description: "You can try again anytime.",
-        variant: "destructive",
-      });
-      window.history.replaceState({}, '', '/shop');
-    }
-  }, [toast, updateStats]);
 
   return (
     <div className="min-h-screen pt-20 pb-10">
