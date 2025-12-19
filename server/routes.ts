@@ -250,14 +250,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const windows = await storage.getTournamentWindows();
-      const window = windows.find(w => w.id === windowId);
+      // windowId from client might be a number (1, 2) so match appropriately
+      const window = windows.find(w => w.id === windowId || w.id === String(windowId));
+      let tournamentId = null;
       if (window) {
-        await storage.updateTournamentPlayerCount(windowId, window.playerCount + 1);
+        await storage.updateTournamentPlayerCount(window.id, window.playerCount + 1);
+        // Use the actual database window ID as tournament ID
+        tournamentId = window.id;
       }
 
       res.json({ 
         success: true, 
         marbles: newMarbles,
+        tournamentId,
+        windowId: window?.id || windowId,
         message: "Tournament entry confirmed. 2500 marbles deducted (from earned/purchased)."
       });
     } catch (error) {
@@ -359,6 +365,192 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to convert tournament winnings" });
+    }
+  });
+
+  // Tournament Bracket Management
+  app.get("/api/tournament/:tournamentId/bracket", async (req, res) => {
+    try {
+      const { tournamentId } = req.params;
+      const matches = await storage.getTournamentMatches(tournamentId);
+      const participants = await storage.getTournamentParticipants(tournamentId);
+      
+      res.json({ 
+        success: true, 
+        matches,
+        participants,
+        totalRounds: Math.ceil(Math.log2(participants.length || 1))
+      });
+    } catch (error) {
+      console.error("Failed to fetch tournament bracket:", error);
+      res.status(500).json({ error: "Failed to fetch tournament bracket" });
+    }
+  });
+
+  app.get("/api/tournament/:tournamentId/my-match", async (req, res) => {
+    try {
+      const { tournamentId } = req.params;
+      const { playerId } = req.query;
+      
+      if (!playerId) {
+        return res.status(400).json({ error: "Player ID required" });
+      }
+
+      const matches = await storage.getTournamentMatches(tournamentId);
+      const myMatch = matches.find(m => 
+        (m.player1Id === playerId || m.player2Id === playerId) && 
+        m.status !== "completed"
+      );
+
+      if (!myMatch) {
+        return res.json({ 
+          success: true, 
+          match: null,
+          message: "No active match found"
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        match: myMatch
+      });
+    } catch (error) {
+      console.error("Failed to fetch player match:", error);
+      res.status(500).json({ error: "Failed to fetch player match" });
+    }
+  });
+
+  app.post("/api/tournament/:tournamentId/start", async (req, res) => {
+    try {
+      const { tournamentId } = req.params;
+      
+      const participants = await storage.getTournamentParticipants(tournamentId);
+      
+      if (participants.length < 2) {
+        return res.status(400).json({ 
+          error: "Not enough participants",
+          participantCount: participants.length
+        });
+      }
+
+      // Shuffle participants for random seeding
+      const shuffled = [...participants].sort(() => Math.random() - 0.5);
+      
+      // Create first round matches
+      const round1Matches: any[] = [];
+      for (let i = 0; i < shuffled.length; i += 2) {
+        const player1 = shuffled[i];
+        const player2 = shuffled[i + 1];
+        
+        const roomCode = `TOUR_${tournamentId}_R1_M${Math.floor(i/2) + 1}`;
+        
+        const match = await storage.createTournamentMatch({
+          tournamentId,
+          roundNumber: 1,
+          matchNumber: Math.floor(i/2) + 1,
+          player1Id: player1.playerId,
+          player1Name: player1.playerName,
+          player2Id: player2?.playerId || null,
+          player2Name: player2?.playerName || null,
+          roomCode,
+          status: player2 ? "ready" : "bye",
+        });
+        
+        round1Matches.push(match);
+      }
+
+      // Update tournament status
+      await storage.updateTournamentStatus(tournamentId, "in_progress");
+
+      res.json({ 
+        success: true,
+        matches: round1Matches,
+        message: "Tournament started! First round matches created."
+      });
+    } catch (error) {
+      console.error("Failed to start tournament:", error);
+      res.status(500).json({ error: "Failed to start tournament" });
+    }
+  });
+
+  app.post("/api/tournament/match/:matchId/result", async (req, res) => {
+    try {
+      const { matchId } = req.params;
+      const { winnerId, winnerName, player1Score, player2Score } = req.body;
+
+      await storage.updateTournamentMatch(matchId, {
+        winnerId,
+        winnerName,
+        player1Score,
+        player2Score,
+        status: "completed",
+        completedAt: new Date()
+      });
+
+      // Check if all matches in round are complete
+      const match = await storage.getTournamentMatch(matchId);
+      if (!match) {
+        return res.status(404).json({ error: "Match not found" });
+      }
+
+      const allMatches = await storage.getTournamentMatches(match.tournamentId);
+      const roundMatches = allMatches.filter(m => m.roundNumber === match.roundNumber);
+      const allComplete = roundMatches.every(m => m.status === "completed" || m.status === "bye");
+
+      if (allComplete) {
+        // Check if this was the final
+        const winners = roundMatches.map(m => ({ id: m.winnerId, name: m.winnerName }));
+        
+        if (winners.length === 1) {
+          // Tournament finished!
+          await storage.updateTournamentStatus(match.tournamentId, "completed");
+          await storage.setTournamentWinner(match.tournamentId, winnerId, winnerName);
+          
+          res.json({
+            success: true,
+            tournamentComplete: true,
+            winnerId,
+            winnerName,
+            message: "Tournament complete! Winner declared."
+          });
+        } else {
+          // Create next round matches
+          const nextRound = match.roundNumber + 1;
+          for (let i = 0; i < winners.length; i += 2) {
+            const p1 = winners[i];
+            const p2 = winners[i + 1];
+            
+            const roomCode = `TOUR_${match.tournamentId}_R${nextRound}_M${Math.floor(i/2) + 1}`;
+            
+            await storage.createTournamentMatch({
+              tournamentId: match.tournamentId,
+              roundNumber: nextRound,
+              matchNumber: Math.floor(i/2) + 1,
+              player1Id: p1.id,
+              player1Name: p1.name,
+              player2Id: p2?.id || null,
+              player2Name: p2?.name || null,
+              roomCode,
+              status: p2 ? "ready" : "bye",
+            });
+          }
+
+          res.json({
+            success: true,
+            nextRoundCreated: true,
+            nextRound,
+            message: `Round ${nextRound} matches created!`
+          });
+        }
+      } else {
+        res.json({
+          success: true,
+          message: "Match result recorded. Waiting for other matches."
+        });
+      }
+    } catch (error) {
+      console.error("Failed to record match result:", error);
+      res.status(500).json({ error: "Failed to record match result" });
     }
   });
 

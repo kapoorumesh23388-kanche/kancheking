@@ -70,8 +70,10 @@ export default function MultiplayerGame() {
   const [opponentHiddenCount, setOpponentHiddenCount] = useState(0);
   const [lastBet, setLastBet] = useState(10);
   const [roundPoints, setRoundPoints] = useState(0);
+  const [countdown, setCountdown] = useState<number | null>(null);
   
   const wsRef = useRef<WebSocket | null>(null);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
   // Connect to WebSocket
   useEffect(() => {
@@ -238,10 +240,34 @@ export default function MultiplayerGame() {
           description: won ? "You won this round!" : "Better luck next round!",
           variant: won ? "default" : "destructive",
         });
+        
+        // Start countdown for auto-restart
+        if (countdownRef.current) {
+          clearInterval(countdownRef.current);
+        }
+        setCountdown(3);
+        countdownRef.current = setInterval(() => {
+          setCountdown(prev => {
+            if (prev === null || prev <= 1) {
+              if (countdownRef.current) {
+                clearInterval(countdownRef.current);
+                countdownRef.current = null;
+              }
+              return null;
+            }
+            return prev - 1;
+          });
+        }, 1000);
         break;
         
       case "new_round":
         console.log(`[NEW_ROUND] Starting new round, hider: ${message.data.currentHider}, I am: ${playerId}`);
+        // Clear countdown if still running
+        if (countdownRef.current) {
+          clearInterval(countdownRef.current);
+          countdownRef.current = null;
+        }
+        setCountdown(null);
         setPhase("selecting");
         setIsHider(message.data.currentHider === playerId);
         setSelectedMarbleIds([]);
@@ -556,9 +582,19 @@ export default function MultiplayerGame() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  <span>Next round starting in 3 seconds...</span>
+                <div className="flex flex-col items-center justify-center gap-3 mt-6">
+                  <div className="relative">
+                    <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center border-4 border-primary animate-pulse">
+                      <span className="text-4xl font-black text-primary">
+                        {countdown !== null ? countdown : "..."}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground font-medium">
+                    {countdown !== null 
+                      ? `Next round in ${countdown} second${countdown !== 1 ? 's' : ''}...`
+                      : 'Starting next round...'}
+                  </p>
                 </div>
               </div>
             )}

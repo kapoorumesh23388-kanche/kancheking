@@ -94,6 +94,11 @@ export function usePresence(): UsePresenceResult {
             setPendingChallenge(message.data);
           } else if (message.type === "challenge_result") {
             if (message.data.accepted) {
+              // Close the presence socket before navigating to game
+              if (wsRef.current) {
+                wsRef.current.close();
+                wsRef.current = null;
+              }
               window.location.href = `/multiplayer-game/${message.data.roomCode}`;
             }
           } else if (message.type === "challenge_failed") {
@@ -183,6 +188,11 @@ export function usePresence(): UsePresenceResult {
       }));
       
       if (accepted) {
+        // Close presence socket before navigating
+        if (wsRef.current) {
+          wsRef.current.close();
+          wsRef.current = null;
+        }
         window.location.href = `/multiplayer-game/${pendingChallenge.roomCode}`;
       }
       

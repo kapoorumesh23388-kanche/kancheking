@@ -53,6 +53,16 @@ export interface IStorage {
   updateUserStripeInfo(userId: string, stripeInfo: { stripeCustomerId?: string; stripeSubscriptionId?: string }): Promise<User | undefined>;
   getProduct(productId: string): Promise<any>;
   getSubscription(subscriptionId: string): Promise<any>;
+  
+  // Tournament Bracket Methods
+  getTournamentParticipants(tournamentId: string): Promise<any[]>;
+  addTournamentParticipant(participant: any): Promise<any>;
+  getTournamentMatches(tournamentId: string): Promise<any[]>;
+  getTournamentMatch(matchId: string): Promise<any>;
+  createTournamentMatch(match: any): Promise<any>;
+  updateTournamentMatch(matchId: string, updates: any): Promise<any>;
+  updateTournamentStatus(tournamentId: string, status: string): Promise<void>;
+  setTournamentWinner(tournamentId: string, winnerId: string, winnerName: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -488,6 +498,66 @@ export class MemStorage implements IStorage {
 
   async getSubscription(subscriptionId: string): Promise<any> {
     return { id: subscriptionId };
+  }
+
+  // Tournament Bracket Methods
+  private tournamentParticipants: Map<string, any[]> = new Map();
+  private tournamentMatches: Map<string, any> = new Map();
+
+  async getTournamentParticipants(tournamentId: string): Promise<any[]> {
+    return this.tournamentParticipants.get(tournamentId) || [];
+  }
+
+  async addTournamentParticipant(participant: any): Promise<any> {
+    const id = randomUUID();
+    const newParticipant = { ...participant, id, createdAt: new Date() };
+    const participants = this.tournamentParticipants.get(participant.tournamentId) || [];
+    participants.push(newParticipant);
+    this.tournamentParticipants.set(participant.tournamentId, participants);
+    return newParticipant;
+  }
+
+  async getTournamentMatches(tournamentId: string): Promise<any[]> {
+    return Array.from(this.tournamentMatches.values()).filter(m => m.tournamentId === tournamentId);
+  }
+
+  async getTournamentMatch(matchId: string): Promise<any> {
+    return this.tournamentMatches.get(matchId);
+  }
+
+  async createTournamentMatch(match: any): Promise<any> {
+    const id = randomUUID();
+    const newMatch = { ...match, id, createdAt: new Date() };
+    this.tournamentMatches.set(id, newMatch);
+    return newMatch;
+  }
+
+  async updateTournamentMatch(matchId: string, updates: any): Promise<any> {
+    const match = this.tournamentMatches.get(matchId);
+    if (match) {
+      const updated = { ...match, ...updates };
+      this.tournamentMatches.set(matchId, updated);
+      return updated;
+    }
+    return null;
+  }
+
+  async updateTournamentStatus(tournamentId: string, status: string): Promise<void> {
+    const window = this.tournamentWindows.get(tournamentId);
+    if (window) {
+      window.status = status;
+      this.tournamentWindows.set(tournamentId, window);
+    }
+  }
+
+  async setTournamentWinner(tournamentId: string, winnerId: string, winnerName: string): Promise<void> {
+    const window = this.tournamentWindows.get(tournamentId);
+    if (window) {
+      window.winnerId = winnerId;
+      window.status = "completed";
+      window.endedAt = new Date();
+      this.tournamentWindows.set(tournamentId, window);
+    }
   }
 }
 

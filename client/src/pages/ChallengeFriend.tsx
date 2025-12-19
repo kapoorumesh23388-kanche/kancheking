@@ -56,14 +56,23 @@ export default function ChallengeFriend() {
             console.log("Creator received:", message);
             
             if (message.type === "player_joined") {
-              // Opponent joined - navigate to game
+              // Opponent joined - close this socket and navigate to game
               toast({
                 title: "Opponent Connected!",
                 description: `${message.data.playerName} has joined the game`,
               });
+              // Close lobby socket before navigating to prevent duplicate connections
+              if (wsRef.current) {
+                wsRef.current.close();
+                wsRef.current = null;
+              }
               setLocation(`/multiplayer-game/${roomCode}`);
             } else if (message.type === "room_ready") {
-              // Both players ready - navigate to game
+              // Both players ready - close socket and navigate to game
+              if (wsRef.current) {
+                wsRef.current.close();
+                wsRef.current = null;
+              }
               setLocation(`/multiplayer-game/${roomCode}`);
             }
           } catch (e) {

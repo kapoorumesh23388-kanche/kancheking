@@ -154,6 +154,39 @@ export const chatMessages = pgTable("chat_messages", {
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
+export const tournamentParticipants = pgTable("tournament_participants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tournamentId: varchar("tournament_id").notNull(),
+  playerId: varchar("player_id").notNull(),
+  playerName: varchar("player_name").notNull(),
+  profileImage: varchar("profile_image"),
+  seed: integer("seed").notNull(),
+  status: varchar("status").notNull().default("active"),
+  eliminatedInRound: integer("eliminated_in_round"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const tournamentMatches = pgTable("tournament_matches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tournamentId: varchar("tournament_id").notNull(),
+  roundNumber: integer("round_number").notNull(),
+  matchNumber: integer("match_number").notNull(),
+  player1Id: varchar("player1_id"),
+  player1Name: varchar("player1_name"),
+  player2Id: varchar("player2_id"),
+  player2Name: varchar("player2_name"),
+  winnerId: varchar("winner_id"),
+  winnerName: varchar("winner_name"),
+  player1Score: integer("player1_score").notNull().default(0),
+  player2Score: integer("player2_score").notNull().default(0),
+  roomCode: varchar("room_code"),
+  status: varchar("status").notNull().default("pending"),
+  scheduledAt: timestamp("scheduled_at"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -172,3 +205,5 @@ export type PlayerRevenueShare = typeof playerRevenueShare.$inferSelect;
 export type TournamentConversion = typeof tournamentConversions.$inferSelect;
 export type FeedbackSubmission = typeof feedbackSubmissions.$inferSelect;
 export type ChatMessage = typeof chatMessages.$inferSelect;
+export type TournamentParticipant = typeof tournamentParticipants.$inferSelect;
+export type TournamentMatch = typeof tournamentMatches.$inferSelect;

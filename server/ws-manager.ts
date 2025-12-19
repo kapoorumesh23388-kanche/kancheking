@@ -86,6 +86,18 @@ export function handleNewConnection(ws: WebSocket) {
         
       } else if (message.type === "challenge") {
         const targetId = message.data.targetPlayerId;
+        
+        // Prevent self-challenge
+        if (targetId === message.playerId) {
+          ws.send(JSON.stringify({
+            type: "challenge_failed",
+            playerId: message.playerId,
+            data: { error: "Cannot challenge yourself", targetPlayerId: targetId }
+          }));
+          console.log(`[CHALLENGE] ${message.playerId} tried to self-challenge - blocked`);
+          return;
+        }
+        
         const target = onlinePlayers.get(targetId);
         
         if (target && target.ws.readyState === 1) {

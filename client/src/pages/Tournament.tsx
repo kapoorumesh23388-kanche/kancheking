@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Info } from "lucide-react";
+import { Loader2, Info, Trophy, Swords, Users, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { 
   getEligibleMarbles, 
   getRewardPoints, 
@@ -14,10 +16,60 @@ import {
   initializeMarbles
 } from "@/lib/marbleStorage";
 
+interface TournamentMatch {
+  id: string;
+  tournamentId: string;
+  roundNumber: number;
+  matchNumber: number;
+  player1Id: string | null;
+  player1Name: string | null;
+  player2Id: string | null;
+  player2Name: string | null;
+  winnerId: string | null;
+  winnerName: string | null;
+  player1Score: number;
+  player2Score: number;
+  roomCode: string | null;
+  status: string;
+}
+
 export default function Tournament() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [activeWindow, setActiveWindow] = useState(1);
   const [isJoining, setIsJoining] = useState(false);
+  const [viewBracket, setViewBracket] = useState(false);
+  const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
+  
+  const playerId = localStorage.getItem("playerId") || `player_${Date.now()}`;
+  
+  // Load saved tournament ID on mount
+  useEffect(() => {
+    const savedTournamentId = localStorage.getItem("activeTournamentId");
+    if (savedTournamentId) {
+      setSelectedTournamentId(savedTournamentId);
+    }
+  }, []);
+  
+  // Fetch tournament windows from API
+  const { data: windowsData } = useQuery<{ windows: any[] }>({
+    queryKey: ['/api/tournament/windows'],
+    refetchInterval: 5000,
+  });
+  
+  // Fetch my current match if in a tournament
+  const { data: myMatchData, refetch: refetchMyMatch } = useQuery<{ success: boolean; match: TournamentMatch | null }>({
+    queryKey: ['/api/tournament', selectedTournamentId, 'my-match', { playerId }],
+    enabled: !!selectedTournamentId,
+    refetchInterval: 5000,
+  });
+  
+  // Fetch bracket data
+  const { data: bracketData } = useQuery<{ success: boolean; matches: TournamentMatch[]; participants: any[]; totalRounds: number }>({
+    queryKey: ['/api/tournament', selectedTournamentId, 'bracket'],
+    enabled: !!selectedTournamentId && viewBracket,
+    refetchInterval: 5000,
+  });
   
   // Eligible marbles (purchased + pvp wins only) for tournament
   const [eligibleMarbles, setEligibleMarbles] = useState(0);
@@ -59,22 +111,33 @@ export default function Tournament() {
     };
   }, [updatePlayerStats]);
 
-  const tournamentWindows = [
+  // Use API data or fallback to default windows
+  const tournamentWindows = windowsData?.windows || [
     {
       id: 1,
-      players: 85,
+      tournamentId: null,
+      players: 0,
       status: "Open",
-      pointPool: 85 * 50000, // Each player's participation points
+      pointPool: 0,
       winnerReward: winnerPoints,
     },
     {
       id: 2,
+      tournamentId: null,
       players: 0,
       status: "Waiting",
       pointPool: 0,
       winnerReward: winnerPoints,
     },
   ];
+  
+  // Auto-select tournament ID when windows data loads
+  useEffect(() => {
+    const activeWindowData = tournamentWindows.find(w => w.id === activeWindow);
+    if (activeWindowData?.tournamentId) {
+      setSelectedTournamentId(activeWindowData.tournamentId);
+    }
+  }, [tournamentWindows, activeWindow]);
 
   const handleJoinTournament = async () => {
     if (!isTournamentEligible()) {
@@ -100,6 +163,8 @@ export default function Tournament() {
       });
       
       if (response.ok) {
+        const data = await response.json();
+        
         // Deduct marbles using proper accounting
         const deducted = spendMarbles(entryFee);
         if (!deducted) {
@@ -111,6 +176,12 @@ export default function Tournament() {
           return;
         }
         updatePlayerStats();
+        
+        // Store the tournament ID for bracket viewing
+        if (data.tournamentId) {
+          setSelectedTournamentId(data.tournamentId);
+          localStorage.setItem("activeTournamentId", data.tournamentId);
+        }
         
         toast({
           title: "Tournament Joined!",
@@ -314,6 +385,114 @@ export default function Tournament() {
             ))}
           </div>
         </div>
+
+        {/* My Active Match Notification */}
+        {myMatchData?.match && myMatchData.match.status === "ready" && (
+          <Card className="mb-8 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-2 border-green-500/50 animate-pulse">
+            <CardContent className="py-6">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-4">
+                  <Swords className="w-10 h-10 text-green-400" />
+                  <div>
+                    <p className="text-xl font-bold text-green-400">Your Match is Ready!</p>
+                    <p className="text-muted-foreground">
+                      Round {myMatchData.match.roundNumber} - vs {myMatchData.match.player1Id === playerId ? myMatchData.match.player2Name : myMatchData.match.player1Name}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="lg"
+                  className="bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold"
+                  onClick={() => setLocation(`/multiplayer-game/${myMatchData.match?.roomCode}`)}
+                  data-testid="button-join-match"
+                >
+                  <Swords className="w-4 h-4 mr-2" />
+                  Join Match Now
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Bracket View Toggle */}
+        {selectedTournamentId && (
+          <Card className="mb-8">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-yellow-400" />
+                  Tournament Bracket
+                </CardTitle>
+                <Button
+                  variant={viewBracket ? "default" : "outline"}
+                  onClick={() => setViewBracket(!viewBracket)}
+                  data-testid="button-toggle-bracket"
+                >
+                  {viewBracket ? "Hide Bracket" : "View Bracket"}
+                </Button>
+              </div>
+            </CardHeader>
+            {viewBracket && bracketData && (
+              <CardContent>
+                <div className="space-y-6">
+                  {Array.from({ length: bracketData.totalRounds || 1 }, (_, i) => i + 1).map(round => {
+                    const roundMatches = bracketData.matches?.filter(m => m.roundNumber === round) || [];
+                    return (
+                      <div key={round} className="space-y-3">
+                        <h4 className="font-bold text-primary flex items-center gap-2">
+                          <Badge variant="outline">Round {round}</Badge>
+                          {round === bracketData.totalRounds && <Trophy className="w-4 h-4 text-yellow-400" />}
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {roundMatches.map(match => (
+                            <Card 
+                              key={match.id} 
+                              className={`p-3 ${match.status === "completed" ? "bg-muted/50" : match.status === "ready" ? "border-green-500/50 bg-green-500/10" : "border-muted"}`}
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <Badge variant={match.status === "completed" ? "secondary" : match.status === "ready" ? "default" : "outline"}>
+                                  {match.status === "completed" ? "Done" : match.status === "ready" ? "Live" : "Pending"}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">Match #{match.matchNumber}</span>
+                              </div>
+                              <div className="space-y-1">
+                                <div className={`flex items-center justify-between p-2 rounded ${match.winnerId === match.player1Id ? "bg-green-500/20 text-green-400" : ""}`}>
+                                  <span className="font-medium truncate">{match.player1Name || "TBD"}</span>
+                                  <span className="font-bold">{match.player1Score}</span>
+                                </div>
+                                <div className={`flex items-center justify-between p-2 rounded ${match.winnerId === match.player2Id ? "bg-green-500/20 text-green-400" : ""}`}>
+                                  <span className="font-medium truncate">{match.player2Name || "TBD"}</span>
+                                  <span className="font-bold">{match.player2Score}</span>
+                                </div>
+                              </div>
+                              {match.status === "ready" && (match.player1Id === playerId || match.player2Id === playerId) && (
+                                <Button
+                                  size="sm"
+                                  className="w-full mt-2 bg-green-500 hover:bg-green-600"
+                                  onClick={() => setLocation(`/multiplayer-game/${match.roomCode}`)}
+                                  data-testid={`button-join-match-${match.id}`}
+                                >
+                                  Join Match
+                                </Button>
+                              )}
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {(!bracketData.matches || bracketData.matches.length === 0) && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p>Tournament hasn't started yet</p>
+                      <p className="text-sm">Bracket will appear once all players join</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            )}
+          </Card>
+        )}
 
         {/* Rules */}
         <Card>
