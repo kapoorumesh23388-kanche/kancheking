@@ -464,11 +464,25 @@ export function handleNewConnection(ws: WebSocket) {
             console.log(`[AUTO-RESTART] Scheduling new round in 3 seconds for room ${savedRoomCode}`);
             setTimeout(() => {
               const roomCheck = rooms.get(savedRoomCode);
-              console.log(`[AUTO-RESTART] Timer fired for room ${savedRoomCode}, players: ${roomCheck?.players.size || 0}`);
-              if (roomCheck && roomCheck.players.size >= 2) {
+              if (!roomCheck) {
+                console.log(`[AUTO-RESTART] Room ${savedRoomCode} no longer exists`);
+                return;
+              }
+              
+              // Check each player's WebSocket status
+              let connectedCount = 0;
+              roomCheck.players.forEach((player, id) => {
+                const wsReady = player.ws.readyState === 1;
+                console.log(`[AUTO-RESTART] Player ${id} ws.readyState: ${player.ws.readyState}, connected: ${wsReady}`);
+                if (wsReady) connectedCount++;
+              });
+              
+              console.log(`[AUTO-RESTART] Timer fired for room ${savedRoomCode}, players: ${roomCheck.players.size}, connected: ${connectedCount}`);
+              
+              if (connectedCount >= 2) {
                 roomCheck.gameState.phase = "selecting";
-                roomCheck.gameState.hiddenMarbles = 0; // Reset hidden marbles
-                broadcastToRoom(savedRoomCode, {
+                roomCheck.gameState.hiddenMarbles = 0;
+                const message = {
                   type: "new_round",
                   roomCode: savedRoomCode,
                   playerId: "system",
@@ -476,8 +490,12 @@ export function handleNewConnection(ws: WebSocket) {
                     phase: "selecting",
                     currentHider: roomCheck.gameState.currentHider,
                   }
-                });
+                };
+                console.log(`[AUTO-RESTART] Broadcasting new_round:`, JSON.stringify(message));
+                broadcastToRoom(savedRoomCode, message);
                 console.log(`[AUTO-RESTART] New round started, hider: ${roomCheck.gameState.currentHider}`);
+              } else {
+                console.log(`[AUTO-RESTART] Not enough connected players (${connectedCount}/2), skipping new round`);
               }
             }, 3000);
           }
