@@ -7,8 +7,15 @@ import GuessingPanel from "@/components/GuessingPanel";
 import ResultDisplay from "@/components/ResultDisplay";
 import MarbleSelector from "@/components/MarbleSelector";
 import GameChat from "@/components/GameChat";
+import { SpinWheel } from "@/components/SpinWheel";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Volume2, VolumeX, ArrowLeft } from "lucide-react";
+import { MessageCircle, Volume2, VolumeX, ArrowLeft, RotateCcw, Home } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   addMarbles, 
   loseMarbles, 
@@ -74,6 +81,15 @@ export default function MultiplayerGame() {
   
   const wsRef = useRef<WebSocket | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [showSpinWheel, setShowSpinWheel] = useState(false);
+
+  // Show celebration when opponent loses all marbles
+  useEffect(() => {
+    if (opponentMarbles <= 0 && opponentConnected && !showCelebration) {
+      setShowCelebration(true);
+    }
+  }, [opponentMarbles, opponentConnected, showCelebration]);
 
   // Connect to WebSocket
   useEffect(() => {
@@ -612,6 +628,91 @@ export default function MultiplayerGame() {
           </Button>
         </div>
       </div>
+
+      {/* Celebration Dialog - Opponent Defeated */}
+      <Dialog open={showCelebration} onOpenChange={setShowCelebration}>
+        <DialogContent className="bg-gradient-to-b from-primary/30 to-black border-4 border-primary max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">
+              <div className="space-y-4">
+                <div className="text-7xl animate-bounce">🎉</div>
+                <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] to-[#FFA500]">
+                  VICTORY!
+                </h2>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4 text-center">
+            <div className="text-6xl animate-pulse">👑</div>
+            <p className="text-2xl font-bold text-[#00FF88]">
+              {opponentName} DEFEATED!
+            </p>
+            <p className="text-lg text-foreground">
+              You've won all their marbles! 
+            </p>
+            <Button
+              className="w-full bg-gradient-to-r from-[#FFD700] to-[#FFA500] hover:opacity-90 text-black font-bold py-6 text-xl animate-pulse"
+              onClick={() => {
+                setShowCelebration(false);
+                setShowSpinWheel(true);
+              }}
+              data-testid="button-spin-prize"
+            >
+              🎰 Spin to Win Bonus Prize!
+            </Button>
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                className="bg-gradient-to-r from-[#00D9FF] to-[#00FF88] hover:opacity-90 text-black font-bold py-6 text-lg"
+                onClick={() => {
+                  setShowCelebration(false);
+                  setOpponentMarbles(150);
+                  setPhase("selecting");
+                  setSelectedMarbleIds([]);
+                  setGameResult(null);
+                }}
+                data-testid="button-play-again"
+              >
+                <RotateCcw className="w-5 h-5 mr-2" />
+                Play Again
+              </Button>
+              <Button
+                variant="outline"
+                className="border-primary text-primary font-bold py-6 text-lg"
+                onClick={() => {
+                  setShowCelebration(false);
+                  setLocation("/modes");
+                }}
+                data-testid="button-victory-home"
+              >
+                <Home className="w-5 h-5 mr-2" />
+                Home
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Victory Spin Wheel */}
+      <SpinWheel
+        isOpen={showSpinWheel}
+        onClose={() => {
+          setShowSpinWheel(false);
+          setOpponentMarbles(150);
+          setPhase("selecting");
+          setSelectedMarbleIds([]);
+          setGameResult(null);
+        }}
+        onPrizeWon={(prize) => {
+          if (prize.type === "marbles") {
+            addMarbles('pvp', prize.value);
+            setMyMarbles(getTotalMarbles());
+          }
+          toast({
+            title: "Prize Won!",
+            description: `You won ${prize.name}!`,
+          });
+        }}
+      />
 
       <GameChat
         isOpen={isChatOpen}
