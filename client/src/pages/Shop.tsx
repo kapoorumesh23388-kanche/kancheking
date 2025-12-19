@@ -89,12 +89,12 @@ export default function Shop() {
   });
 
   const marblePacks = [
-    { price: 50, marbles: 100, savings: 0 },
-    { price: 99, marbles: 250, savings: 0 },
-    { price: 149, marbles: 400, savings: 0 },
-    { price: 199, marbles: 550, savings: 0 },
-    { price: 249, marbles: 700, savings: 0 },
-    { price: 499, marbles: 1500, savings: 0 },
+    { price: 10, marbles: 50, savings: 0 },
+    { price: 20, marbles: 120, savings: 0 },
+    { price: 50, marbles: 350, savings: 0 },
+    { price: 100, marbles: 800, savings: 0 },
+    { price: 200, marbles: 1800, savings: 0 },
+    { price: 500, marbles: 5000, savings: 0 },
   ];
 
   const copyReferralCode = () => {
