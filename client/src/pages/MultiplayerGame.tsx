@@ -81,6 +81,8 @@ export default function MultiplayerGame() {
   
   const wsRef = useRef<WebSocket | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  const nextHiderRef = useRef<string | null>(null);
+  const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showSpinWheel, setShowSpinWheel] = useState(false);
 
@@ -285,6 +287,10 @@ export default function MultiplayerGame() {
           variant: won ? "default" : "destructive",
         });
         
+        // Store nextHider for fallback mechanism
+        nextHiderRef.current = message.data.nextHider;
+        console.log(`[ROUND_RESULT] Next hider will be: ${message.data.nextHider}`);
+        
         // Start countdown for auto-restart
         if (countdownRef.current) {
           clearInterval(countdownRef.current);
@@ -302,6 +308,28 @@ export default function MultiplayerGame() {
             return prev - 1;
           });
         }, 1000);
+        
+        // Clear any existing fallback timeout
+        if (fallbackTimeoutRef.current) {
+          clearTimeout(fallbackTimeoutRef.current);
+        }
+        
+        // Fallback: If we don't receive new_round from server within 5 seconds, 
+        // start the next round locally using the nextHider from round_result
+        fallbackTimeoutRef.current = setTimeout(() => {
+          const nextHider = nextHiderRef.current;
+          console.log(`[FALLBACK] Checking if fallback needed, nextHider: ${nextHider}`);
+          
+          if (nextHider) {
+            console.log(`[FALLBACK] Forcing transition to new round, hider: ${nextHider}`);
+            setPhase("selecting");
+            setIsHider(nextHider === playerId);
+            setSelectedMarbleIds([]);
+            setGameResult(null);
+            setCountdown(null);
+            nextHiderRef.current = null; // Clear after using
+          }
+        }, 5000);
         break;
         
       case "new_round":
@@ -311,6 +339,12 @@ export default function MultiplayerGame() {
           clearInterval(countdownRef.current);
           countdownRef.current = null;
         }
+        // Clear fallback timeout since we received the new_round
+        if (fallbackTimeoutRef.current) {
+          clearTimeout(fallbackTimeoutRef.current);
+          fallbackTimeoutRef.current = null;
+        }
+        nextHiderRef.current = null; // Clear since we're starting new round
         setCountdown(null);
         setPhase("selecting");
         setIsHider(message.data.currentHider === playerId);

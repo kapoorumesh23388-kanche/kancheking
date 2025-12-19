@@ -461,7 +461,9 @@ export function handleNewConnection(ws: WebSocket) {
             
             // Auto-start next round after 3 seconds
             const savedRoomCode = roomCode;
-            console.log(`[AUTO-RESTART] Scheduling new round in 3 seconds for room ${savedRoomCode}`);
+            const savedNewHider = newHider;
+            console.log(`[AUTO-RESTART] Scheduling new round in 3 seconds for room ${savedRoomCode}, next hider: ${savedNewHider}`);
+            
             setTimeout(() => {
               const roomCheck = rooms.get(savedRoomCode);
               if (!roomCheck) {
@@ -469,34 +471,45 @@ export function handleNewConnection(ws: WebSocket) {
                 return;
               }
               
-              // Check each player's WebSocket status
-              let connectedCount = 0;
-              roomCheck.players.forEach((player, id) => {
-                const wsReady = player.ws.readyState === 1;
-                console.log(`[AUTO-RESTART] Player ${id} ws.readyState: ${player.ws.readyState}, connected: ${wsReady}`);
-                if (wsReady) connectedCount++;
+              // Always update room state and broadcast new_round
+              // Don't skip based on connection count - let clients handle reconnection
+              roomCheck.gameState.phase = "selecting";
+              roomCheck.gameState.hiddenMarbles = 0;
+              
+              const newRoundMessage = {
+                type: "new_round",
+                roomCode: savedRoomCode,
+                playerId: "system",
+                data: {
+                  phase: "selecting",
+                  currentHider: savedNewHider,
+                }
+              };
+              
+              console.log(`[AUTO-RESTART] Broadcasting new_round to room ${savedRoomCode}:`, JSON.stringify(newRoundMessage));
+              
+              // Broadcast to all players - send even if WebSocket might be reconnecting
+              const messageStr = JSON.stringify(newRoundMessage);
+              let sentCount = 0;
+              let failedCount = 0;
+              
+              roomCheck.players.forEach((player, playerId) => {
+                try {
+                  if (player.ws.readyState === 1) { // OPEN
+                    player.ws.send(messageStr);
+                    sentCount++;
+                    console.log(`[AUTO-RESTART] Sent new_round to ${playerId}`);
+                  } else {
+                    failedCount++;
+                    console.log(`[AUTO-RESTART] Player ${playerId} ws not ready (state: ${player.ws.readyState})`);
+                  }
+                } catch (e) {
+                  failedCount++;
+                  console.log(`[AUTO-RESTART] Error sending to ${playerId}:`, e);
+                }
               });
               
-              console.log(`[AUTO-RESTART] Timer fired for room ${savedRoomCode}, players: ${roomCheck.players.size}, connected: ${connectedCount}`);
-              
-              if (connectedCount >= 2) {
-                roomCheck.gameState.phase = "selecting";
-                roomCheck.gameState.hiddenMarbles = 0;
-                const message = {
-                  type: "new_round",
-                  roomCode: savedRoomCode,
-                  playerId: "system",
-                  data: {
-                    phase: "selecting",
-                    currentHider: roomCheck.gameState.currentHider,
-                  }
-                };
-                console.log(`[AUTO-RESTART] Broadcasting new_round:`, JSON.stringify(message));
-                broadcastToRoom(savedRoomCode, message);
-                console.log(`[AUTO-RESTART] New round started, hider: ${roomCheck.gameState.currentHider}`);
-              } else {
-                console.log(`[AUTO-RESTART] Not enough connected players (${connectedCount}/2), skipping new round`);
-              }
+              console.log(`[AUTO-RESTART] New round started for room ${savedRoomCode}: sent=${sentCount}, failed=${failedCount}, hider=${savedNewHider}`);
             }, 3000);
           }
           
