@@ -6,6 +6,7 @@ import GuessingPanel from "@/components/GuessingPanel";
 import ResultDisplay from "@/components/ResultDisplay";
 import MarbleSelector from "@/components/MarbleSelector";
 import GameChat from "@/components/GameChat";
+import { SpinWheel } from "@/components/SpinWheel";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Volume2, VolumeX } from "lucide-react";
 import {
@@ -89,6 +90,7 @@ export default function GamePlay() {
   const winAudioRef = useRef<HTMLAudioElement | null>(null);
   const lossAudioRef = useRef<HTMLAudioElement | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showSpinWheel, setShowSpinWheel] = useState(false);
 
   // Initialize background music
   useEffect(() => {
@@ -711,6 +713,16 @@ export default function GamePlay() {
                 +25 Points
               </p>
             </div>
+            <Button
+              className="w-full bg-gradient-to-r from-[#FFD700] to-[#FFA500] hover:opacity-90 text-black font-bold py-6 text-xl animate-pulse"
+              onClick={() => {
+                setShowCelebration(false);
+                setShowSpinWheel(true);
+              }}
+              data-testid="button-spin-prize"
+            >
+              🎰 Spin to Win Bonus Prize!
+            </Button>
             <div className="grid grid-cols-2 gap-4">
               <Button
                 className="bg-gradient-to-r from-[#00D9FF] to-[#00FF88] hover:opacity-90 text-black font-bold py-6 text-lg"
@@ -745,6 +757,31 @@ export default function GamePlay() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Victory Spin Wheel */}
+      <SpinWheel
+        isOpen={showSpinWheel}
+        onClose={() => {
+          setShowSpinWheel(false);
+          setPlayer2Marbles(120);
+          setPhase("selecting");
+          setSelectedMarbleIds([]);
+          setFistOpen(false);
+          setGameResult(null);
+          setShowRevealButton(false);
+          setIsHiderPlayer1(true);
+        }}
+        onPrizeWon={(prize) => {
+          if (prize.type === "marbles") {
+            addMarbles('free', prize.value);
+            setPlayer1Marbles(getTotalMarbles());
+          }
+          toast({
+            title: "Prize Won!",
+            description: `You won ${prize.name}!`,
+          });
+        }}
+      />
 
       {/* Ad Reward Modal */}
       <Dialog open={showAdReward} onOpenChange={setShowAdReward}>
