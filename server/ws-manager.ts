@@ -29,6 +29,8 @@ interface RoomData {
     currentBet: number;
     lastGuess: string;
   };
+  // Grace period for reconnections
+  pendingDisconnects: Map<string, NodeJS.Timeout>;
 }
 
 const connectedPlayers: Map<string, ConnectedPlayer> = new Map();
@@ -176,13 +178,21 @@ export function handleNewConnection(ws: WebSocket) {
                 hiddenMarbles: 0,
                 currentBet: 10,
                 lastGuess: "",
-              }
+              },
+              pendingDisconnects: new Map(),
             });
             console.log(`[ROOM] Room ${currentRoomCode} created by ${playerInfo.playerName}`);
           } else {
             // Player is joining existing room
             const room = rooms.get(currentRoomCode);
             if (room) {
+              // Cancel any pending disconnect for this player (they're reconnecting)
+              if (room.pendingDisconnects.has(currentPlayerId)) {
+                clearTimeout(room.pendingDisconnects.get(currentPlayerId)!);
+                room.pendingDisconnects.delete(currentPlayerId);
+                console.log(`[RECONNECT] Player ${playerInfo.playerName} reconnected via join_room to ${currentRoomCode}`);
+              }
+              
               room.players.set(currentPlayerId, playerInfo);
               
               // Notify room creator that someone joined
@@ -281,12 +291,40 @@ export function handleNewConnection(ws: WebSocket) {
                 hiddenMarbles: 0,
                 currentBet: 10,
                 lastGuess: "",
-              }
+              },
+              pendingDisconnects: new Map(),
             };
             rooms.set(currentRoomCode, room);
           }
           
+          // Cancel any pending disconnect for this player (they're reconnecting)
+          const isReconnecting = room.pendingDisconnects.has(currentPlayerId);
+          if (isReconnecting) {
+            clearTimeout(room.pendingDisconnects.get(currentPlayerId)!);
+            room.pendingDisconnects.delete(currentPlayerId);
+            console.log(`[RECONNECT] Player ${playerInfo.playerName} reconnected to room ${currentRoomCode}`);
+          }
+          
           room.players.set(currentPlayerId, playerInfo);
+          
+          // Send current game state to reconnecting player
+          const allPlayersInRoomForSync = Array.from(room.players.values());
+          ws.send(JSON.stringify({
+            type: "game_sync",
+            roomCode: currentRoomCode,
+            playerId: currentPlayerId,
+            data: {
+              phase: room.gameState.phase,
+              currentHider: room.gameState.currentHider,
+              players: allPlayersInRoomForSync.map(p => ({
+                id: p.playerId,
+                name: p.playerName,
+                marbles: p.marbles,
+                profileImage: p.profileImage,
+              })),
+              isReconnecting,
+            }
+          }));
 
           // Broadcast player joined to all in room
           const allPlayersInRoom = Array.from(room.players.values());
@@ -514,26 +552,47 @@ export function handleNewConnection(ws: WebSocket) {
       onlinePlayers.delete(currentPlayerId);
       connectedPlayers.delete(currentPlayerId);
       
-      // Remove from room
+      // Handle room disconnection with grace period for reconnection
       const room = rooms.get(currentRoomCode);
       if (room) {
-        room.players.delete(currentPlayerId);
+        // Give player 5 seconds to reconnect (e.g., during page navigation)
+        const RECONNECT_GRACE_PERIOD = 5000;
         
-        // Notify others in room
-        broadcastToRoom(currentRoomCode, {
-          type: "player_left",
-          roomCode: currentRoomCode,
-          playerId: currentPlayerId,
-          data: { playerId: currentPlayerId }
-        });
-        
-        // Clean up empty room
-        if (room.players.size === 0) {
-          rooms.delete(currentRoomCode);
+        // Clear any existing pending disconnect
+        if (room.pendingDisconnects.has(currentPlayerId)) {
+          clearTimeout(room.pendingDisconnects.get(currentPlayerId)!);
         }
+        
+        // Set up delayed disconnect
+        const disconnectTimeout = setTimeout(() => {
+          const roomCheck = rooms.get(currentRoomCode);
+          if (roomCheck) {
+            roomCheck.players.delete(currentPlayerId);
+            roomCheck.pendingDisconnects.delete(currentPlayerId);
+            
+            // Notify others in room
+            broadcastToRoom(currentRoomCode, {
+              type: "player_left",
+              roomCode: currentRoomCode,
+              playerId: currentPlayerId,
+              data: { playerId: currentPlayerId }
+            });
+            
+            console.log(`[DISCONNECT] ${currentPlayerId} removed from room ${currentRoomCode} after grace period`);
+            
+            // Clean up empty room
+            if (roomCheck.players.size === 0) {
+              rooms.delete(currentRoomCode);
+              console.log(`[ROOM] Room ${currentRoomCode} deleted (empty)`);
+            }
+          }
+        }, RECONNECT_GRACE_PERIOD);
+        
+        room.pendingDisconnects.set(currentPlayerId, disconnectTimeout);
+        console.log(`[PRESENCE] ${currentPlayerId} disconnected, waiting ${RECONNECT_GRACE_PERIOD}ms for reconnect`);
+      } else {
+        console.log(`[PRESENCE] ${currentPlayerId} went offline (no room)`);
       }
-      
-      console.log(`[PRESENCE] ${currentPlayerId} went offline`);
     }
     if (currentRoomCode) {
       const roomConns = roomConnections.get(currentRoomCode);
@@ -566,16 +625,22 @@ export function getOnlinePlayerCount() {
 }
 
 export function broadcastToRoom(roomCode: string, message: any) {
-  const room = roomConnections.get(roomCode);
-  if (!room) return;
+  // Use rooms Map instead of roomConnections for more reliable broadcasting
+  const room = rooms.get(roomCode);
+  if (!room) {
+    console.log(`[BROADCAST] Room ${roomCode} not found`);
+    return;
+  }
 
   const messageStr = JSON.stringify(message);
-  room.forEach((playerId) => {
-    const player = connectedPlayers.get(playerId);
-    if (player && player.ws.readyState === 1) {
+  let sentCount = 0;
+  room.players.forEach((player, playerId) => {
+    if (player.ws.readyState === 1) {
       player.ws.send(messageStr);
+      sentCount++;
     }
   });
+  console.log(`[BROADCAST] Sent to ${sentCount}/${room.players.size} players in room ${roomCode}`);
 }
 
 export function broadcastToPlayer(playerId: string, message: any) {

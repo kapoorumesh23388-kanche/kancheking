@@ -91,54 +91,82 @@ export default function MultiplayerGame() {
     }
   }, [opponentMarbles, opponentConnected, showCelebration]);
 
-  // Connect to WebSocket
+  // Connect to WebSocket with auto-reconnection
   useEffect(() => {
     if (!roomCode) return;
     
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 5;
+    const RECONNECT_DELAY = 2000;
+    let reconnectTimeout: NodeJS.Timeout | null = null;
+    let isUnmounting = false;
     
-    try {
-      const ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
+    const connect = () => {
+      if (isUnmounting) return;
       
-      ws.onopen = () => {
-        console.log("Game WebSocket connected");
-        // Join the room with full player info
-        ws.send(JSON.stringify({
-          type: "join",
-          roomCode,
-          playerId,
-          data: {
-            playerName,
-            marbles: myMarbles,
-            profileImage,
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      
+      try {
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+        
+        ws.onopen = () => {
+          console.log("Game WebSocket connected");
+          reconnectAttempts = 0; // Reset on successful connection
+          // Join the room with full player info
+          ws.send(JSON.stringify({
+            type: "join",
+            roomCode,
+            playerId,
+            data: {
+              playerName,
+              marbles: myMarbles,
+              profileImage,
+            }
+          }));
+        };
+        
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            console.log("Game received:", message);
+            handleGameMessage(message);
+          } catch (e) {
+            console.error("Parse error:", e);
           }
-        }));
-      };
-      
-      ws.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          console.log("Game received:", message);
-          handleGameMessage(message);
-        } catch (e) {
-          console.error("Parse error:", e);
+        };
+        
+        ws.onclose = () => {
+          console.log("Game WebSocket disconnected");
+          // Auto-reconnect if not intentionally closing
+          if (!isUnmounting && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttempts++;
+            console.log(`Reconnecting in ${RECONNECT_DELAY}ms (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+            reconnectTimeout = setTimeout(connect, RECONNECT_DELAY);
+          }
+        };
+        
+        ws.onerror = (err) => {
+          console.error("Game WebSocket error:", err);
+        };
+      } catch (error) {
+        console.error("Failed to connect:", error);
+        // Retry connection
+        if (!isUnmounting && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          reconnectAttempts++;
+          reconnectTimeout = setTimeout(connect, RECONNECT_DELAY);
         }
-      };
-      
-      ws.onclose = () => {
-        console.log("Game WebSocket disconnected");
-      };
-      
-      ws.onerror = (err) => {
-        console.error("Game WebSocket error:", err);
-      };
-    } catch (error) {
-      console.error("Failed to connect:", error);
-    }
+      }
+    };
+    
+    connect();
     
     return () => {
+      isUnmounting = true;
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;
@@ -318,6 +346,32 @@ export default function MultiplayerGame() {
           audioUrl: message.data.messageType === "voice" ? message.data.content : undefined,
         };
         setChatMessages(prev => [...prev, chatMessage]);
+        break;
+        
+      case "game_sync":
+        // Sync game state on (re)connection
+        console.log(`[GAME_SYNC] Syncing state: phase=${message.data.phase}, hider=${message.data.currentHider}`);
+        if (message.data.phase && message.data.phase !== "waiting") {
+          setPhase(message.data.phase === "result" ? "selecting" : message.data.phase);
+          setIsHider(message.data.currentHider === playerId);
+        }
+        
+        // Sync opponent info
+        const syncOpponent = message.data.players?.find((p: PlayerInfo) => p.id !== playerId);
+        if (syncOpponent) {
+          setOpponentName(syncOpponent.name);
+          setOpponentMarbles(syncOpponent.marbles);
+          setOpponentImage(syncOpponent.profileImage || null);
+          setOpponentConnected(true);
+        }
+        
+        // If both players are in room and game can start
+        if (message.data.players?.length >= 2) {
+          setOpponentConnected(true);
+          if (message.data.phase === "waiting") {
+            setPhase("selecting");
+          }
+        }
         break;
     }
   }, [playerId, toast]);
