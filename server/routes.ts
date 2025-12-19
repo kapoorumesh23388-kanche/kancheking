@@ -1298,29 +1298,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "userId, marblesCount, and amount required" });
       }
 
-      const { createRazorpayOrder } = await import('./razorpayClient');
+      const { getUncachableStripeClient, getStripePublishableKey } = await import('./stripeClient');
+      const stripe = await getUncachableStripeClient();
+      const publishableKey = await getStripePublishableKey();
       
-      // amount is in rupees, convert to paise
-      const amountInPaise = amount * 100;
-      const order = await createRazorpayOrder(amountInPaise, userId, marblesCount);
-
-      const { getRazorpayCredentials } = await import('./razorpayClient');
-      const credentials = await getRazorpayCredentials();
-      
-      if (!credentials) {
-        return res.status(500).json({ error: "Razorpay not configured" });
-      }
+      // Create Stripe Checkout Session
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'inr',
+            product_data: {
+              name: `${marblesCount} Marbles`,
+              description: `Purchase ${marblesCount} marbles for Kali Jhota game`,
+            },
+            unit_amount: amount * 100, // Convert to paise
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: `${req.headers.origin}/shop?success=true&marbles=${marblesCount}&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${req.headers.origin}/shop?canceled=true`,
+        metadata: {
+          userId,
+          marblesCount: String(marblesCount),
+        },
+      });
 
       res.json({
         success: true,
-        orderId: order.id,
-        amount: order.amount,
-        currency: order.currency,
-        keyId: credentials.keyId,
+        sessionId: session.id,
+        url: session.url,
+        publishableKey,
       });
     } catch (error) {
-      console.error("Razorpay order creation error:", error);
-      res.status(500).json({ error: "Failed to create order" });
+      console.error("Stripe checkout error:", error);
+      res.status(500).json({ error: "Failed to create checkout session" });
     }
   });
 

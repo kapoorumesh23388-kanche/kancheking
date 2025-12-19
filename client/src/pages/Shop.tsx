@@ -89,12 +89,12 @@ export default function Shop() {
   });
 
   const marblePacks = [
-    { price: 10, marbles: 100, savings: 0 },
-    { price: 20, marbles: 250, savings: 0 },
-    { price: 30, marbles: 400, savings: 0 },
-    { price: 40, marbles: 550, savings: 0 },
-    { price: 50, marbles: 700, savings: 0 },
-    { price: 100, marbles: 1500, savings: 0 },
+    { price: 50, marbles: 100, savings: 0 },
+    { price: 99, marbles: 250, savings: 0 },
+    { price: 149, marbles: 400, savings: 0 },
+    { price: 199, marbles: 550, savings: 0 },
+    { price: 249, marbles: 700, savings: 0 },
+    { price: 499, marbles: 1500, savings: 0 },
   ];
 
   const copyReferralCode = () => {
@@ -155,59 +155,13 @@ export default function Shop() {
       });
       const data = await res.json();
       
-      if (data.orderId && data.keyId) {
-        // Initialize Razorpay checkout
-        const options = {
-          key: data.keyId,
-          amount: data.amount,
-          currency: data.currency,
-          order_id: data.orderId,
-          handler: async (response: any) => {
-            // Verify payment with backend
-            const verifyRes = await apiRequest("POST", "/api/marble-purchase/verify", {
-              userId,
-              orderId: data.orderId,
-              paymentId: response.razorpay_payment_id,
-              signature: response.razorpay_signature,
-              marblesCount: pack.marbles,
-            });
-            const verifyData = await verifyRes.json();
-            
-            if (verifyData.success) {
-              // Add marbles to the 'purchase' bucket for tournament eligibility
-              addMarbles('purchase', pack.marbles);
-              updateStats();
-              toast({
-                title: "Success!",
-                description: `${pack.marbles} marbles added to your account!`,
-              });
-            } else {
-              toast({
-                title: "Error",
-                description: verifyData.error || "Payment verification failed",
-                variant: "destructive",
-              });
-            }
-          },
-          prefill: {
-            name: localStorage.getItem("playerName") || "Player",
-            contact: "9999999999",
-          },
-        };
-        
-        // Load Razorpay script
-        const script = document.createElement("script");
-        script.src = "https://checkout.razorpay.com/v1/checkout.js";
-        script.onload = () => {
-          // @ts-ignore
-          const rzp1 = new window.Razorpay(options);
-          rzp1.open();
-        };
-        document.body.appendChild(script);
+      if (data.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
       } else {
         toast({
           title: "Error",
-          description: data.error || "Failed to create order",
+          description: data.error || "Failed to create checkout session",
           variant: "destructive",
         });
       }
@@ -221,6 +175,34 @@ export default function Shop() {
       setIsLoading(false);
     }
   };
+  
+  // Handle successful payment return from Stripe
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get('success');
+    const marbles = urlParams.get('marbles');
+    
+    if (success === 'true' && marbles) {
+      const marblesCount = parseInt(marbles);
+      if (!isNaN(marblesCount)) {
+        addMarbles('purchase', marblesCount);
+        updateStats();
+        toast({
+          title: "Payment Successful!",
+          description: `${marblesCount} marbles added to your account!`,
+        });
+        // Clear URL params
+        window.history.replaceState({}, '', '/shop');
+      }
+    } else if (urlParams.get('canceled') === 'true') {
+      toast({
+        title: "Payment Canceled",
+        description: "You can try again anytime.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, '', '/shop');
+    }
+  }, [toast, updateStats]);
 
   return (
     <div className="min-h-screen pt-20 pb-10">
