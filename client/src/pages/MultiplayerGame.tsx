@@ -287,14 +287,21 @@ export default function MultiplayerGame() {
           variant: won ? "default" : "destructive",
         });
         
-        // Store nextHider for fallback mechanism
+        // Store nextHider for auto-restart mechanism
         nextHiderRef.current = message.data.nextHider;
         console.log(`[ROUND_RESULT] Next hider will be: ${message.data.nextHider}`);
         
-        // Start countdown for auto-restart
+        // Clear any existing timeouts/intervals
         if (countdownRef.current) {
           clearInterval(countdownRef.current);
+          countdownRef.current = null;
         }
+        if (fallbackTimeoutRef.current) {
+          clearTimeout(fallbackTimeoutRef.current);
+          fallbackTimeoutRef.current = null;
+        }
+        
+        // Start countdown for visual feedback (3 seconds)
         setCountdown(3);
         countdownRef.current = setInterval(() => {
           setCountdown(prev => {
@@ -309,27 +316,29 @@ export default function MultiplayerGame() {
           });
         }, 1000);
         
-        // Clear any existing fallback timeout
-        if (fallbackTimeoutRef.current) {
-          clearTimeout(fallbackTimeoutRef.current);
-        }
-        
-        // Fallback: If we don't receive new_round from server within 5 seconds, 
-        // start the next round locally using the nextHider from round_result
+        // CLIENT-SIDE AUTO-RESTART: Always transition after 3.5 seconds
+        // This is the primary mechanism - don't rely on server's new_round
         fallbackTimeoutRef.current = setTimeout(() => {
           const nextHider = nextHiderRef.current;
-          console.log(`[FALLBACK] Checking if fallback needed, nextHider: ${nextHider}`);
+          console.log(`[AUTO-RESTART CLIENT] Starting new round, nextHider: ${nextHider}, playerId: ${playerId}`);
           
           if (nextHider) {
-            console.log(`[FALLBACK] Forcing transition to new round, hider: ${nextHider}`);
+            // Clear state and start new round
+            if (countdownRef.current) {
+              clearInterval(countdownRef.current);
+              countdownRef.current = null;
+            }
+            setCountdown(null);
             setPhase("selecting");
             setIsHider(nextHider === playerId);
             setSelectedMarbleIds([]);
             setGameResult(null);
-            setCountdown(null);
-            nextHiderRef.current = null; // Clear after using
+            nextHiderRef.current = null;
+            console.log(`[AUTO-RESTART CLIENT] Transitioned to selecting phase, isHider: ${nextHider === playerId}`);
+          } else {
+            console.log(`[AUTO-RESTART CLIENT] No nextHider found, staying in result phase`);
           }
-        }, 5000);
+        }, 3500); // 3.5 seconds - just after countdown ends
         break;
         
       case "new_round":
