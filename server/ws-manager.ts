@@ -488,9 +488,16 @@ export function handleNewConnection(ws: WebSocket) {
           const won = isOdd === guessedOdd;
           console.log(`[GAME] Hidden: ${hiddenCount}, isOdd: ${isOdd}, guess: ${guess}, guessedOdd: ${guessedOdd}, won: ${won}`);
           
-          // Get players
-          const guesser = connectedPlayers.get(currentPlayerId);
+          // Get players - prefer room.players for both as it has more up-to-date WebSocket refs
+          let guesser = room.players.get(currentPlayerId);
           const hider = Array.from(room.players.values()).find(p => p.playerId !== currentPlayerId);
+          
+          // Fallback to connectedPlayers if guesser not in room
+          if (!guesser) {
+            guesser = connectedPlayers.get(currentPlayerId);
+          }
+          
+          console.log(`[GAME] Guesser: ${guesser?.playerId || 'null'}, Hider: ${hider?.playerId || 'null'}, Room players: ${room.players.size}`);
           
           if (guesser && hider) {
             // Update marbles
@@ -589,6 +596,11 @@ export function handleNewConnection(ws: WebSocket) {
               
               console.log(`[AUTO-RESTART] New round started for room ${savedRoomCode}: sent=${sentCount}, failed=${failedCount}, hider=${savedNewHider}`);
             }, 3000);
+          } else {
+            // Guesser or hider is null - log error and attempt recovery
+            console.log(`[GAME ERROR] Cannot process guess - guesser: ${guesser?.playerId || 'null'}, hider: ${hider?.playerId || 'null'}`);
+            console.log(`[GAME ERROR] Room players:`, Array.from(room.players.keys()));
+            console.log(`[GAME ERROR] Connected players:`, Array.from(connectedPlayers.keys()));
           }
           
         } else if (action === "play_again") {
