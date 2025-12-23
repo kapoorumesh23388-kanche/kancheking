@@ -25,6 +25,15 @@ interface GameChatProps {
 
 const EMOJI_LIST = ["😂", "🎉", "😢", "😡", "👍", "👎", "🔥", "💪", "🤔", "😎", "🤗", "❤️", "😘", "🙏", "💯"];
 
+const QUICK_MESSAGES = [
+  "Nice move!",
+  "Good game!",
+  "Lucky guess!",
+  "Well played!",
+  "Let's go!",
+  "Gg wp",
+];
+
 export default function GameChat({ 
   isOpen, 
   onClose, 
@@ -181,6 +190,24 @@ export default function GameChat({
           ))
         )}
         <div ref={messagesEndRef} />
+      </div>
+
+      {/* Quick Messages */}
+      <div className="px-3 pt-2 flex flex-wrap gap-1">
+        {QUICK_MESSAGES.map((msg) => (
+          <button
+            key={msg}
+            onClick={() => {
+              if (onSendMessage) {
+                onSendMessage({ type: "text", content: msg });
+              }
+            }}
+            className="text-xs px-2 py-1 rounded-full bg-primary/20 hover:bg-primary/40 text-primary border border-primary/30 transition-colors"
+            data-testid={`quick-msg-${msg.toLowerCase().replace(/\s+/g, "-")}`}
+          >
+            {msg}
+          </button>
+        ))}
       </div>
 
       {/* Input Area */}

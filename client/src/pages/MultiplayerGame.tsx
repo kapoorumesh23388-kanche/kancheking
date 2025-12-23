@@ -74,6 +74,7 @@ export default function MultiplayerGame() {
   } | null>(null);
   const [opponentConnected, setOpponentConnected] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [opponentHiddenCount, setOpponentHiddenCount] = useState(0);
   const [lastBet, setLastBet] = useState(10);
   const [roundPoints, setRoundPoints] = useState(0);
@@ -408,6 +409,10 @@ export default function MultiplayerGame() {
           audioUrl: message.data.messageType === "voice" ? message.data.content : undefined,
         };
         setChatMessages(prev => [...prev, chatMessage]);
+        // Increment unread count if chat is closed and message is from opponent
+        if (message.playerId !== playerId) {
+          setUnreadCount(prev => prev + 1);
+        }
         break;
         
       case "game_sync":
@@ -566,11 +571,21 @@ export default function MultiplayerGame() {
         <Button
           size="icon"
           variant="outline"
-          className="rounded-full bg-primary/20 text-primary hover:bg-primary/40 border-primary/50"
-          onClick={() => setIsChatOpen(!isChatOpen)}
+          className="rounded-full bg-primary/20 text-primary hover:bg-primary/40 border-primary/50 relative"
+          onClick={() => {
+            setIsChatOpen(!isChatOpen);
+            if (!isChatOpen) {
+              setUnreadCount(0);
+            }
+          }}
           data-testid="button-open-chat"
         >
           <MessageCircle className="w-5 h-5" />
+          {unreadCount > 0 && !isChatOpen && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
         </Button>
       </div>
 
