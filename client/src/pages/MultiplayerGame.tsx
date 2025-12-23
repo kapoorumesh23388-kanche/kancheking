@@ -176,6 +176,25 @@ export default function MultiplayerGame() {
     };
   }, [roomCode]);
 
+  // PERIODIC SYNC: Request game state every 4 seconds to recover from missed messages
+  useEffect(() => {
+    if (!roomCode || !opponentConnected) return;
+    
+    const syncInterval = setInterval(() => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({
+          type: "request_sync",
+          roomCode,
+          playerId,
+          data: {}
+        }));
+        console.log("[SYNC] Requested game state sync");
+      }
+    }, 4000);
+    
+    return () => clearInterval(syncInterval);
+  }, [roomCode, playerId, opponentConnected]);
+
   const handleGameMessage = useCallback((message: any) => {
     switch (message.type) {
       case "player_joined":
@@ -392,10 +411,20 @@ export default function MultiplayerGame() {
         break;
         
       case "game_sync":
-        // Sync game state on (re)connection
-        console.log(`[GAME_SYNC] Syncing state: phase=${message.data.phase}, hider=${message.data.currentHider}`);
-        if (message.data.phase && message.data.phase !== "waiting") {
-          setPhase(message.data.phase === "result" ? "selecting" : message.data.phase);
+        // Sync game state on (re)connection - critical for round transitions
+        console.log(`[GAME_SYNC] Syncing state: phase=${message.data.phase}, hider=${message.data.currentHider}, current phase=${phase}`);
+        
+        // Only sync if server says we should be in selecting phase and we're stuck in result
+        if (message.data.phase === "selecting" && phase === "result") {
+          console.log("[GAME_SYNC] Recovering from stuck result phase - transitioning to selecting");
+          setPhase("selecting");
+          setIsHider(message.data.currentHider === playerId);
+          setSelectedMarbleIds([]);
+          setGameResult(null);
+          setCountdown(null);
+        } else if (message.data.phase && message.data.phase !== "waiting" && phase === "waiting") {
+          // Initial sync on connection
+          setPhase(message.data.phase);
           setIsHider(message.data.currentHider === playerId);
         }
         
@@ -411,13 +440,13 @@ export default function MultiplayerGame() {
         // If both players are in room and game can start
         if (message.data.players?.length >= 2) {
           setOpponentConnected(true);
-          if (message.data.phase === "waiting") {
+          if (message.data.phase === "waiting" && phase === "waiting") {
             setPhase("selecting");
           }
         }
         break;
     }
-  }, [playerId, toast]);
+  }, [playerId, toast, phase]);
 
   const sendGameAction = useCallback((action: string, data: any) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
