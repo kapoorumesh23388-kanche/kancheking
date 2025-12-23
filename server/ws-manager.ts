@@ -1,7 +1,7 @@
 import { WebSocket } from "ws";
 
 interface GameMessage {
-  type: "join" | "join_room" | "move" | "guess" | "result" | "chat" | "sync" | "presence" | "challenge" | "challenge_response" | "get_online_players" | "game_action" | "marble_update";
+  type: "join" | "join_room" | "move" | "guess" | "result" | "chat" | "sync" | "presence" | "challenge" | "challenge_response" | "get_online_players" | "game_action" | "marble_update" | "request_sync";
   roomCode?: string;
   playerId: string;
   data: any;
@@ -370,6 +370,40 @@ export function handleNewConnection(ws: WebSocket) {
 
         console.log(`[ROOM] Player ${playerInfo.playerName} joined room ${currentRoomCode} (${roomConnections.get(currentRoomCode)?.size || 0} players)`);
         
+      } else if (message.type === "request_sync") {
+        // Handle state sync requests - critical for round transitions
+        const syncRoomCode = message.roomCode || currentRoomCode;
+        if (message.roomCode) {
+          currentRoomCode = message.roomCode;
+        }
+        const syncRoom = rooms.get(syncRoomCode);
+        if (syncRoom) {
+          // CRITICAL: Update WebSocket reference for this player
+          if (syncRoom.players.has(currentPlayerId)) {
+            syncRoom.players.get(currentPlayerId)!.ws = ws;
+            syncRoom.players.get(currentPlayerId)!.lastSeen = Date.now();
+          }
+          
+          const allPlayers = Array.from(syncRoom.players.values());
+          ws.send(JSON.stringify({
+            type: "game_sync",
+            roomCode: syncRoomCode,
+            playerId: currentPlayerId,
+            data: {
+              phase: syncRoom.gameState.phase,
+              currentHider: syncRoom.gameState.currentHider,
+              hiddenMarbles: syncRoom.gameState.hiddenMarbles,
+              players: allPlayers.map(p => ({
+                id: p.playerId,
+                name: p.playerName,
+                marbles: p.marbles,
+                profileImage: p.profileImage,
+              }))
+            }
+          }));
+          console.log(`[SYNC] Sent game_sync to ${currentPlayerId} in room ${syncRoomCode}, phase: ${syncRoom.gameState.phase}`);
+        }
+        
       } else if (message.type === "game_action") {
         // Handle game actions (hide marbles, guess, etc.)
         // Use message.roomCode if available, fallback to currentRoomCode
@@ -381,6 +415,12 @@ export function handleNewConnection(ws: WebSocket) {
         if (!room) {
           console.log(`[GAME_ACTION] Room ${roomCode} not found`);
           return;
+        }
+        
+        // CRITICAL: Update WebSocket reference for this player on every game action
+        if (room.players.has(currentPlayerId)) {
+          room.players.get(currentPlayerId)!.ws = ws;
+          room.players.get(currentPlayerId)!.lastSeen = Date.now();
         }
         
         const action = message.data.action;
