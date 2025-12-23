@@ -126,7 +126,45 @@ export function handleNewConnection(ws: WebSocket) {
         
       } else if (message.type === "challenge_response") {
         const challengerId = message.data.challengerId;
+        const roomCode = message.data.roomCode;
         const challenger = onlinePlayers.get(challengerId);
+        const responder = onlinePlayers.get(message.playerId);
+        
+        // If accepted, pre-create the room before notifying players
+        if (message.data.accepted && roomCode && challenger && responder) {
+          // Create room with challenger as creator/first hider
+          const challengerInfo: ConnectedPlayer = {
+            ws: challenger.ws,
+            playerId: challengerId,
+            roomCode: roomCode,
+            playerName: challenger.playerName || "Challenger",
+            marbles: challenger.marbles || 150,
+            profileImage: challenger.profileImage,
+            lastSeen: Date.now(),
+            isCreator: true,
+          };
+          
+          rooms.set(roomCode, {
+            players: new Map([[challengerId, challengerInfo]]),
+            creatorId: challengerId,
+            gameState: {
+              phase: "waiting",
+              currentHider: challengerId, // Challenger hides first
+              hiddenMarbles: 0,
+              currentBet: 10,
+              lastGuess: "",
+            },
+            pendingDisconnects: new Map(),
+          });
+          
+          if (!roomConnections.has(roomCode)) {
+            roomConnections.set(roomCode, new Set());
+          }
+          roomConnections.get(roomCode)!.add(challengerId);
+          roomConnections.get(roomCode)!.add(message.playerId);
+          
+          console.log(`[CHALLENGE] Pre-created room ${roomCode} for challenge match`);
+        }
         
         if (challenger && challenger.ws.readyState === 1) {
           challenger.ws.send(JSON.stringify({
@@ -135,8 +173,8 @@ export function handleNewConnection(ws: WebSocket) {
             data: {
               accepted: message.data.accepted,
               responderId: message.playerId,
-              responderName: onlinePlayers.get(message.playerId)?.playerName,
-              roomCode: message.data.roomCode,
+              responderName: responder?.playerName,
+              roomCode: roomCode,
             }
           }));
           console.log(`[CHALLENGE RESPONSE] ${message.playerId} ${message.data.accepted ? 'accepted' : 'declined'} challenge from ${challengerId}`);
