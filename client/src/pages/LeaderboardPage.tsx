@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Leaderboard from "@/components/Leaderboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Star, Clock, Target } from "lucide-react";
+import { Trophy, Star, Clock, Target, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 
 interface LeaderboardEntry {
   rank: number;
@@ -22,40 +24,21 @@ export default function LeaderboardPage() {
     rank: 0,
   });
 
+  // Fetch leaderboard from API with real-time polling
+  const { data: leaderboardData, isLoading, refetch } = useQuery<{ leaderboard: LeaderboardEntry[] }>({
+    queryKey: ["/api/leaderboard"],
+    refetchInterval: 10000, // Auto-refresh every 10 seconds for real-time updates
+    staleTime: 5000,
+  });
+
+  const globalEntries: LeaderboardEntry[] = leaderboardData?.leaderboard || [];
+
   const getWinningMarbles = (): number => {
     const pvpWins = parseInt(localStorage.getItem("pvpWinMarbles") || "0");
     return pvpWins;
   };
 
-  useEffect(() => {
-    const name = localStorage.getItem("playerDisplayName") || "You";
-    const winningMarbles = getWinningMarbles();
-    
-    setCurrentPlayer({
-      name,
-      winningMarbles,
-      rank: 0,
-    });
-
-    const today = new Date().toISOString().split("T")[0];
-    const lastBonusDate = localStorage.getItem("leaderboardBonusDate");
-    
-    if (lastBonusDate !== today) {
-      const playerRank = calculatePlayerRank(winningMarbles, globalEntries);
-      if (playerRank === 1 && winningMarbles > 0) {
-        const currentPoints = parseInt(localStorage.getItem("playerRewardPoints") || "0");
-        localStorage.setItem("playerRewardPoints", (currentPoints + 50).toString());
-        localStorage.setItem("leaderboardBonusDate", today);
-        
-        toast({
-          title: "Daily #1 Bonus!",
-          description: "+50 points for being #1 on the leaderboard!",
-        });
-      }
-    }
-  }, [toast]);
-
-  const calculatePlayerRank = (winningMarbles: number, entries: LeaderboardEntry[]): number => {
+  const calculatePlayerRank = useCallback((winningMarbles: number, entries: LeaderboardEntry[]): number => {
     let rank = 1;
     for (const entry of entries) {
       if (entry.marbles > winningMarbles) {
@@ -63,48 +46,80 @@ export default function LeaderboardPage() {
       }
     }
     return rank;
-  };
+  }, []);
 
-  const globalEntries: LeaderboardEntry[] = [
-    { rank: 1, name: "Priya Sharma", marbles: 8500, winRate: 87 },
-    { rank: 2, name: "Arjun Patel", marbles: 7200, winRate: 82 },
-    { rank: 3, name: "Kavya Singh", marbles: 6800, winRate: 79 },
-    { rank: 4, name: "Rohan Gupta", marbles: 5500, winRate: 75 },
-    { rank: 5, name: "Ananya Das", marbles: 4800, winRate: 71 },
-    { rank: 6, name: "Vikram Mehta", marbles: 4200, winRate: 68 },
-    { rank: 7, name: "Neha Reddy", marbles: 3600, winRate: 65 },
-  ];
+  useEffect(() => {
+    const name = localStorage.getItem("playerDisplayName") || "You";
+    const winningMarbles = getWinningMarbles();
+    
+    const rank = globalEntries.length > 0 ? calculatePlayerRank(winningMarbles, globalEntries) : 0;
+    
+    setCurrentPlayer({
+      name,
+      winningMarbles,
+      rank,
+    });
 
-  const tournamentEntries: LeaderboardEntry[] = [
-    { rank: 1, name: "Arjun Patel", marbles: 3500, winRate: 92 },
-    { rank: 2, name: "Kavya Singh", marbles: 3200, winRate: 88 },
-    { rank: 3, name: "Priya Sharma", marbles: 2800, winRate: 85 },
-  ];
+    const today = new Date().toISOString().split("T")[0];
+    const lastBonusDate = localStorage.getItem("leaderboardBonusDate");
+    
+    if (lastBonusDate !== today && rank === 1 && winningMarbles > 0) {
+      const currentPoints = parseInt(localStorage.getItem("playerRewardPoints") || "0");
+      localStorage.setItem("playerRewardPoints", (currentPoints + 50).toString());
+      localStorage.setItem("leaderboardBonusDate", today);
+      
+      toast({
+        title: "Daily #1 Bonus!",
+        description: "+50 points for being #1 on the leaderboard!",
+      });
+    }
+  }, [toast, globalEntries, calculatePlayerRank]);
+
+  const tournamentEntries: LeaderboardEntry[] = globalEntries.slice(0, 10);
 
   return (
     <div className="min-h-screen pt-20 pb-10">
       <div className="container max-w-4xl mx-auto px-5">
         <div className="text-center mb-8">
-          <h1
-            className="text-5xl font-bold text-primary mb-3"
-            style={{ textShadow: '0 0 20px rgba(255,215,0,0.5)' }}
-          >
-            Leaderboards
-          </h1>
+          <div className="flex items-center justify-center gap-3">
+            <h1
+              className="text-5xl font-bold text-primary mb-3"
+              style={{ textShadow: '0 0 20px rgba(255,215,0,0.5)' }}
+            >
+              Leaderboards
+            </h1>
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={() => refetch()}
+              className="rounded-full"
+              data-testid="button-refresh-leaderboard"
+            >
+              <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
           <p className="text-xl text-muted-foreground">
-            Ranked by Winning Marbles (PvP Wins)
+            Ranked by Winning Marbles (PvP Wins) - Updates every 10s
           </p>
         </div>
 
         <Card className="bg-gradient-to-r from-[#00D9FF]/10 to-[#E91E8C]/10 border-2 border-[#00D9FF]/40 mb-6">
           <CardContent className="p-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-3">
-                <Trophy className="w-8 h-8 text-[#FFD700]" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Your Winning Marbles</p>
-                  <p className="text-2xl font-bold text-[#00FF88]" data-testid="text-your-winning-marbles">
-                    {currentPlayer.winningMarbles}
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3">
+                  <Trophy className="w-8 h-8 text-[#FFD700]" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Your Winning Marbles</p>
+                    <p className="text-2xl font-bold text-[#00FF88]" data-testid="text-your-winning-marbles">
+                      {currentPlayer.winningMarbles}
+                    </p>
+                  </div>
+                </div>
+                <div className="border-l border-white/20 pl-6">
+                  <p className="text-sm text-muted-foreground">Your Rank</p>
+                  <p className="text-2xl font-bold text-[#FFD700]" data-testid="text-your-rank">
+                    #{currentPlayer.rank > 0 ? currentPlayer.rank : "-"}
                   </p>
                 </div>
               </div>

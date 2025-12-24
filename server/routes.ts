@@ -841,6 +841,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get Leaderboard - Real player data sorted by wins and earnings
+  app.get("/api/leaderboard", async (req, res) => {
+    try {
+      const { type = "global" } = req.query;
+      
+      // Get all users from database
+      const allUsers = await storage.getAllUsers();
+      
+      // Filter and sort users for leaderboard
+      const leaderboard = allUsers
+        .filter(u => u.gamesPlayed > 0 || u.earnedMarbles > 0)
+        .map(u => ({
+          id: u.id,
+          name: u.displayName || u.username || "Player",
+          avatar: u.profileImage || "",
+          marbles: u.earnedMarbles || 0,
+          gamesWon: u.gamesWon || 0,
+          gamesPlayed: u.gamesPlayed || 0,
+          winRate: u.gamesPlayed > 0 ? Math.round((u.gamesWon / u.gamesPlayed) * 100) : 0,
+          points: u.points || 0,
+        }))
+        .sort((a, b) => b.marbles - a.marbles)
+        .slice(0, 100)
+        .map((entry, index) => ({ ...entry, rank: index + 1 }));
+      
+      res.json({ success: true, leaderboard, type });
+    } catch (error) {
+      console.error("Leaderboard fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch leaderboard" });
+    }
+  });
+
   // Update User Profile
   app.post("/api/profile/update", async (req, res) => {
     try {
