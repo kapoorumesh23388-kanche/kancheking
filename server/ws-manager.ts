@@ -488,6 +488,20 @@ export function handleNewConnection(ws: WebSocket) {
           const won = isOdd === guessedOdd;
           console.log(`[GAME] Hidden: ${hiddenCount}, isOdd: ${isOdd}, guess: ${guess}, guessedOdd: ${guessedOdd}, won: ${won}`);
           
+          // Store current bet in game state and broadcast to hider
+          room.gameState.currentBet = bet;
+          const guesserPlayer = connectedPlayers.get(currentPlayerId);
+          broadcastToRoom(roomCode, {
+            type: "opponent_bet",
+            roomCode: roomCode,
+            playerId: currentPlayerId,
+            data: {
+              bet,
+              guess,
+              guesserName: guesserPlayer?.playerName || "Opponent",
+            }
+          });
+          
           // Get players - prefer room.players for both as it has more up-to-date WebSocket refs
           let guesser = room.players.get(currentPlayerId);
           const hider = Array.from(room.players.values()).find(p => p.playerId !== currentPlayerId);

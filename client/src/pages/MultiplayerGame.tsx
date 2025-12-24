@@ -23,6 +23,7 @@ import {
   initializeMarbles,
   recordGameResult 
 } from "@/lib/marbleStorage";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface ChatMessage {
@@ -77,6 +78,7 @@ export default function MultiplayerGame() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [opponentHiddenCount, setOpponentHiddenCount] = useState(0);
   const [lastBet, setLastBet] = useState(10);
+  const [opponentBet, setOpponentBet] = useState<{ bet: number; guess: string } | null>(null);
   const [roundPoints, setRoundPoints] = useState(0);
   const [countdown, setCountdown] = useState<number | null>(null);
   
@@ -281,6 +283,18 @@ export default function MultiplayerGame() {
         localStorage.setItem("playerRewardPoints", newPoints.toString());
         setRoundPoints(prev => prev + pointChange);
         
+        // Send points to server for persistence
+        const userId = localStorage.getItem("userId") || playerId;
+        const gameMode = window.location.pathname.includes("random") ? "random" : "friend";
+        apiRequest("POST", "/api/game-points", {
+          userId,
+          points: pointChange,
+          gameType: gameMode,
+          opponent: opponentName,
+          won,
+          opponentType: "player", // PvP match
+        }).catch((err) => console.error("Failed to record game points:", err));
+        
         // Different messages for hider vs guesser
         let resultDetails = "";
         if (iAmGuesser) {
@@ -353,6 +367,7 @@ export default function MultiplayerGame() {
             setIsHider(nextHider === playerId);
             setSelectedMarbleIds([]);
             setGameResult(null);
+            setOpponentBet(null); // Clear opponent bet for new round
             nextHiderRef.current = null;
             console.log(`[AUTO-RESTART CLIENT] Transitioned to selecting phase, isHider: ${nextHider === playerId}`);
           } else {
@@ -379,6 +394,7 @@ export default function MultiplayerGame() {
         setIsHider(message.data.currentHider === playerId);
         setSelectedMarbleIds([]);
         setGameResult(null);
+        setOpponentBet(null); // Clear opponent bet for new round
         break;
         
       case "marble_update":
@@ -395,6 +411,14 @@ export default function MultiplayerGame() {
             variant: "destructive",
           });
           setOpponentConnected(false);
+        }
+        break;
+        
+      case "opponent_bet":
+        // Show opponent's bet to the hider
+        if (message.playerId !== playerId) {
+          setOpponentBet({ bet: message.data.bet, guess: message.data.guess });
+          console.log(`[OPPONENT_BET] ${opponentName} bet ${message.data.bet} marbles on ${message.data.guess}`);
         }
         break;
         
@@ -709,6 +733,15 @@ export default function MultiplayerGame() {
                 <h3 className="text-xl font-bold text-primary mb-2">Waiting for Guess...</h3>
                 <p className="text-muted-foreground">{opponentName} is guessing your hidden marbles</p>
                 <p className="text-sm text-primary mt-4">You hid: {selectedMarbleIds.length} marbles</p>
+                
+                {opponentBet && (
+                  <div className="mt-6 p-4 rounded-lg bg-[#E91E8C]/20 border-2 border-[#E91E8C]/40 inline-block">
+                    <p className="text-sm text-muted-foreground">Opponent's Bet</p>
+                    <p className="text-2xl font-bold text-[#E91E8C]" data-testid="text-opponent-bet">
+                      {opponentBet.bet} marbles on {opponentBet.guess === "kali" ? "Kali (Odd)" : "Jhota (Even)"}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
