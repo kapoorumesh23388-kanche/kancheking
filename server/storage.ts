@@ -19,6 +19,7 @@ export interface IStorage {
   
   getCatalogItems(): Promise<CatalogItem[]>;
   addCatalogItem(item: Omit<CatalogItem, 'id' | 'createdAt'>): Promise<CatalogItem>;
+  updateCatalogItem(id: string, item: Partial<Omit<CatalogItem, 'id' | 'createdAt'>>): Promise<CatalogItem | undefined>;
   deleteCatalogItem(id: string): Promise<void>;
   
   recordTransaction(tx: Omit<MarbleTransaction, 'id' | 'createdAt'>): Promise<MarbleTransaction>;
@@ -266,6 +267,19 @@ export class MemStorage implements IStorage {
       await db.delete(catalogItems).where(eq(catalogItems.id, id));
     } catch (error) {
       console.error("Error deleting catalog item from DB:", error);
+      throw error;
+    }
+  }
+
+  async updateCatalogItem(id: string, item: Partial<Omit<CatalogItem, 'id' | 'createdAt'>>): Promise<CatalogItem | undefined> {
+    try {
+      const [updatedItem] = await db.update(catalogItems)
+        .set(item)
+        .where(eq(catalogItems.id, id))
+        .returning();
+      return updatedItem;
+    } catch (error) {
+      console.error("Error updating catalog item in DB:", error);
       throw error;
     }
   }

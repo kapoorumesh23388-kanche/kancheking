@@ -39,6 +39,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update catalog item
+  app.put("/api/catalog/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, description, pointsCost, imageUrl } = req.body;
+      
+      const updatedItem = await storage.updateCatalogItem(id, {
+        name,
+        description,
+        pointsCost,
+        imageUrl,
+      });
+      
+      if (!updatedItem) {
+        return res.status(404).json({ error: "Catalog item not found" });
+      }
+      
+      res.json(updatedItem);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update catalog item" });
+    }
+  });
+
   app.post("/api/marbles/purchase", async (req, res) => {
     try {
       const { userId, marblesAmount, transactionId } = req.body;
