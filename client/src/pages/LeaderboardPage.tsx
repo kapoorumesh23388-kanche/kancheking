@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Leaderboard from "@/components/Leaderboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +23,7 @@ export default function LeaderboardPage() {
     winningMarbles: 0,
     rank: 0,
   });
+  const bonusCheckedRef = useRef(false);
 
   // Fetch leaderboard from API with real-time polling
   const { data: leaderboardData, isLoading, refetch } = useQuery<{ leaderboard: LeaderboardEntry[] }>({
@@ -31,51 +32,52 @@ export default function LeaderboardPage() {
     staleTime: 5000,
   });
 
-  const globalEntries: LeaderboardEntry[] = leaderboardData?.leaderboard || [];
+  const globalEntries = useMemo(() => leaderboardData?.leaderboard || [], [leaderboardData]);
 
   const getWinningMarbles = (): number => {
     const pvpWins = parseInt(localStorage.getItem("pvpWinMarbles") || "0");
     return pvpWins;
   };
 
-  const calculatePlayerRank = useCallback((winningMarbles: number, entries: LeaderboardEntry[]): number => {
-    let rank = 1;
-    for (const entry of entries) {
-      if (entry.marbles > winningMarbles) {
-        rank++;
-      }
-    }
-    return rank;
-  }, []);
-
+  // Calculate player rank and update current player state
   useEffect(() => {
     const name = localStorage.getItem("playerDisplayName") || "You";
     const winningMarbles = getWinningMarbles();
     
-    const rank = globalEntries.length > 0 ? calculatePlayerRank(winningMarbles, globalEntries) : 0;
+    let rank = 1;
+    for (const entry of globalEntries) {
+      if (entry.marbles > winningMarbles) {
+        rank++;
+      }
+    }
+    const finalRank = globalEntries.length > 0 ? rank : 0;
     
     setCurrentPlayer({
       name,
       winningMarbles,
-      rank,
+      rank: finalRank,
     });
 
-    const today = new Date().toISOString().split("T")[0];
-    const lastBonusDate = localStorage.getItem("leaderboardBonusDate");
-    
-    if (lastBonusDate !== today && rank === 1 && winningMarbles > 0) {
-      const currentPoints = parseInt(localStorage.getItem("playerRewardPoints") || "0");
-      localStorage.setItem("playerRewardPoints", (currentPoints + 50).toString());
-      localStorage.setItem("leaderboardBonusDate", today);
+    // Check for daily #1 bonus only once per page load
+    if (!bonusCheckedRef.current && finalRank === 1 && winningMarbles > 0) {
+      const today = new Date().toISOString().split("T")[0];
+      const lastBonusDate = localStorage.getItem("leaderboardBonusDate");
       
-      toast({
-        title: "Daily #1 Bonus!",
-        description: "+50 points for being #1 on the leaderboard!",
-      });
+      if (lastBonusDate !== today) {
+        const currentPoints = parseInt(localStorage.getItem("playerRewardPoints") || "0");
+        localStorage.setItem("playerRewardPoints", (currentPoints + 50).toString());
+        localStorage.setItem("leaderboardBonusDate", today);
+        bonusCheckedRef.current = true;
+        
+        toast({
+          title: "Daily #1 Bonus!",
+          description: "+50 points for being #1 on the leaderboard!",
+        });
+      }
     }
-  }, [toast, globalEntries, calculatePlayerRank]);
+  }, [globalEntries, toast]);
 
-  const tournamentEntries: LeaderboardEntry[] = globalEntries.slice(0, 10);
+  const tournamentEntries = useMemo(() => globalEntries.slice(0, 10), [globalEntries]);
 
   return (
     <div className="min-h-screen pt-20 pb-10">
