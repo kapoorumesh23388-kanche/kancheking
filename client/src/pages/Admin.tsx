@@ -3,7 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Loader2, LogOut, Settings } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Plus, Trash2, Loader2, LogOut, Settings, Pencil } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -21,6 +22,13 @@ export default function Admin() {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  
+  // Edit item state
+  const [editingItem, setEditingItem] = useState<CatalogItem | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editPointsCost, setEditPointsCost] = useState("");
+  const [editImageUrl, setEditImageUrl] = useState("");
 
   // Check if admin is logged in
   useEffect(() => {
@@ -71,6 +79,26 @@ export default function Admin() {
     },
   });
 
+  const updateItemMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const res = await apiRequest("PUT", `/api/catalog/${itemId}`, {
+        name: editName,
+        description: editDescription,
+        pointsCost: parseInt(editPointsCost),
+        imageUrl: editImageUrl,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Item updated!" });
+      setEditingItem(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog"] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update item", variant: "destructive" });
+    },
+  });
+
   const changePasswordMutation = useMutation({
     mutationFn: async () => {
       const token = localStorage.getItem("adminToken");
@@ -99,6 +127,22 @@ export default function Admin() {
       return;
     }
     addItemMutation.mutate();
+  };
+
+  const handleEditItem = (item: CatalogItem) => {
+    setEditingItem(item);
+    setEditName(item.name);
+    setEditDescription(item.description || "");
+    setEditPointsCost(item.pointsCost?.toString() || "0");
+    setEditImageUrl(item.imageUrl || "");
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingItem || !editName || !editDescription || !editPointsCost) {
+      toast({ title: "Error", description: "Fill all required fields", variant: "destructive" });
+      return;
+    }
+    updateItemMutation.mutate(editingItem.id);
   };
 
   const handleChangePassword = () => {
@@ -280,16 +324,27 @@ export default function Admin() {
                         <p className="font-semibold text-primary truncate">{item.name}</p>
                         <p className="text-sm text-muted-foreground">{item.pointsCost?.toLocaleString()} pts</p>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="ml-2 text-red-500 hover:text-red-700"
-                        onClick={() => deleteItemMutation.mutate(item.id)}
-                        disabled={deleteItemMutation.isPending}
-                        data-testid={`button-delete-${item.id}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-blue-400 hover:text-blue-600"
+                          onClick={() => handleEditItem(item)}
+                          data-testid={`button-edit-${item.id}`}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-500 hover:text-red-700"
+                          onClick={() => deleteItemMutation.mutate(item.id)}
+                          disabled={deleteItemMutation.isPending}
+                          data-testid={`button-delete-${item.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -297,6 +352,71 @@ export default function Admin() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Edit Item Dialog */}
+        <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
+          <DialogContent className="bg-gradient-to-b from-gray-900 to-gray-950 border-primary/40">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-primary">
+                <Pencil className="w-5 h-5" /> Edit Catalog Item
+              </DialogTitle>
+              <DialogDescription>
+                Update item details below
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <Input
+                placeholder="Item Name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                data-testid="input-edit-name"
+              />
+              <Textarea
+                placeholder="Description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                className="resize-none"
+                data-testid="input-edit-desc"
+              />
+              <Input
+                type="number"
+                placeholder="Points Cost"
+                value={editPointsCost}
+                onChange={(e) => setEditPointsCost(e.target.value)}
+                data-testid="input-edit-points"
+              />
+              <Input
+                placeholder="Image URL (optional)"
+                value={editImageUrl}
+                onChange={(e) => setEditImageUrl(e.target.value)}
+                data-testid="input-edit-image"
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setEditingItem(null)}
+                data-testid="button-cancel-edit"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveEdit}
+                disabled={updateItemMutation.isPending}
+                className="bg-gradient-to-r from-primary to-[#FFA500]"
+                data-testid="button-save-edit"
+              >
+                {updateItemMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
