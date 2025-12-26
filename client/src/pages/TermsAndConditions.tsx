@@ -161,7 +161,33 @@ export default function TermsAndConditions() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">7. Fair Play Policy</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">7. Points Value & Revenue Sharing</h2>
+            <ul className="space-y-3 text-gray-200">
+              <li className="flex gap-3">
+                <span className="text-primary">•</span>
+                <span><strong>Important Notice:</strong> The points displayed in-app may differ from actual redeemable value</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-primary">•</span>
+                <span><strong>Final Calculation:</strong> The actual value of points is calculated on the 5th of every month</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-primary">•</span>
+                <span><strong>20% Revenue Sharing:</strong> This game operates on a 20% revenue sharing model - the value of your points depends on the total revenue generated</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-primary">•</span>
+                <span><strong>Redemption Window:</strong> On the 5th of every month, the points displayed will be finalized based on revenue and players can redeem items from the catalog</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-primary">•</span>
+                <span><strong>Value Variance:</strong> The shown points are estimates only; the actual redeemable value will be calculated based on each player's share of the 20% revenue pool</span>
+              </li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-primary mb-4">8. Fair Play Policy</h2>
             <ul className="space-y-3 text-gray-200">
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
@@ -183,7 +209,7 @@ export default function TermsAndConditions() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">8. Age Restrictions</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">9. Age Restrictions</h2>
             <ul className="space-y-3 text-gray-200">
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
@@ -201,7 +227,7 @@ export default function TermsAndConditions() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">9. Liability & Disputes</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">10. Liability & Disputes</h2>
             <ul className="space-y-3 text-gray-200">
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
@@ -219,7 +245,7 @@ export default function TermsAndConditions() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">10. Data Privacy</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">11. Data Privacy</h2>
             <ul className="space-y-3 text-gray-200">
               <li className="flex gap-3">
                 <span className="text-primary">•</span>

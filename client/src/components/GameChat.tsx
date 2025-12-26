@@ -75,16 +75,26 @@ export default function GameChat({
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      
+      // Use supported MIME type - browsers vary in support
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+        ? 'audio/webm;codecs=opus' 
+        : MediaRecorder.isTypeSupported('audio/webm') 
+          ? 'audio/webm'
+          : 'audio/mp4';
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
       mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/wav" });
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         
         // Convert audio blob to base64 for transmission
         const reader = new FileReader();
@@ -103,7 +113,7 @@ export default function GameChat({
         setRecordingTime(0);
       };
 
-      mediaRecorder.start();
+      mediaRecorder.start(100); // Record in 100ms chunks for better data availability
       setIsRecording(true);
       setRecordingTime(0);
 
@@ -170,14 +180,15 @@ export default function GameChat({
                 {msg.type === "text" ? (
                   <p className="text-sm break-words">{msg.content}</p>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs">🎤 {msg.content}</span>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs flex items-center gap-1">🎤 Voice Message</span>
                     {msg.audioUrl && (
                       <audio
                         src={msg.audioUrl}
                         controls
-                        className="h-6 max-w-[120px]"
+                        className="h-8 w-full max-w-[180px]"
                         data-testid="audio-player"
+                        preload="auto"
                       />
                     )}
                   </div>
