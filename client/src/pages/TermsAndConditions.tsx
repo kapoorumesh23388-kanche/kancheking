@@ -129,7 +129,7 @@ export default function TermsAndConditions() {
               </li>
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
-                <span>Reward points can be redeemed from our catalog for exclusive items worth Rs. 500-5000</span>
+                <span>Reward points can be redeemed from our catalog for exclusive items</span>
               </li>
             </ul>
           </section>
@@ -151,7 +151,7 @@ export default function TermsAndConditions() {
               </li>
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
-                <span><strong>Point Value:</strong> Reward points can be redeemed for items worth Rs. 500-5000 depending on accumulated points</span>
+                <span><strong>Point Value:</strong> Reward points can be redeemed for catalog items depending on accumulated points</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary">•</span>
