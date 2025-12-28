@@ -198,15 +198,45 @@ export default function Shop() {
           },
         };
         
-        // Load Razorpay script dynamically
-        const script = document.createElement("script");
-        script.src = "https://checkout.razorpay.com/v1/checkout.js";
-        script.onload = () => {
+        // Load Razorpay script dynamically (only if not already loaded)
+        const openRazorpay = () => {
           // @ts-ignore
-          const rzp = new window.Razorpay(options);
-          rzp.open();
+          if (window.Razorpay) {
+            // @ts-ignore
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', (response: any) => {
+              toast({
+                title: "Payment Failed",
+                description: response.error?.description || "Payment was cancelled or failed",
+                variant: "destructive",
+              });
+            });
+            rzp.open();
+          } else {
+            toast({
+              title: "Error",
+              description: "Payment gateway not loaded. Please try again.",
+              variant: "destructive",
+            });
+          }
         };
-        document.body.appendChild(script);
+        
+        // @ts-ignore
+        if (window.Razorpay) {
+          openRazorpay();
+        } else {
+          const script = document.createElement("script");
+          script.src = "https://checkout.razorpay.com/v1/checkout.js";
+          script.onload = openRazorpay;
+          script.onerror = () => {
+            toast({
+              title: "Error",
+              description: "Failed to load payment gateway",
+              variant: "destructive",
+            });
+          };
+          document.body.appendChild(script);
+        }
       } else {
         toast({
           title: "Error",
