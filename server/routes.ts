@@ -1353,24 +1353,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "userId, marblesCount, and amount required" });
       }
 
-      const { createRazorpayOrder, getRazorpayCredentials } = await import('./razorpayClient');
+      const { createRazorpayOrder, getRazorpayKeyId } = await import('./razorpayService');
       
-      // amount is in rupees, convert to paise
-      const amountInPaise = amount * 100;
-      const order = await createRazorpayOrder(amountInPaise, userId, marblesCount);
+      const order = await createRazorpayOrder({
+        amount: amount,
+        currency: 'INR',
+        receipt: `marble_${userId}_${Date.now()}`,
+        notes: {
+          userId,
+          marblesCount: String(marblesCount),
+        },
+      });
 
-      const credentials = await getRazorpayCredentials();
-      
-      if (!credentials) {
-        return res.status(500).json({ error: "Razorpay not configured" });
-      }
+      const keyId = getRazorpayKeyId();
 
       res.json({
         success: true,
         orderId: order.id,
         amount: order.amount,
         currency: order.currency,
-        keyId: credentials.keyId,
+        keyId: keyId,
       });
     } catch (error) {
       console.error("Razorpay order creation error:", error);
@@ -1387,14 +1389,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      const { verifyRazorpayPayment, getRazorpayCredentials } = await import('./razorpayClient');
-      const credentials = await getRazorpayCredentials();
+      const { verifyRazorpaySignature } = await import('./razorpayService');
       
-      if (!credentials) {
-        return res.status(500).json({ error: "Razorpay not configured" });
-      }
-
-      const isValid = await verifyRazorpayPayment(orderId, paymentId, signature, credentials.keySecret);
+      const isValid = verifyRazorpaySignature(orderId, paymentId, signature);
       
       if (!isValid) {
         return res.status(400).json({ error: "Payment verification failed" });
@@ -1415,7 +1412,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         amount: marblesCount,
         type: 'purchase',
         description: `Purchased ${marblesCount} marbles via Razorpay`,
-        transactionId: null,
+        transactionId: paymentId,
       });
 
       res.json({
