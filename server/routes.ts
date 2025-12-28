@@ -1355,10 +1355,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { createRazorpayOrder, getRazorpayKeyId } = await import('./razorpayService');
       
+      // Receipt must be max 40 chars - use short format
+      const shortReceipt = `m_${Date.now()}`;
+      
       const order = await createRazorpayOrder({
         amount: amount,
         currency: 'INR',
-        receipt: `marble_${userId}_${Date.now()}`,
+        receipt: shortReceipt,
         notes: {
           userId,
           marblesCount: String(marblesCount),
