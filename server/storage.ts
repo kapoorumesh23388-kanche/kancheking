@@ -24,6 +24,7 @@ export interface IStorage {
   
   recordTransaction(tx: Omit<MarbleTransaction, 'id' | 'createdAt'>): Promise<MarbleTransaction>;
   getUserTransactions(userId: string): Promise<MarbleTransaction[]>;
+  getTransactionByExternalId(externalId: string): Promise<MarbleTransaction | undefined>;
   
   addGamePoints(points: Omit<GamePoint, 'id' | 'createdAt'>): Promise<GamePoint>;
   getUserGamePoints(userId: string): Promise<GamePoint[]>;
@@ -296,6 +297,10 @@ export class MemStorage implements IStorage {
 
   async getUserTransactions(userId: string): Promise<MarbleTransaction[]> {
     return this.transactions.filter((tx) => tx.userId === userId);
+  }
+
+  async getTransactionByExternalId(externalId: string): Promise<MarbleTransaction | undefined> {
+    return this.transactions.find((tx) => tx.transactionId === externalId);
   }
 
   async addGamePoints(points: Omit<GamePoint, 'id' | 'createdAt'>): Promise<GamePoint> {

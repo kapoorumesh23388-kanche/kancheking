@@ -155,92 +155,13 @@ export default function Shop() {
       });
       const data = await res.json();
       
-      if (data.orderId && data.keyId) {
-        // Initialize Razorpay checkout
-        const options = {
-          key: data.keyId,
-          amount: data.amount,
-          currency: data.currency,
-          order_id: data.orderId,
-          name: "Kanchey King",
-          description: `Purchase ${pack.marbles} marbles`,
-          handler: async (response: any) => {
-            // Verify payment with backend
-            const verifyRes = await apiRequest("POST", "/api/marble-purchase/verify", {
-              userId,
-              orderId: data.orderId,
-              paymentId: response.razorpay_payment_id,
-              signature: response.razorpay_signature,
-              marblesCount: pack.marbles,
-            });
-            const verifyData = await verifyRes.json();
-            
-            if (verifyData.success) {
-              addMarbles('purchase', pack.marbles);
-              updateStats();
-              toast({
-                title: "Success!",
-                description: `${pack.marbles} marbles added to your account!`,
-              });
-            } else {
-              toast({
-                title: "Error",
-                description: verifyData.error || "Payment verification failed",
-                variant: "destructive",
-              });
-            }
-          },
-          prefill: {
-            name: localStorage.getItem("playerName") || "Player",
-          },
-          theme: {
-            color: "#FFD700",
-          },
-        };
-        
-        // Load Razorpay script dynamically (only if not already loaded)
-        const openRazorpay = () => {
-          // @ts-ignore
-          if (window.Razorpay) {
-            // @ts-ignore
-            const rzp = new window.Razorpay(options);
-            rzp.on('payment.failed', (response: any) => {
-              toast({
-                title: "Payment Failed",
-                description: response.error?.description || "Payment was cancelled or failed",
-                variant: "destructive",
-              });
-            });
-            rzp.open();
-          } else {
-            toast({
-              title: "Error",
-              description: "Payment gateway not loaded. Please try again.",
-              variant: "destructive",
-            });
-          }
-        };
-        
-        // @ts-ignore
-        if (window.Razorpay) {
-          openRazorpay();
-        } else {
-          const script = document.createElement("script");
-          script.src = "https://checkout.razorpay.com/v1/checkout.js";
-          script.onload = openRazorpay;
-          script.onerror = () => {
-            toast({
-              title: "Error",
-              description: "Failed to load payment gateway",
-              variant: "destructive",
-            });
-          };
-          document.body.appendChild(script);
-        }
+      if (data.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
       } else {
         toast({
           title: "Error",
-          description: data.error || "Failed to create order",
+          description: data.error || "Failed to create checkout session",
           variant: "destructive",
         });
       }
@@ -254,6 +175,52 @@ export default function Shop() {
       setIsLoading(false);
     }
   };
+
+  // Handle payment success/cancel from URL params
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    const sessionId = urlParams.get('session_id');
+    
+    if (paymentStatus === 'success' && sessionId) {
+      // Verify payment and add marbles
+      const verifyPayment = async () => {
+        try {
+          const res = await apiRequest("POST", "/api/marble-purchase/verify", {
+            sessionId,
+          });
+          const data = await res.json();
+          
+          if (data.success && !data.alreadyProcessed) {
+            updateStats();
+            toast({
+              title: "Payment Successful!",
+              description: "Marbles have been added to your account!",
+            });
+          } else if (data.alreadyProcessed) {
+            toast({
+              title: "Already Processed",
+              description: "This payment was already verified.",
+            });
+          }
+        } catch (error) {
+          console.error("Payment verification error:", error);
+        }
+        
+        // Clean up URL params
+        window.history.replaceState({}, '', '/shop');
+      };
+      
+      verifyPayment();
+    } else if (paymentStatus === 'cancelled') {
+      toast({
+        title: "Payment Cancelled",
+        description: "Your payment was cancelled.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, '', '/shop');
+    }
+  }, []);
 
   return (
     <div className="min-h-screen pt-20 pb-10">
