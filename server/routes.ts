@@ -1344,7 +1344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Razorpay marble purchase endpoint (for India)
+  // Stripe marble purchase endpoint - Create checkout session
   app.post("/api/marble-purchase", async (req, res) => {
     try {
       const { userId, marblesCount, amount } = req.body;
@@ -1353,51 +1353,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "userId, marblesCount, and amount required" });
       }
 
-      const { createRazorpayOrder, getRazorpayKeyId } = await import('./razorpayService');
+      const { getUncachableStripeClient, getStripePublishableKey } = await import('./stripeClient');
+      const stripe = await getUncachableStripeClient();
+      const publishableKey = await getStripePublishableKey();
       
-      // Receipt must be max 40 chars - use short format
-      const shortReceipt = `m_${Date.now()}`;
-      
-      const order = await createRazorpayOrder({
-        amount: amount,
-        currency: 'INR',
-        receipt: shortReceipt,
-        notes: {
+      // Get the base URL for redirect
+      const baseUrl = process.env.REPLIT_DOMAINS?.split(',')[0] 
+        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+        : 'http://localhost:5000';
+
+      // Create Stripe Checkout Session for one-time payment
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'inr',
+              product_data: {
+                name: `${marblesCount} Marbles Pack`,
+                description: `Purchase ${marblesCount} marbles for Kanchey King`,
+              },
+              unit_amount: amount * 100, // Stripe uses paise
+            },
+            quantity: 1,
+          },
+        ],
+        mode: 'payment',
+        success_url: `${baseUrl}/shop?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${baseUrl}/shop?payment=cancelled`,
+        metadata: {
           userId,
           marblesCount: String(marblesCount),
         },
       });
 
-      const keyId = getRazorpayKeyId();
-
       res.json({
         success: true,
-        orderId: order.id,
-        amount: order.amount,
-        currency: order.currency,
-        keyId: keyId,
+        sessionId: session.id,
+        url: session.url,
+        publishableKey,
       });
     } catch (error) {
-      console.error("Razorpay order creation error:", error);
-      res.status(500).json({ error: "Failed to create order" });
+      console.error("Stripe checkout error:", error);
+      res.status(500).json({ error: "Failed to create checkout session" });
     }
   });
 
-  // Razorpay payment verification endpoint
+  // Stripe payment verification endpoint - verify session and add marbles
   app.post("/api/marble-purchase/verify", async (req, res) => {
     try {
-      const { userId, orderId, paymentId, signature, marblesCount } = req.body;
+      const { sessionId } = req.body;
       
-      if (!userId || !orderId || !paymentId || !signature || !marblesCount) {
-        return res.status(400).json({ error: "Missing required fields" });
+      if (!sessionId) {
+        return res.status(400).json({ error: "sessionId required" });
       }
 
-      const { verifyRazorpaySignature } = await import('./razorpayService');
+      const { getUncachableStripeClient } = await import('./stripeClient');
+      const stripe = await getUncachableStripeClient();
       
-      const isValid = verifyRazorpaySignature(orderId, paymentId, signature);
+      // Retrieve the session
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
       
-      if (!isValid) {
-        return res.status(400).json({ error: "Payment verification failed" });
+      if (session.payment_status !== 'paid') {
+        return res.status(400).json({ error: "Payment not completed" });
+      }
+
+      const userId = session.metadata?.userId;
+      const marblesCount = parseInt(session.metadata?.marblesCount || '0');
+
+      if (!userId || !marblesCount) {
+        return res.status(400).json({ error: "Invalid session metadata" });
+      }
+
+      // Check if already processed (prevent double-crediting)
+      const existingTx = await storage.getTransactionByExternalId(sessionId);
+      if (existingTx) {
+        return res.json({
+          success: true,
+          message: "Payment already processed",
+          alreadyProcessed: true,
+        });
       }
 
       // Add marbles to user
@@ -1414,8 +1449,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         amount: marblesCount,
         type: 'purchase',
-        description: `Purchased ${marblesCount} marbles via Razorpay`,
-        transactionId: paymentId,
+        description: `Purchased ${marblesCount} marbles via Stripe`,
+        transactionId: sessionId,
       });
 
       res.json({
@@ -1426,6 +1461,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Payment verification error:", error);
       res.status(500).json({ error: "Payment verification failed" });
+    }
+  });
+
+  // Get Stripe publishable key for frontend
+  app.get("/api/stripe/publishable-key", async (req, res) => {
+    try {
+      const { getStripePublishableKey } = await import('./stripeClient');
+      const publishableKey = await getStripePublishableKey();
+      res.json({ publishableKey });
+    } catch (error) {
+      console.error("Stripe key error:", error);
+      res.status(500).json({ error: "Failed to get Stripe key" });
     }
   });
 
