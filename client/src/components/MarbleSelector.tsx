@@ -74,8 +74,8 @@ export default function MarbleSelector({
         )}
       </div>
       
-      <div className="p-6 bg-gradient-to-b from-black/40 to-black/20 rounded-3xl border-2 border-primary/30 shadow-2xl">
-        <div className="grid grid-cols-8 gap-3">
+      <div className="p-3 sm:p-6 bg-gradient-to-b from-black/40 to-black/20 rounded-3xl border-2 border-primary/30 shadow-2xl">
+        <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 gap-1.5 sm:gap-3">
           {marbles.map((id) => {
             const isSelected = selectedMarbleIds.includes(id);
             const order = isSelected ? selectedMarbleIds.indexOf(id) + 1 : null;
@@ -86,9 +86,9 @@ export default function MarbleSelector({
               <button
                 key={id}
                 onClick={() => onToggleMarble(id)}
-                className={`w-12 h-12 rounded-full cursor-pointer transition-all duration-300 transform hover:scale-120 relative group overflow-hidden ${
+                className={`w-9 h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full cursor-pointer transition-all duration-300 transform hover:scale-110 relative group overflow-visible ${
                   isSelected
-                    ? "ring-3 ring-[#00FF88] shadow-[0_0_25px_rgba(0,255,136,0.7)] scale-110"
+                    ? "ring-2 sm:ring-3 ring-[#00FF88] shadow-[0_0_15px_rgba(0,255,136,0.7)] sm:shadow-[0_0_25px_rgba(0,255,136,0.7)] scale-105 sm:scale-110 z-10"
                     : "ring-1 ring-white/30 hover:ring-2 hover:ring-white/50 hover:shadow-[0_-4px_12px_rgba(0,0,0,0.6)]"
                 }`}
                 style={{
@@ -118,7 +118,7 @@ export default function MarbleSelector({
                 />
                 {/* Selection number */}
                 {isSelected && (
-                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-br from-[#00FF88] to-[#00CC6F] rounded-full flex items-center justify-center text-xs font-bold text-black border border-white shadow-md animate-pulse z-10">
+                  <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-gradient-to-br from-[#00FF88] to-[#00CC6F] rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold text-black border border-white shadow-md animate-pulse z-20">
                     {order}
                   </div>
                 )}
