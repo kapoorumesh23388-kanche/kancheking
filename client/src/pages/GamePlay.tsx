@@ -549,7 +549,7 @@ export default function GamePlay() {
 
       <div className="container max-w-7xl mx-auto px-2 sm:px-5">
         <div className="mb-4 sm:mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4 items-center">
+          <div className="grid grid-cols-3 gap-1 sm:gap-2 md:gap-4 items-center">
             <div className="text-center">
               <PlayerBox
                 name={player1Name}
@@ -561,11 +561,11 @@ export default function GamePlay() {
                 isGuesser={!isHiderPlayer1 && phase === "guessing"}
               />
             </div>
-            <div className="text-center">
-              <div className="text-4xl font-black text-primary animate-pulse" style={{ textShadow: '0 0 30px rgba(255,215,0,0.8)' }}>
+            <div className="text-center flex flex-col items-center justify-center">
+              <div className="text-xl sm:text-2xl md:text-4xl font-black text-primary animate-pulse" style={{ textShadow: '0 0 30px rgba(255,215,0,0.8)' }}>
                 ⚔️
               </div>
-              <p className="text-sm text-muted-foreground mt-2 uppercase tracking-widest font-bold">Battle</p>
+              <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mt-1 md:mt-2 uppercase tracking-widest font-bold">Battle</p>
             </div>
             <div className="text-center">
               <PlayerBox
