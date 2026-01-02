@@ -410,7 +410,7 @@ export default function Shop() {
           <h3 className="text-2xl font-bold mb-6">🎪 Points Catalog (Updated quarterly by admin)</h3>
           <Card>
             <CardContent className="pt-6">
-              {isLoading ? (
+              {isLoadingCatalog ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-6 h-6 animate-spin" />
                 </div>
