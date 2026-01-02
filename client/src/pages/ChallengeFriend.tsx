@@ -190,76 +190,76 @@ export default function ChallengeFriend() {
   // Show room code and share options after creating room
   if (roomCode) {
     return (
-      <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black">
-        <div className="container max-w-2xl mx-auto px-5">
+      <div className="min-h-screen pt-20 sm:pt-24 pb-6 sm:pb-10 bg-gradient-to-b from-black via-blue-950 to-black">
+        <div className="container max-w-2xl mx-auto px-3 sm:px-5">
           <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40">
-            <CardHeader className="text-center">
-              <CardTitle className="text-4xl font-bold text-primary mb-2">
+            <CardHeader className="text-center py-3 sm:py-6">
+              <CardTitle className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary mb-1 sm:mb-2">
                 Room Created!
               </CardTitle>
-              <CardDescription>Share this with your friend</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">Share this with your friend</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-3 sm:space-y-5 px-3 sm:px-6">
               {/* Room Code Display */}
-              <div className="bg-primary/20 rounded-lg p-8 border-2 border-primary/50">
-                <p className="text-sm text-muted-foreground text-center mb-4 font-semibold">Room Code</p>
-                <p className="text-6xl font-black text-primary text-center tracking-widest font-mono" data-testid="text-room-code">
+              <div className="bg-primary/20 rounded-lg p-3 sm:p-6 border-2 border-primary/50">
+                <p className="text-xs sm:text-sm text-muted-foreground text-center mb-2 font-semibold">Room Code</p>
+                <p className="text-2xl sm:text-4xl md:text-5xl font-black text-primary text-center tracking-widest font-mono" data-testid="text-room-code">
                   {roomCode}
                 </p>
               </div>
 
               {/* Share Link Display */}
-              <div className="bg-primary/10 border border-primary/30 rounded-lg p-5">
-                <p className="text-sm text-primary/80 mb-3 font-semibold">Share Link</p>
-                <div className="bg-black/50 rounded p-4 mb-4 border border-primary/20">
-                  <p className="text-xs text-muted-foreground break-all font-mono" data-testid="text-share-link">
+              <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 sm:p-4">
+                <p className="text-xs sm:text-sm text-primary/80 mb-2 font-semibold">Share Link</p>
+                <div className="bg-black/50 rounded p-2 sm:p-3 mb-3 border border-primary/20">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground break-all font-mono" data-testid="text-share-link">
                     {`${window.location.origin}/game/friend-join?code=${roomCode}`}
                   </p>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-2 sm:gap-4">
                 <Button
-                  size="lg"
+                  size="default"
                   variant="outline"
-                  className="flex items-center justify-center gap-2"
+                  className="flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm"
                   onClick={copyCode}
                   data-testid="button-copy-code"
                 >
                   {copiedCode ? (
                     <>
-                      <Check className="w-5 h-5" /> Copied!
+                      <Check className="w-4 h-4" /> Copied!
                     </>
                   ) : (
                     <>
-                      <Copy className="w-5 h-5" /> Copy Code
+                      <Copy className="w-4 h-4" /> Copy Code
                     </>
                   )}
                 </Button>
                 <Button
-                  size="lg"
-                  className="bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 flex items-center justify-center gap-2 text-primary-foreground font-bold"
+                  size="default"
+                  className="bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 flex items-center justify-center gap-1 sm:gap-2 text-primary-foreground font-bold text-xs sm:text-sm"
                   onClick={shareLink}
                   data-testid="button-share-room"
                 >
-                  <Share2 className="w-5 h-5" /> Share Link
+                  <Share2 className="w-4 h-4" /> Share Link
                 </Button>
               </div>
 
               {/* Waiting Status */}
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 text-center">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                  <p className="font-bold text-primary">Waiting for opponent...</p>
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-center">
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <p className="font-bold text-primary text-sm sm:text-base">Waiting for opponent...</p>
                 </div>
-                <p className="text-sm text-muted-foreground">Share the code or link with your friend</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Share the code or link with your friend</p>
               </div>
 
               {/* Cancel Button */}
               <Button
                 variant="ghost"
-                className="w-full"
+                className="w-full text-xs sm:text-sm"
                 onClick={cancelRoom}
                 data-testid="button-cancel-room"
               >

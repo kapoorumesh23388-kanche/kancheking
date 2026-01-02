@@ -29,18 +29,18 @@ export default function GuessingPanel({ onGuess, maxBet = 100 }: GuessingPanelPr
   };
 
   return (
-    <Card className="bg-gradient-to-br from-primary/20 to-primary/5 border-3 border-primary/40 shadow-2xl">
-      <CardContent className="p-10">
+    <Card className="bg-gradient-to-br from-primary/20 to-primary/5 border-2 sm:border-3 border-primary/40 shadow-xl sm:shadow-2xl">
+      <CardContent className="p-3 sm:p-6 md:p-8">
         <h3
-          className="text-4xl font-bold text-primary text-center mb-8 uppercase tracking-wider"
-          style={{ textShadow: '0 0 20px rgba(255,215,0,0.7)' }}
+          className="text-xl sm:text-2xl md:text-3xl font-bold text-primary text-center mb-3 sm:mb-6 uppercase tracking-wide sm:tracking-wider"
+          style={{ textShadow: '0 0 15px rgba(255,215,0,0.7)' }}
         >
           {t("guessOddEven")}
         </h3>
         
-        <div className="flex gap-6 items-center justify-center mb-10 flex-wrap">
-          <div className="flex items-center gap-3">
-            <Label htmlFor="bet-input" className="text-xl font-bold text-primary uppercase">
+        <div className="flex gap-2 sm:gap-4 items-center justify-center mb-4 sm:mb-8 flex-wrap">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Label htmlFor="bet-input" className="text-sm sm:text-lg md:text-xl font-bold text-primary uppercase whitespace-nowrap">
               {t("betAmount")}:
             </Label>
             <Input
@@ -48,31 +48,31 @@ export default function GuessingPanel({ onGuess, maxBet = 100 }: GuessingPanelPr
               type="number"
               value={bet}
               onChange={(e) => handleBetChange(e.target.value)}
-              className="w-32 text-center text-2xl font-bold border-3 border-primary/50 bg-black/40 text-[#00FF88] focus:border-primary focus:shadow-[0_0_25px_rgba(255,215,0,0.6)]"
+              className="w-20 sm:w-28 md:w-32 text-center text-lg sm:text-xl md:text-2xl font-bold border-2 sm:border-3 border-primary/50 bg-black/40 text-[#00FF88] focus:border-primary"
               min={1}
               max={maxBet}
               data-testid="input-bet"
             />
-            <span className="text-sm text-muted-foreground font-semibold">/ {maxBet}</span>
+            <span className="text-xs sm:text-sm text-muted-foreground font-semibold">/ {maxBet}</span>
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-2 gap-2 sm:gap-4 md:gap-6">
           <Button
-            className="h-auto py-8 px-6 text-3xl font-bold bg-gradient-to-br from-[#9C27B0] via-[#E91E63] to-[#9C27B0] hover:from-[#9C27B0]/80 hover:via-[#E91E63]/80 hover:to-[#9C27B0]/80 text-white shadow-2xl transition-all hover:-translate-y-2 transform active:scale-95 uppercase tracking-wider border-2 border-white/20"
+            className="h-auto py-4 px-2 sm:py-6 sm:px-4 md:py-8 md:px-6 text-base sm:text-xl md:text-2xl font-bold bg-gradient-to-br from-[#9C27B0] via-[#E91E63] to-[#9C27B0] hover:from-[#9C27B0]/80 hover:via-[#E91E63]/80 hover:to-[#9C27B0]/80 text-white shadow-lg sm:shadow-xl transition-all hover:-translate-y-1 transform active:scale-95 uppercase tracking-wide border border-white/20 flex flex-col items-center"
             onClick={() => handleGuess("kali")}
             data-testid="button-guess-kali"
           >
-            ⬆️ {t("odd")}
-            <div className="text-sm">Kali</div>
+            <span>⬆️ {t("odd")}</span>
+            <span className="text-[10px] sm:text-xs md:text-sm opacity-80">Kali</span>
           </Button>
           <Button
-            className="h-auto py-8 px-6 text-3xl font-bold bg-gradient-to-br from-[#2196F3] via-[#00BCD4] to-[#2196F3] hover:from-[#2196F3]/80 hover:via-[#00BCD4]/80 hover:to-[#2196F3]/80 text-white shadow-2xl transition-all hover:-translate-y-2 transform active:scale-95 uppercase tracking-wider border-2 border-white/20"
+            className="h-auto py-4 px-2 sm:py-6 sm:px-4 md:py-8 md:px-6 text-base sm:text-xl md:text-2xl font-bold bg-gradient-to-br from-[#2196F3] via-[#00BCD4] to-[#2196F3] hover:from-[#2196F3]/80 hover:via-[#00BCD4]/80 hover:to-[#2196F3]/80 text-white shadow-lg sm:shadow-xl transition-all hover:-translate-y-1 transform active:scale-95 uppercase tracking-wide border border-white/20 flex flex-col items-center"
             onClick={() => handleGuess("jotta")}
             data-testid="button-guess-jotta"
           >
-            ⬇️ {t("even")}
-            <div className="text-sm">Jotta</div>
+            <span>⬇️ {t("even")}</span>
+            <span className="text-[10px] sm:text-xs md:text-sm opacity-80">Jotta</span>
           </Button>
         </div>
       </CardContent>
