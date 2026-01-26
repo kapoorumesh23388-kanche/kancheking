@@ -4,12 +4,38 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Trash2, Loader2, LogOut, Settings, Pencil } from "lucide-react";
+import { Plus, Trash2, Loader2, LogOut, Settings, Pencil, Users, TrendingUp, BarChart3 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { CatalogItem } from "@shared/schema";
+
+interface UserAnalytics {
+  success: boolean;
+  totalUsers: number;
+  users: Array<{
+    id: string;
+    displayName: string;
+    dateOfBirth: string | null;
+    age: number | null;
+    adPreferences: string[];
+    isAgeVerified: boolean;
+    marbles: number;
+    gamesPlayed: number;
+    gamesWon: number;
+    createdAt: Date;
+    lastActiveAt: Date | null;
+  }>;
+  adPreferenceStats: Record<string, number>;
+  ageDemographics: {
+    under15: number;
+    age15to18: number;
+    age18to25: number;
+    above25: number;
+    unknown: number;
+  };
+}
 
 export default function Admin() {
   const [location, setLocation] = useLocation();
@@ -40,6 +66,10 @@ export default function Admin() {
 
   const { data: catalogItems = [], isLoading } = useQuery<CatalogItem[]>({
     queryKey: ["/api/catalog"],
+  });
+
+  const { data: userAnalytics, isLoading: isLoadingAnalytics } = useQuery<UserAnalytics>({
+    queryKey: ["/api/admin/users"],
   });
 
   const addItemMutation = useMutation({
@@ -352,6 +382,109 @@ export default function Admin() {
             </CardContent>
           </Card>
         </div>
+
+        {/* User Analytics Section */}
+        <Card className="mt-8 bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" /> User Analytics
+            </CardTitle>
+            <CardDescription>User demographics and ad preference insights for targeted advertising</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingAnalytics ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : userAnalytics ? (
+              <div className="space-y-6">
+                {/* Summary Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-primary" data-testid="stat-total-users">
+                      {userAnalytics.totalUsers}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Total Users</div>
+                  </div>
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-green-400" data-testid="stat-verified-users">
+                      {userAnalytics.users.filter(u => u.isAgeVerified).length}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Age Verified (15+)</div>
+                  </div>
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-blue-400" data-testid="stat-active-players">
+                      {userAnalytics.users.filter(u => u.gamesPlayed > 0).length}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Active Players</div>
+                  </div>
+                  <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-orange-400" data-testid="stat-with-preferences">
+                      {userAnalytics.users.filter(u => u.adPreferences.length > 0).length}
+                    </div>
+                    <div className="text-sm text-muted-foreground">With Ad Prefs</div>
+                  </div>
+                </div>
+
+                {/* Age Demographics */}
+                <div>
+                  <h3 className="flex items-center gap-2 text-lg font-semibold text-primary mb-3">
+                    <BarChart3 className="w-5 h-5" /> Age Demographics
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-yellow-400">{userAnalytics.ageDemographics.under15}</div>
+                      <div className="text-xs text-muted-foreground">Under 15</div>
+                    </div>
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-green-400">{userAnalytics.ageDemographics.age15to18}</div>
+                      <div className="text-xs text-muted-foreground">15-17</div>
+                    </div>
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-blue-400">{userAnalytics.ageDemographics.age18to25}</div>
+                      <div className="text-xs text-muted-foreground">18-25</div>
+                    </div>
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-purple-400">{userAnalytics.ageDemographics.above25}</div>
+                      <div className="text-xs text-muted-foreground">25+</div>
+                    </div>
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-gray-400">{userAnalytics.ageDemographics.unknown}</div>
+                      <div className="text-xs text-muted-foreground">Unknown</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ad Preference Breakdown */}
+                <div>
+                  <h3 className="flex items-center gap-2 text-lg font-semibold text-primary mb-3">
+                    <TrendingUp className="w-5 h-5" /> Ad Interest Categories
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {Object.entries(userAnalytics.adPreferenceStats).length === 0 ? (
+                      <p className="text-muted-foreground col-span-full text-center py-4">No ad preferences recorded yet</p>
+                    ) : (
+                      Object.entries(userAnalytics.adPreferenceStats)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([category, count]) => (
+                          <div 
+                            key={category}
+                            className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/30 rounded-lg p-3 flex justify-between items-center"
+                            data-testid={`ad-pref-${category}`}
+                          >
+                            <span className="text-sm capitalize">{category.replace(/([A-Z])/g, ' $1').trim()}</span>
+                            <span className="text-lg font-bold text-primary">{count}</span>
+                          </div>
+                        ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-6">Failed to load analytics</p>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Edit Item Dialog */}
         <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
