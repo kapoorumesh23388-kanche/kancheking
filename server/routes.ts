@@ -864,6 +864,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update User Onboarding Data (save ad preferences to database)
+  app.post("/api/user/:userId/onboarding", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { displayName, dateOfBirth, adPreferences, isAgeVerified } = req.body;
+      
+      // Get or create user first
+      let user = await storage.getUser(userId);
+      if (!user) {
+        user = await storage.createUser(
+          { username: userId, password: "guest" },
+          undefined,
+          userId
+        );
+      }
+      
+      // Update with onboarding data
+      const updatedUser = await storage.updateUserOnboarding(userId, {
+        displayName,
+        dateOfBirth,
+        adPreferences,
+        isAgeVerified
+      });
+      
+      console.log(`User ${userId} onboarding saved:`, { displayName, dateOfBirth, adPreferences });
+      
+      res.json({ success: true, user: updatedUser });
+    } catch (error) {
+      console.error("Onboarding save error:", error);
+      res.status(500).json({ error: "Failed to save onboarding data" });
+    }
+  });
+
+  // Admin: Get all users with ad preferences for analytics
+  app.get("/api/admin/users", async (req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      
+      // Format user data for admin view
+      const usersData = allUsers.map(u => ({
+        id: u.id,
+        displayName: u.displayName || u.username,
+        dateOfBirth: u.dateOfBirth,
+        age: u.dateOfBirth ? Math.floor((Date.now() - new Date(u.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null,
+        adPreferences: u.adPreferences || [],
+        isAgeVerified: u.isAgeVerified,
+        marbles: u.marbles,
+        gamesPlayed: u.gamesPlayed,
+        gamesWon: u.gamesWon,
+        createdAt: u.createdAt,
+        lastActiveAt: u.lastActiveAt
+      }));
+      
+      // Calculate ad preference stats
+      const adPreferenceStats: Record<string, number> = {};
+      allUsers.forEach(u => {
+        if (u.adPreferences) {
+          u.adPreferences.forEach(pref => {
+            adPreferenceStats[pref] = (adPreferenceStats[pref] || 0) + 1;
+          });
+        }
+      });
+      
+      // Age demographics
+      const ageDemographics = {
+        under15: usersData.filter(u => u.age !== null && u.age < 15).length,
+        age15to18: usersData.filter(u => u.age !== null && u.age >= 15 && u.age < 18).length,
+        age18to25: usersData.filter(u => u.age !== null && u.age >= 18 && u.age <= 25).length,
+        above25: usersData.filter(u => u.age !== null && u.age > 25).length,
+        unknown: usersData.filter(u => u.age === null).length
+      };
+      
+      res.json({
+        success: true,
+        totalUsers: usersData.length,
+        users: usersData,
+        adPreferenceStats,
+        ageDemographics
+      });
+    } catch (error) {
+      console.error("Admin users fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
   // Get Leaderboard - Real player data sorted by wins and earnings
   app.get("/api/leaderboard", async (req, res) => {
     try {

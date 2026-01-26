@@ -13,6 +13,7 @@ export interface IStorage {
   updateUserPoints(userId: string, points: number): Promise<User | undefined>;
   updateUserStats(userId: string, stats: { gamesWon?: number; gamesPlayed?: number }): Promise<User | undefined>;
   updateUserProfile(userId: string, profile: { displayName?: string; profileImage?: string; gender?: string }): Promise<User | undefined>;
+  updateUserOnboarding(userId: string, data: { displayName?: string; dateOfBirth?: string; adPreferences?: string[]; isAgeVerified?: boolean }): Promise<User | undefined>;
   incrementAiWins(userId: string): Promise<User | undefined>;
   addEarnedMarbles(userId: string, amount: number): Promise<User | undefined>;
   updateEarnedMarbles(userId: string, earnedMarbles: number): Promise<User | undefined>;
@@ -156,9 +157,11 @@ export class MemStorage implements IStorage {
       dateOfBirth: null,
       isAgeVerified: false,
       adContentRating: "family",
+      adPreferences: null,
       stripeCustomerId: null,
       stripeSubscriptionId: null,
       createdAt: new Date(),
+      lastActiveAt: null,
     };
     this.users.set(id, user);
     return user;
@@ -201,6 +204,20 @@ export class MemStorage implements IStorage {
       if (profile.displayName !== undefined) user.displayName = profile.displayName;
       if (profile.profileImage !== undefined) user.profileImage = profile.profileImage;
       if (profile.gender !== undefined) user.gender = profile.gender;
+      this.users.set(userId, user);
+      return user;
+    }
+    return undefined;
+  }
+
+  async updateUserOnboarding(userId: string, data: { displayName?: string; dateOfBirth?: string; adPreferences?: string[]; isAgeVerified?: boolean }): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (user) {
+      if (data.displayName !== undefined) user.displayName = data.displayName;
+      if (data.dateOfBirth !== undefined) user.dateOfBirth = data.dateOfBirth;
+      if (data.adPreferences !== undefined) user.adPreferences = data.adPreferences;
+      if (data.isAgeVerified !== undefined) user.isAgeVerified = data.isAgeVerified;
+      user.lastActiveAt = new Date();
       this.users.set(userId, user);
       return user;
     }
