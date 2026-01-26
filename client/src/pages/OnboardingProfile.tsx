@@ -124,8 +124,8 @@ export default function OnboardingProfile() {
       }
       localStorage.setItem("playerProfileCompleted", "true");
 
-      // Then update backend
-      const response = await fetch("/api/profile/update", {
+      // Update backend profile
+      const profileResponse = await fetch("/api/profile/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -139,14 +139,27 @@ export default function OnboardingProfile() {
         }),
       });
 
-      const data = await response.json();
-      
-      if (!response.ok) {
-        console.warn("Backend profile update had issues:", data);
-        // Continue anyway since localStorage is saved
+      if (!profileResponse.ok) {
+        console.warn("Backend profile update had issues:", await profileResponse.json());
       }
 
-      console.log("✅ Profile saved:", { displayName, gender, age, adInterests });
+      // Save onboarding data with ad preferences to database for targeted advertising
+      const onboardingResponse = await fetch(`/api/user/${userId}/onboarding`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          displayName,
+          dateOfBirth,
+          adPreferences: adInterests,
+          isAgeVerified: age >= 15,
+        }),
+      });
+
+      if (!onboardingResponse.ok) {
+        console.warn("Onboarding data save had issues:", await onboardingResponse.json());
+      }
+
+      console.log("✅ Profile and ad preferences saved:", { displayName, gender, age, adPreferences: adInterests });
 
       // Dispatch events to update Header and other components
       window.dispatchEvent(new Event("profileUpdated"));
