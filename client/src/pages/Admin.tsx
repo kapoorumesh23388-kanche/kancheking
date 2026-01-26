@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Trash2, Loader2, LogOut, Settings, Pencil, Users, TrendingUp, BarChart3 } from "lucide-react";
+import { Plus, Trash2, Loader2, LogOut, Settings, Pencil, Users, TrendingUp, BarChart3, Clock, Eye, DollarSign } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -35,6 +35,32 @@ interface UserAnalytics {
     above25: number;
     unknown: number;
   };
+}
+
+interface EngagementAnalytics {
+  success: boolean;
+  dailyStats: Array<{
+    date: string;
+    totalUsers: number;
+    totalPlaytimeSeconds: number;
+    totalGamesPlayed: number;
+    totalAdsViewed: number;
+    totalAdRevenue: number;
+  }>;
+  topUsers: Array<{
+    userId: string;
+    displayName: string;
+    totalPlaytimeSeconds: number;
+    totalGamesPlayed: number;
+    totalAdsViewed: number;
+    totalAdRevenue: number;
+  }>;
+  adStats: Array<{
+    adType: string;
+    impressions: number;
+    clicks: number;
+    revenue: number;
+  }>;
 }
 
 export default function Admin() {
@@ -70,6 +96,10 @@ export default function Admin() {
 
   const { data: userAnalytics, isLoading: isLoadingAnalytics } = useQuery<UserAnalytics>({
     queryKey: ["/api/admin/users"],
+  });
+
+  const { data: engagementAnalytics, isLoading: isLoadingEngagement } = useQuery<EngagementAnalytics>({
+    queryKey: ["/api/admin/engagement-analytics"],
   });
 
   const addItemMutation = useMutation({
@@ -482,6 +512,147 @@ export default function Admin() {
               </div>
             ) : (
               <p className="text-muted-foreground text-center py-6">Failed to load analytics</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Engagement Analytics Section */}
+        <Card className="mt-8 bg-gradient-to-b from-white/10 to-white/5 border-2 border-green-500/40">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-400">
+              <Clock className="w-5 h-5" /> Engagement Analytics
+            </CardTitle>
+            <CardDescription>Playtime, ad views, and earnings per user</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingEngagement ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-green-400" />
+              </div>
+            ) : engagementAnalytics ? (
+              <div className="space-y-6">
+                {/* Daily Summary Stats */}
+                <div>
+                  <h3 className="flex items-center gap-2 text-lg font-semibold text-green-400 mb-3">
+                    <BarChart3 className="w-5 h-5" /> Daily Summary (Last 7 Days)
+                  </h3>
+                  {engagementAnalytics.dailyStats.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-4">No activity data yet. Users need to play games to generate stats.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-white/20">
+                            <th className="text-left py-2 px-3">Date</th>
+                            <th className="text-right py-2 px-3">Users</th>
+                            <th className="text-right py-2 px-3">Playtime</th>
+                            <th className="text-right py-2 px-3">Games</th>
+                            <th className="text-right py-2 px-3">Ads</th>
+                            <th className="text-right py-2 px-3">Revenue</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {engagementAnalytics.dailyStats.slice(0, 7).map((stat) => (
+                            <tr key={stat.date} className="border-b border-white/10">
+                              <td className="py-2 px-3">{stat.date}</td>
+                              <td className="text-right py-2 px-3">{stat.totalUsers}</td>
+                              <td className="text-right py-2 px-3 text-blue-400">
+                                {Math.floor(stat.totalPlaytimeSeconds / 60)}m
+                              </td>
+                              <td className="text-right py-2 px-3">{stat.totalGamesPlayed}</td>
+                              <td className="text-right py-2 px-3 text-purple-400">{stat.totalAdsViewed}</td>
+                              <td className="text-right py-2 px-3 text-green-400">
+                                ₹{(stat.totalAdRevenue / 100).toFixed(2)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Top Users by Playtime */}
+                <div>
+                  <h3 className="flex items-center gap-2 text-lg font-semibold text-blue-400 mb-3">
+                    <Clock className="w-5 h-5" /> Top Users by Playtime
+                  </h3>
+                  {engagementAnalytics.topUsers.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-4">No user activity yet</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+                      {engagementAnalytics.topUsers.slice(0, 10).map((user, index) => (
+                        <div 
+                          key={user.userId}
+                          className="bg-white/5 border border-white/20 rounded-lg p-3 flex items-center justify-between"
+                          data-testid={`top-user-${index}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg font-bold text-primary">#{index + 1}</span>
+                            <div>
+                              <p className="font-semibold">{user.displayName}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {user.totalGamesPlayed} games | {user.totalAdsViewed} ads
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold text-blue-400">
+                              {Math.floor(user.totalPlaytimeSeconds / 60)}m
+                            </p>
+                            <p className="text-xs text-green-400">
+                              ₹{(user.totalAdRevenue / 100).toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Ad Performance */}
+                <div>
+                  <h3 className="flex items-center gap-2 text-lg font-semibold text-purple-400 mb-3">
+                    <Eye className="w-5 h-5" /> Ad Performance by Type
+                  </h3>
+                  {engagementAnalytics.adStats.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-4">No ad data yet</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {engagementAnalytics.adStats.map((ad) => (
+                        <div 
+                          key={ad.adType}
+                          className="bg-gradient-to-r from-purple-500/10 to-purple-500/5 border border-purple-500/30 rounded-lg p-4"
+                          data-testid={`ad-stat-${ad.adType}`}
+                        >
+                          <h4 className="text-lg font-semibold capitalize mb-2">{ad.adType}</h4>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div>
+                              <p className="text-2xl font-bold text-purple-400">{ad.impressions}</p>
+                              <p className="text-xs text-muted-foreground">Views</p>
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold text-blue-400">{ad.clicks}</p>
+                              <p className="text-xs text-muted-foreground">Clicks</p>
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold text-green-400">₹{(ad.revenue / 100).toFixed(0)}</p>
+                              <p className="text-xs text-muted-foreground">Revenue</p>
+                            </div>
+                          </div>
+                          <div className="mt-2 text-center">
+                            <p className="text-sm text-muted-foreground">
+                              CTR: {ad.impressions > 0 ? ((ad.clicks / ad.impressions) * 100).toFixed(1) : 0}%
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-6">Failed to load engagement analytics</p>
             )}
           </CardContent>
         </Card>

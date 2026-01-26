@@ -57,6 +57,15 @@ export interface IStorage {
   updateUserStripeInfo(userId: string, stripeInfo: { stripeCustomerId?: string; stripeSubscriptionId?: string }): Promise<User | undefined>;
   getProduct(productId: string): Promise<any>;
   getSubscription(subscriptionId: string): Promise<any>;
+
+  // Analytics tracking
+  startGameSession(userId: string, gameType: string): Promise<{ sessionId: string }>;
+  endGameSession(sessionId: string, stats: { gamesPlayed: number; gamesWon: number; marblesWon: number; marblesLost: number }): Promise<void>;
+  recordAdImpression(userId: string, adType: string, adCategory: string | null, revenueAmount: number): Promise<void>;
+  recordAdClick(impressionId: string): Promise<void>;
+  getDailyUserStats(userId: string, date: string): Promise<any>;
+  updateDailyUserStats(userId: string, date: string, stats: Partial<{ totalPlaytimeSeconds: number; gamesPlayed: number; gamesWon: number; adsViewed: number; adsClicked: number; adRevenueGenerated: number; marblesEarned: number; marblesSpent: number }>): Promise<void>;
+  getEngagementAnalytics(): Promise<{ dailyStats: any[]; topUsers: any[]; adStats: any[] }>;
   
   // Tournament Bracket Methods
   getTournamentParticipants(tournamentId: string): Promise<any[]>;
@@ -539,6 +548,205 @@ export class MemStorage implements IStorage {
 
   async getSubscription(subscriptionId: string): Promise<any> {
     return { id: subscriptionId };
+  }
+
+  // Analytics tracking
+  private gameSessions: Map<string, any> = new Map();
+  private adImpressions: Map<string, any> = new Map();
+  private dailyUserStats: Map<string, any> = new Map();
+
+  async startGameSession(userId: string, gameType: string): Promise<{ sessionId: string }> {
+    const sessionId = randomUUID();
+    this.gameSessions.set(sessionId, {
+      id: sessionId,
+      userId,
+      gameType,
+      startedAt: new Date(),
+      endedAt: null,
+      durationSeconds: 0,
+      gamesPlayed: 0,
+      gamesWon: 0,
+      marblesWon: 0,
+      marblesLost: 0,
+    });
+    return { sessionId };
+  }
+
+  async endGameSession(sessionId: string, stats: { gamesPlayed: number; gamesWon: number; marblesWon: number; marblesLost: number }): Promise<void> {
+    const session = this.gameSessions.get(sessionId);
+    if (session) {
+      const endedAt = new Date();
+      const durationSeconds = Math.floor((endedAt.getTime() - new Date(session.startedAt).getTime()) / 1000);
+      session.endedAt = endedAt;
+      session.durationSeconds = durationSeconds;
+      session.gamesPlayed = stats.gamesPlayed;
+      session.gamesWon = stats.gamesWon;
+      session.marblesWon = stats.marblesWon;
+      session.marblesLost = stats.marblesLost;
+      this.gameSessions.set(sessionId, session);
+
+      // Update daily stats
+      const date = endedAt.toISOString().split('T')[0];
+      await this.updateDailyUserStats(session.userId, date, {
+        totalPlaytimeSeconds: durationSeconds,
+        gamesPlayed: stats.gamesPlayed,
+        gamesWon: stats.gamesWon,
+        marblesEarned: stats.marblesWon,
+        marblesSpent: stats.marblesLost,
+      });
+    }
+  }
+
+  async recordAdImpression(userId: string, adType: string, adCategory: string | null, revenueAmount: number): Promise<void> {
+    const id = randomUUID();
+    this.adImpressions.set(id, {
+      id,
+      userId,
+      adType,
+      adCategory,
+      revenueAmount,
+      viewedAt: new Date(),
+      clickedAt: null,
+      isClicked: false,
+    });
+
+    // Update daily stats
+    const date = new Date().toISOString().split('T')[0];
+    await this.updateDailyUserStats(userId, date, {
+      adsViewed: 1,
+      adRevenueGenerated: revenueAmount,
+    });
+  }
+
+  async recordAdClick(impressionId: string): Promise<void> {
+    const impression = this.adImpressions.get(impressionId);
+    if (impression) {
+      impression.clickedAt = new Date();
+      impression.isClicked = true;
+      this.adImpressions.set(impressionId, impression);
+
+      // Update daily stats
+      const date = new Date().toISOString().split('T')[0];
+      await this.updateDailyUserStats(impression.userId, date, {
+        adsClicked: 1,
+      });
+    }
+  }
+
+  async getDailyUserStats(userId: string, date: string): Promise<any> {
+    const key = `${userId}_${date}`;
+    return this.dailyUserStats.get(key);
+  }
+
+  async updateDailyUserStats(userId: string, date: string, stats: Partial<{ totalPlaytimeSeconds: number; gamesPlayed: number; gamesWon: number; adsViewed: number; adsClicked: number; adRevenueGenerated: number; marblesEarned: number; marblesSpent: number }>): Promise<void> {
+    const key = `${userId}_${date}`;
+    let existing = this.dailyUserStats.get(key);
+    
+    if (!existing) {
+      existing = {
+        id: randomUUID(),
+        userId,
+        date,
+        totalPlaytimeSeconds: 0,
+        gamesPlayed: 0,
+        gamesWon: 0,
+        adsViewed: 0,
+        adsClicked: 0,
+        adRevenueGenerated: 0,
+        marblesEarned: 0,
+        marblesSpent: 0,
+        createdAt: new Date(),
+      };
+    }
+
+    // Add incremental values
+    if (stats.totalPlaytimeSeconds) existing.totalPlaytimeSeconds += stats.totalPlaytimeSeconds;
+    if (stats.gamesPlayed) existing.gamesPlayed += stats.gamesPlayed;
+    if (stats.gamesWon) existing.gamesWon += stats.gamesWon;
+    if (stats.adsViewed) existing.adsViewed += stats.adsViewed;
+    if (stats.adsClicked) existing.adsClicked += stats.adsClicked;
+    if (stats.adRevenueGenerated) existing.adRevenueGenerated += stats.adRevenueGenerated;
+    if (stats.marblesEarned) existing.marblesEarned += stats.marblesEarned;
+    if (stats.marblesSpent) existing.marblesSpent += stats.marblesSpent;
+
+    this.dailyUserStats.set(key, existing);
+  }
+
+  async getEngagementAnalytics(): Promise<{ dailyStats: any[]; topUsers: any[]; adStats: any[] }> {
+    // Get all daily stats
+    const allDailyStats = Array.from(this.dailyUserStats.values());
+    
+    // Aggregate by date
+    const dateAggregates: Record<string, any> = {};
+    allDailyStats.forEach(stat => {
+      if (!dateAggregates[stat.date]) {
+        dateAggregates[stat.date] = {
+          date: stat.date,
+          totalUsers: 0,
+          totalPlaytimeSeconds: 0,
+          totalGamesPlayed: 0,
+          totalAdsViewed: 0,
+          totalAdRevenue: 0,
+        };
+      }
+      dateAggregates[stat.date].totalUsers++;
+      dateAggregates[stat.date].totalPlaytimeSeconds += stat.totalPlaytimeSeconds;
+      dateAggregates[stat.date].totalGamesPlayed += stat.gamesPlayed;
+      dateAggregates[stat.date].totalAdsViewed += stat.adsViewed;
+      dateAggregates[stat.date].totalAdRevenue += stat.adRevenueGenerated;
+    });
+    
+    const dailyStats = Object.values(dateAggregates).sort((a: any, b: any) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    ).slice(0, 30);
+
+    // Top users by playtime
+    const userAggregates: Record<string, any> = {};
+    allDailyStats.forEach(stat => {
+      if (!userAggregates[stat.userId]) {
+        userAggregates[stat.userId] = {
+          userId: stat.userId,
+          totalPlaytimeSeconds: 0,
+          totalGamesPlayed: 0,
+          totalAdsViewed: 0,
+          totalAdRevenue: 0,
+        };
+      }
+      userAggregates[stat.userId].totalPlaytimeSeconds += stat.totalPlaytimeSeconds;
+      userAggregates[stat.userId].totalGamesPlayed += stat.gamesPlayed;
+      userAggregates[stat.userId].totalAdsViewed += stat.adsViewed;
+      userAggregates[stat.userId].totalAdRevenue += stat.adRevenueGenerated;
+    });
+
+    const topUsers = Object.values(userAggregates)
+      .sort((a: any, b: any) => b.totalPlaytimeSeconds - a.totalPlaytimeSeconds)
+      .slice(0, 20);
+
+    // Add user names
+    for (const user of topUsers) {
+      const userData = await this.getUser(user.userId);
+      user.displayName = userData?.displayName || userData?.username || 'Unknown';
+    }
+
+    // Ad stats by type
+    const adTypeStats: Record<string, any> = {};
+    Array.from(this.adImpressions.values()).forEach(ad => {
+      if (!adTypeStats[ad.adType]) {
+        adTypeStats[ad.adType] = {
+          adType: ad.adType,
+          impressions: 0,
+          clicks: 0,
+          revenue: 0,
+        };
+      }
+      adTypeStats[ad.adType].impressions++;
+      if (ad.isClicked) adTypeStats[ad.adType].clicks++;
+      adTypeStats[ad.adType].revenue += ad.revenueAmount;
+    });
+
+    const adStats = Object.values(adTypeStats);
+
+    return { dailyStats, topUsers, adStats };
   }
 
   // Tournament Bracket Methods

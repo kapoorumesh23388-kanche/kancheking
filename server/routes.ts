@@ -949,6 +949,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Get engagement analytics (playtime, ads, earnings)
+  app.get("/api/admin/engagement-analytics", async (req, res) => {
+    try {
+      const analytics = await storage.getEngagementAnalytics();
+      res.json({ success: true, ...analytics });
+    } catch (error) {
+      console.error("Engagement analytics fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch engagement analytics" });
+    }
+  });
+
+  // Start game session tracking
+  app.post("/api/session/start", async (req, res) => {
+    try {
+      const { userId, gameType } = req.body;
+      if (!userId || !gameType) {
+        return res.status(400).json({ error: "userId and gameType required" });
+      }
+      const result = await storage.startGameSession(userId, gameType);
+      res.json({ success: true, ...result });
+    } catch (error) {
+      console.error("Session start error:", error);
+      res.status(500).json({ error: "Failed to start session" });
+    }
+  });
+
+  // End game session tracking
+  app.post("/api/session/end", async (req, res) => {
+    try {
+      const { sessionId, gamesPlayed, gamesWon, marblesWon, marblesLost } = req.body;
+      if (!sessionId) {
+        return res.status(400).json({ error: "sessionId required" });
+      }
+      await storage.endGameSession(sessionId, {
+        gamesPlayed: gamesPlayed || 0,
+        gamesWon: gamesWon || 0,
+        marblesWon: marblesWon || 0,
+        marblesLost: marblesLost || 0,
+      });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Session end error:", error);
+      res.status(500).json({ error: "Failed to end session" });
+    }
+  });
+
+  // Record ad impression
+  app.post("/api/ads/impression", async (req, res) => {
+    try {
+      const { userId, adType, adCategory, revenueAmount } = req.body;
+      if (!userId || !adType) {
+        return res.status(400).json({ error: "userId and adType required" });
+      }
+      await storage.recordAdImpression(userId, adType, adCategory || null, revenueAmount || 0);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Ad impression error:", error);
+      res.status(500).json({ error: "Failed to record ad impression" });
+    }
+  });
+
+  // Record ad click
+  app.post("/api/ads/click", async (req, res) => {
+    try {
+      const { impressionId } = req.body;
+      if (!impressionId) {
+        return res.status(400).json({ error: "impressionId required" });
+      }
+      await storage.recordAdClick(impressionId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Ad click error:", error);
+      res.status(500).json({ error: "Failed to record ad click" });
+    }
+  });
+
+  // Get user's daily stats
+  app.get("/api/user/:userId/daily-stats/:date", async (req, res) => {
+    try {
+      const { userId, date } = req.params;
+      const stats = await storage.getDailyUserStats(userId, date);
+      res.json({ success: true, stats: stats || null });
+    } catch (error) {
+      console.error("Daily stats fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch daily stats" });
+    }
+  });
+
   // Get Leaderboard - Real player data sorted by wins and earnings
   app.get("/api/leaderboard", async (req, res) => {
     try {

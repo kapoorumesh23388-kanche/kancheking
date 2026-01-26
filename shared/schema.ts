@@ -189,6 +189,45 @@ export const tournamentMatches = pgTable("tournament_matches", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const gameSessions = pgTable("game_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  gameType: varchar("game_type").notNull(),
+  startedAt: timestamp("started_at").defaultNow(),
+  endedAt: timestamp("ended_at"),
+  durationSeconds: integer("duration_seconds").notNull().default(0),
+  gamesPlayed: integer("games_played").notNull().default(0),
+  gamesWon: integer("games_won").notNull().default(0),
+  marblesWon: integer("marbles_won").notNull().default(0),
+  marblesLost: integer("marbles_lost").notNull().default(0),
+});
+
+export const adImpressions = pgTable("ad_impressions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  adType: varchar("ad_type").notNull(),
+  adCategory: varchar("ad_category"),
+  revenueAmount: integer("revenue_amount").notNull().default(0),
+  viewedAt: timestamp("viewed_at").defaultNow(),
+  clickedAt: timestamp("clicked_at"),
+  isClicked: boolean("is_clicked").notNull().default(false),
+});
+
+export const dailyUserStats = pgTable("daily_user_stats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  date: varchar("date").notNull(),
+  totalPlaytimeSeconds: integer("total_playtime_seconds").notNull().default(0),
+  gamesPlayed: integer("games_played").notNull().default(0),
+  gamesWon: integer("games_won").notNull().default(0),
+  adsViewed: integer("ads_viewed").notNull().default(0),
+  adsClicked: integer("ads_clicked").notNull().default(0),
+  adRevenueGenerated: integer("ad_revenue_generated").notNull().default(0),
+  marblesEarned: integer("marbles_earned").notNull().default(0),
+  marblesSpent: integer("marbles_spent").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -209,3 +248,6 @@ export type FeedbackSubmission = typeof feedbackSubmissions.$inferSelect;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type TournamentParticipant = typeof tournamentParticipants.$inferSelect;
 export type TournamentMatch = typeof tournamentMatches.$inferSelect;
+export type GameSession = typeof gameSessions.$inferSelect;
+export type AdImpression = typeof adImpressions.$inferSelect;
+export type DailyUserStats = typeof dailyUserStats.$inferSelect;
