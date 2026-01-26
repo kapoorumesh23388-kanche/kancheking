@@ -518,7 +518,7 @@ export default function GamePlay() {
   };
 
   return (
-    <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black">
+    <div className="min-h-screen pt-16 sm:pt-20 md:pt-24 pb-4 sm:pb-8 bg-gradient-to-b from-black via-blue-950 to-black">
       {/* Music Toggle Button */}
       <div className="fixed top-20 right-2 sm:right-5 z-30 flex gap-2">
         <Button
@@ -547,9 +547,9 @@ export default function GamePlay() {
         </Button>
       </div>
 
-      <div className="container max-w-7xl mx-auto px-2 sm:px-5">
-        <div className="mb-4 sm:mb-8">
-          <div className="grid grid-cols-3 gap-1 sm:gap-2 md:gap-4 items-center">
+      <div className="container max-w-7xl mx-auto px-1 sm:px-3 md:px-5">
+        <div className="mb-2 sm:mb-4">
+          <div className="grid grid-cols-3 gap-1 items-center">
             <div className="text-center">
               <PlayerBox
                 name={player1Name}
@@ -562,10 +562,10 @@ export default function GamePlay() {
               />
             </div>
             <div className="text-center flex flex-col items-center justify-center">
-              <div className="text-xl sm:text-2xl md:text-4xl font-black text-primary animate-pulse" style={{ textShadow: '0 0 30px rgba(255,215,0,0.8)' }}>
+              <div className="text-lg sm:text-xl md:text-3xl font-black text-primary animate-pulse" style={{ textShadow: '0 0 20px rgba(255,215,0,0.8)' }}>
                 ⚔️
               </div>
-              <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mt-1 md:mt-2 uppercase tracking-widest font-bold">Battle</p>
+              <p className="text-[8px] sm:text-xs text-muted-foreground uppercase tracking-wider font-bold">Battle</p>
             </div>
             <div className="text-center">
               <PlayerBox
@@ -580,15 +580,15 @@ export default function GamePlay() {
           </div>
         </div>
         
-        <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40 shadow-2xl backdrop-blur-sm mb-6">
-          <CardContent className="p-4 sm:p-8">
+        <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40 shadow-xl backdrop-blur-sm mb-4">
+          <CardContent className="p-2 sm:p-4 md:p-6">
 
             {phase === "selecting" && (
-              <div className="space-y-6">
+              <div className="space-y-2 sm:space-y-4">
                 {isHiderPlayer1 ? (
-                  <Card className="bg-white/5 border-2 border-primary/20">
-                    <CardContent className="p-6">
-                      <h3 className="text-lg sm:text-2xl font-bold text-primary mb-4 text-center">
+                  <Card className="bg-white/5 border border-primary/20">
+                    <CardContent className="p-2 sm:p-4">
+                      <h3 className="text-sm sm:text-lg md:text-xl font-bold text-primary mb-2 text-center">
                         🎯 Select Marbles to Hide
                       </h3>
                       <MarbleSelector
@@ -598,7 +598,7 @@ export default function GamePlay() {
                         maxMarbles={Math.min(20, player1Marbles)}
                       />
                       <Button
-                        className="w-full mt-6 bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground py-6 text-xl font-bold"
+                        className="w-full mt-2 sm:mt-4 bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground py-3 sm:py-4 text-sm sm:text-base md:text-lg font-bold"
                         onClick={handleConfirmSelection}
                         data-testid="button-confirm-selection"
                       >
@@ -607,14 +607,14 @@ export default function GamePlay() {
                     </CardContent>
                   </Card>
                 ) : (
-                  <Card className="bg-white/5 border-2 border-primary/20">
-                    <CardContent className="p-8 text-center">
-                      <h3 className="text-xl sm:text-3xl font-bold text-primary mb-6">
+                  <Card className="bg-white/5 border border-primary/20">
+                    <CardContent className="p-4 sm:p-6 text-center">
+                      <h3 className="text-lg sm:text-2xl font-bold text-primary mb-3">
                         🤖 AI is hiding marbles...
                       </h3>
-                      <div className="text-6xl animate-bounce mb-6">✊</div>
+                      <div className="text-4xl sm:text-5xl animate-bounce mb-3">✊</div>
                       <Button
-                        className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground py-6 text-xl font-bold"
+                        className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground py-3 sm:py-4 text-sm sm:text-base font-bold"
                         onClick={() => {
                           setAiHiddenCount(Math.floor(Math.random() * Math.min(21, player2Marbles + 1)));
                           handleConfirmSelection();
@@ -630,16 +630,16 @@ export default function GamePlay() {
             )}
 
             {phase === "guessing" && (
-              <div className="space-y-6">
+              <div className="space-y-2 sm:space-y-4">
                 <FistDisplay isOpen={false} label={isHiderPlayer1 ? "Your Hidden Marbles" : "AI's Hidden Marbles"} />
                 {isHiderPlayer1 ? (
-                  <div className="bg-white/5 border-2 border-primary/20 rounded-lg p-6 text-center">
-                    <p className="text-2xl font-bold text-primary mb-4">
+                  <div className="bg-white/5 border border-primary/20 rounded-lg p-3 sm:p-4 text-center">
+                    <p className="text-base sm:text-xl font-bold text-primary mb-2 sm:mb-3">
                       {showRevealButton ? "🤖 AI is guessing..." : "Waiting for AI to guess..."}
                     </p>
                     {showRevealButton && (
                       <Button
-                        className="w-full bg-gradient-to-r from-[#00FF88] to-[#00C853] hover:from-[#00FF88]/80 hover:to-[#00C853]/80 text-black py-6 text-2xl font-bold animate-pulse"
+                        className="w-full bg-gradient-to-r from-[#00FF88] to-[#00C853] hover:from-[#00FF88]/80 hover:to-[#00C853]/80 text-black py-3 sm:py-4 text-sm sm:text-lg font-bold animate-pulse"
                         onClick={handleReveal}
                         data-testid="button-reveal"
                       >
@@ -652,7 +652,7 @@ export default function GamePlay() {
                     <GuessingPanel onGuess={handleGuess} maxBet={player1Marbles} />
                     {showRevealButton && (
                       <Button
-                        className="w-full bg-gradient-to-r from-[#00FF88] to-[#00C853] hover:from-[#00FF88]/80 hover:to-[#00C853]/80 text-black py-6 text-2xl font-bold animate-pulse"
+                        className="w-full bg-gradient-to-r from-[#00FF88] to-[#00C853] hover:from-[#00FF88]/80 hover:to-[#00C853]/80 text-black py-3 sm:py-4 text-sm sm:text-lg font-bold animate-pulse"
                         onClick={handleReveal}
                         data-testid="button-reveal"
                       >

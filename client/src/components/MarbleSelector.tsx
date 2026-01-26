@@ -50,13 +50,13 @@ export default function MarbleSelector({
   const marbles = Array.from({ length: maxMarbles }, (_, i) => i);
   
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center gap-4 flex-wrap">
+    <div className="space-y-2 sm:space-y-4">
+      <div className="flex justify-between items-center gap-2 flex-wrap">
         <div>
-          <h3 className="text-2xl font-bold text-primary uppercase tracking-wider">
+          <h3 className="text-base sm:text-xl md:text-2xl font-bold text-primary uppercase tracking-wider">
             {t("selectMarbles")}
           </h3>
-          <p className="text-lg text-[#00FF88] mt-1" style={{ textShadow: '0 0 10px rgba(0,255,136,0.5)' }}>
+          <p className="text-sm sm:text-base text-[#00FF88]" style={{ textShadow: '0 0 10px rgba(0,255,136,0.5)' }}>
             {selectedMarbleIds.length} / {maxMarbles} selected
           </p>
         </div>
@@ -65,17 +65,17 @@ export default function MarbleSelector({
             variant="outline"
             size="sm"
             onClick={onClearAll}
-            className="bg-destructive/30 text-destructive border-destructive/60 hover:bg-destructive/50 font-bold hover:-translate-y-1 transition-all"
+            className="bg-destructive/30 text-destructive border-destructive/60 hover:bg-destructive/50 font-bold text-xs sm:text-sm"
             data-testid="button-clear-all"
           >
-            <X className="w-5 h-5 mr-2" />
-            Clear All
+            <X className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+            Clear
           </Button>
         )}
       </div>
       
-      <div className="p-3 sm:p-6 bg-gradient-to-b from-black/40 to-black/20 rounded-3xl border-2 border-primary/30 shadow-2xl">
-        <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 gap-1.5 sm:gap-3">
+      <div className="p-2 sm:p-4 md:p-6 bg-gradient-to-b from-black/40 to-black/20 rounded-xl sm:rounded-2xl border border-primary/30 shadow-xl">
+        <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 gap-1 sm:gap-2 md:gap-3">
           {marbles.map((id) => {
             const isSelected = selectedMarbleIds.includes(id);
             const order = isSelected ? selectedMarbleIds.indexOf(id) + 1 : null;
@@ -86,10 +86,10 @@ export default function MarbleSelector({
               <button
                 key={id}
                 onClick={() => onToggleMarble(id)}
-                className={`w-9 h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full cursor-pointer transition-all duration-300 transform hover:scale-110 relative group overflow-visible ${
+                className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full cursor-pointer transition-all duration-200 transform hover:scale-105 relative group overflow-visible ${
                   isSelected
-                    ? "ring-2 sm:ring-3 ring-[#00FF88] shadow-[0_0_15px_rgba(0,255,136,0.7)] sm:shadow-[0_0_25px_rgba(0,255,136,0.7)] scale-105 sm:scale-110 z-10"
-                    : "ring-1 ring-white/30 hover:ring-2 hover:ring-white/50 hover:shadow-[0_-4px_12px_rgba(0,0,0,0.6)]"
+                    ? "ring-2 ring-[#00FF88] shadow-[0_0_10px_rgba(0,255,136,0.6)] scale-105 z-10"
+                    : "ring-1 ring-white/30 hover:ring-2 hover:ring-white/50"
                 }`}
                 style={{
                   background: marbleColor.bg,
@@ -118,7 +118,7 @@ export default function MarbleSelector({
                 />
                 {/* Selection number */}
                 {isSelected && (
-                  <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-gradient-to-br from-[#00FF88] to-[#00CC6F] rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold text-black border border-white shadow-md animate-pulse z-20">
+                  <div className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 bg-gradient-to-br from-[#00FF88] to-[#00CC6F] rounded-full flex items-center justify-center text-[8px] sm:text-[10px] md:text-xs font-bold text-black border border-white shadow-sm z-20">
                     {order}
                   </div>
                 )}

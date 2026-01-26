@@ -37,22 +37,16 @@ export default function FistDisplay({
       marbles.push(
         <div
           key={i}
-          className={`w-12 h-12 rounded-full inline-block mx-1 bg-gradient-to-br ${color.grad} transform transition-all animate-bounce relative shadow-lg`}
+          className={`w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full inline-block bg-gradient-to-br ${color.grad} transform transition-all animate-bounce relative shadow-md`}
           style={{
-            boxShadow: `0 0 30px ${color.glow}, 0 8px 16px rgba(0,0,0,0.4), inset -3px -3px 8px rgba(0,0,0,0.5), inset 3px 3px 8px rgba(255,255,255,0.3)`,
-            animationDelay: `${i * 0.1}s`
+            boxShadow: `0 0 15px ${color.glow}, 0 4px 8px rgba(0,0,0,0.4), inset -2px -2px 5px rgba(0,0,0,0.5), inset 2px 2px 5px rgba(255,255,255,0.3)`,
+            animationDelay: `${i * 0.05}s`
           }}
         >
           <div
             className="absolute top-[20%] left-[25%] w-[28%] h-[28%] rounded-full"
             style={{
               background: "radial-gradient(circle, rgba(255,255,255,0.8), transparent)"
-            }}
-          />
-          <div
-            className="absolute bottom-[15%] right-[20%] w-[18%] h-[18%] rounded-full"
-            style={{
-              background: "radial-gradient(circle, rgba(255,255,255,0.5), transparent)"
             }}
           />
         </div>
@@ -62,24 +56,24 @@ export default function FistDisplay({
   };
 
   return (
-    <Card className="bg-gradient-to-br from-primary/20 to-primary/5 border-3 border-primary/40 shadow-2xl">
-      <CardContent className="p-12 text-center">
+    <Card className="bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/40 shadow-xl">
+      <CardContent className="p-4 sm:p-6 md:p-10 text-center">
         <h3
-          className="text-3xl font-bold text-primary mb-6 uppercase tracking-wider"
-          style={{ textShadow: '0 0 20px rgba(255,215,0,0.7)' }}
+          className="text-lg sm:text-2xl md:text-3xl font-bold text-primary mb-2 sm:mb-4 uppercase tracking-wider"
+          style={{ textShadow: '0 0 15px rgba(255,215,0,0.7)' }}
         >
           {label}
         </h3>
         
         {isOpen && marbleCount > 0 && (
-          <div className="mb-8 flex flex-wrap justify-center gap-3 animate-in fade-in duration-500">
+          <div className="mb-3 sm:mb-6 flex flex-wrap justify-center gap-1.5 sm:gap-2 animate-in fade-in duration-500">
             {renderMarbles()}
           </div>
         )}
 
         <div
-          className={`text-9xl cursor-pointer transition-all duration-500 hover:scale-125 ${
-            animate ? "animate-bounce scale-110" : "hover:scale-110"
+          className={`text-5xl sm:text-7xl md:text-8xl cursor-pointer transition-all duration-500 hover:scale-110 ${
+            animate ? "animate-bounce scale-105" : "hover:scale-105"
           }`}
           onClick={handleClick}
           data-testid="fist-icon"
@@ -88,7 +82,7 @@ export default function FistDisplay({
         </div>
 
         {marbleCount > 0 && !isOpen && (
-          <div className="mt-6 text-2xl font-bold text-[#00FF88]" style={{ textShadow: '0 0 10px rgba(0,255,136,0.5)' }}>
+          <div className="mt-2 sm:mt-4 text-base sm:text-xl font-bold text-[#00FF88]" style={{ textShadow: '0 0 10px rgba(0,255,136,0.5)' }}>
             {marbleCount} marble{marbleCount !== 1 ? 's' : ''} hidden 🔒
           </div>
         )}
