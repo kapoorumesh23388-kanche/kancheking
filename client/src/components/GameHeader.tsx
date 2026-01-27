@@ -1,4 +1,4 @@
-import { Settings, User, ArrowLeft, Upload, Globe, HelpCircle, MessageCircle, Volume2, Volume1, VolumeX, Lock } from "lucide-react";
+import { Settings, User, ArrowLeft, Upload, Globe, HelpCircle, MessageCircle, Volume2, Volume1, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useState, useRef, useEffect } from "react";
@@ -172,17 +172,7 @@ export default function GameHeader() {
             >
               <User className="w-5 h-5" />
             </Button>
-            <Button
-                size="icon"
-                variant="ghost"
-                className="rounded-full bg-[#E91E8C]/15 text-[#E91E8C] hover:bg-[#E91E8C]/30 hover:scale-105 transition-all"
-                onClick={() => setLocation("/admin-login")}
-                data-testid="button-admin"
-                title="Admin Panel"
-              >
-                <Lock className="w-5 h-5" />
-              </Button>
-            <Button
+                        <Button
               size="icon"
               variant="ghost"
               className="rounded-full bg-[#00D9FF]/15 text-[#00D9FF] hover:bg-[#00D9FF]/30 hover:scale-105 transition-all"
