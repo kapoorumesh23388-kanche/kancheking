@@ -924,6 +924,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin: Get all users with ad preferences for analytics
   app.get("/api/admin/users", async (req, res) => {
     try {
+      // Check admin authorization
+      const userId = req.headers['x-user-id'] as string;
+      if (userId) {
+        const isAdmin = await checkAdminAuth(userId);
+        if (!isAdmin) {
+          return res.status(403).json({ error: "Access denied. Admin privileges required." });
+        }
+      }
+      
       const allUsers = await storage.getAllUsers();
       
       // Format user data for admin view
@@ -976,6 +985,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin: Get engagement analytics (playtime, ads, earnings)
   app.get("/api/admin/engagement-analytics", async (req, res) => {
     try {
+      // Check admin authorization
+      const userId = req.headers['x-user-id'] as string;
+      if (userId) {
+        const isAdmin = await checkAdminAuth(userId);
+        if (!isAdmin) {
+          return res.status(403).json({ error: "Access denied. Admin privileges required." });
+        }
+      }
+      
       const analytics = await storage.getEngagementAnalytics();
       res.json({ success: true, ...analytics });
     } catch (error) {
@@ -1182,10 +1200,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/change-password", async (req, res) => {
     try {
-      const { token, oldPassword, newPassword } = req.body;
+      const { token, oldPassword, newPassword, userId } = req.body;
       
       if (!token) {
         return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Check if user has admin privileges
+      if (userId) {
+        const isAdmin = await checkAdminAuth(userId);
+        if (!isAdmin) {
+          return res.status(403).json({ error: "Access denied. Admin privileges required." });
+        }
       }
 
       const adminId = "admin";
@@ -1203,6 +1229,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Password change error:", error);
       res.status(500).json({ error: "Failed to change password" });
+    }
+  });
+  
+  // Set user as admin (requires master secret key for security)
+  app.post("/api/admin/set-admin", async (req, res) => {
+    try {
+      const { userId, secretKey } = req.body;
+      
+      // Use a simple master key for setting admin (should be set via environment variable in production)
+      const MASTER_ADMIN_KEY = process.env.ADMIN_MASTER_KEY || "kancheyking_admin_2024";
+      
+      if (secretKey !== MASTER_ADMIN_KEY) {
+        return res.status(403).json({ error: "Invalid secret key" });
+      }
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId required" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      await storage.setUserAsAdmin(userId, true);
+      
+      res.json({ success: true, message: `User ${userId} is now an admin` });
+    } catch (error) {
+      console.error("Set admin error:", error);
+      res.status(500).json({ error: "Failed to set admin" });
     }
   });
 

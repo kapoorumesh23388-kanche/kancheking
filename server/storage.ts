@@ -55,6 +55,7 @@ export interface IStorage {
   verifyOTP(adminId: string, otp: string): Promise<boolean>;
 
   updateUserStripeInfo(userId: string, stripeInfo: { stripeCustomerId?: string; stripeSubscriptionId?: string }): Promise<User | undefined>;
+  setUserAsAdmin(userId: string, isAdmin: boolean): Promise<User | undefined>;
   getProduct(productId: string): Promise<any>;
   getSubscription(subscriptionId: string): Promise<any>;
 
@@ -169,6 +170,7 @@ export class MemStorage implements IStorage {
       adPreferences: null,
       stripeCustomerId: null,
       stripeSubscriptionId: null,
+      isAdmin: false,
       createdAt: new Date(),
       lastActiveAt: null,
     };
@@ -536,6 +538,16 @@ export class MemStorage implements IStorage {
     if (user) {
       if (stripeInfo.stripeCustomerId) user.stripeCustomerId = stripeInfo.stripeCustomerId;
       if (stripeInfo.stripeSubscriptionId) user.stripeSubscriptionId = stripeInfo.stripeSubscriptionId;
+      this.users.set(userId, user);
+      return user;
+    }
+    return undefined;
+  }
+
+  async setUserAsAdmin(userId: string, isAdmin: boolean): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (user) {
+      user.isAdmin = isAdmin;
       this.users.set(userId, user);
       return user;
     }
