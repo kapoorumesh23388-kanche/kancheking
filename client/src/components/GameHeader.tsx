@@ -29,6 +29,7 @@ export default function GameHeader() {
   const [volume, setVolume] = useState(70);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [lastUpdate, setLastUpdate] = useState(() => localStorage.getItem("lastProfileUpdate") || "0");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const syncFromStorage = () => {
@@ -61,6 +62,21 @@ export default function GameHeader() {
       syncFromStorage();
     };
     window.addEventListener("profileUpdated", handleProfileUpdate);
+
+    // Check if user is admin
+    const checkAdminStatus = async () => {
+      const userId = localStorage.getItem("userId");
+      if (userId) {
+        try {
+          const response = await fetch(`/api/user/${userId}/is-admin`);
+          const data = await response.json();
+          setIsAdmin(data.isAdmin || false);
+        } catch (error) {
+          setIsAdmin(false);
+        }
+      }
+    };
+    checkAdminStatus();
     
     return () => {
       window.removeEventListener("storage", syncFromStorage);
@@ -171,16 +187,18 @@ export default function GameHeader() {
             >
               <User className="w-5 h-5" />
             </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="rounded-full bg-[#E91E8C]/15 text-[#E91E8C] hover:bg-[#E91E8C]/30 hover:scale-105 transition-all"
-              onClick={() => setLocation("/admin-login")}
-              data-testid="button-admin"
-              title="Admin Panel"
-            >
-              <Lock className="w-5 h-5" />
-            </Button>
+            {isAdmin && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="rounded-full bg-[#E91E8C]/15 text-[#E91E8C] hover:bg-[#E91E8C]/30 hover:scale-105 transition-all"
+                onClick={() => setLocation("/admin-login")}
+                data-testid="button-admin"
+                title="Admin Panel"
+              >
+                <Lock className="w-5 h-5" />
+              </Button>
+            )}
             <Button
               size="icon"
               variant="ghost"
