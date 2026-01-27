@@ -26,6 +26,7 @@ export const users = pgTable("users", {
   adPreferences: text("ad_preferences").array(),
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
+  isAdmin: boolean("is_admin").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   lastActiveAt: timestamp("last_active_at"),
 });
