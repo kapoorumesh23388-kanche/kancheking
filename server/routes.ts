@@ -897,6 +897,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check if user is admin
+  app.get("/api/user/:userId/is-admin", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.json({ isAdmin: false });
+      }
+      
+      res.json({ isAdmin: user.isAdmin || false });
+    } catch (error) {
+      console.error("Admin check error:", error);
+      res.json({ isAdmin: false });
+    }
+  });
+
+  // Helper function to check admin status for protected routes
+  const checkAdminAuth = async (userId: string): Promise<boolean> => {
+    if (!userId) return false;
+    const user = await storage.getUser(userId);
+    return user?.isAdmin || false;
+  };
+
   // Admin: Get all users with ad preferences for analytics
   app.get("/api/admin/users", async (req, res) => {
     try {
