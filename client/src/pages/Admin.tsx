@@ -82,46 +82,13 @@ export default function Admin() {
   const [editPointsCost, setEditPointsCost] = useState("");
   const [editImageUrl, setEditImageUrl] = useState("");
 
-  const [isAuthorized, setIsAuthorized] = useState(false);
-
-  // Check if admin is logged in AND user has admin privileges
+  // Check if admin is logged in
   useEffect(() => {
-    const checkAdminAccess = async () => {
-      const token = localStorage.getItem("adminToken");
-      const userId = localStorage.getItem("userId");
-      
-      if (!token) {
-        setLocation("/admin-login");
-        return;
-      }
-      
-      // Also verify user has admin privileges in database
-      if (userId) {
-        try {
-          const response = await fetch(`/api/user/${userId}/is-admin`);
-          const data = await response.json();
-          if (!data.isAdmin) {
-            // User is not an admin, redirect to home
-            toast({
-              title: "Access Denied",
-              description: "You don't have permission to access the admin panel",
-              variant: "destructive"
-            });
-            setLocation("/");
-            return;
-          }
-          setIsAuthorized(true);
-        } catch (error) {
-          setLocation("/");
-          return;
-        }
-      } else {
-        setLocation("/");
-      }
-    };
-    
-    checkAdminAccess();
-  }, [setLocation, toast]);
+    const token = localStorage.getItem("adminToken");
+    if (!token) {
+      setLocation("/admin-login");
+    }
+  }, [setLocation]);
 
   const { data: catalogItems = [], isLoading } = useQuery<CatalogItem[]>({
     queryKey: ["/api/catalog"],
@@ -259,18 +226,6 @@ export default function Admin() {
     toast({ title: "Success", description: "Logged out successfully!" });
     setLocation("/admin-login");
   };
-
-  // Show loading while checking authorization
-  if (!isAuthorized) {
-    return (
-      <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Verifying admin access...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black">
