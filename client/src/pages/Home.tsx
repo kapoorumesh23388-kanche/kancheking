@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PlayerProfile from "@/components/PlayerProfile";
@@ -6,6 +6,7 @@ import FloatingMarbles from "@/components/FloatingMarbles";
 import { Link } from "wouter";
 import { useLanguage } from "@/lib/LanguageContext";
 import { t, LANGUAGES, getMarbleName, type Language } from "@/lib/translations";
+import { Volume2, VolumeX } from "lucide-react";
 
 export default function Home() {
   const { language, setLanguage } = useLanguage();
@@ -15,6 +16,50 @@ export default function Home() {
   const [playerRewardPoints, setPlayerRewardPoints] = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const [gamesWon, setGamesWon] = useState(0);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize and play background music
+  useEffect(() => {
+    const audio = new Audio();
+    audio.loop = true;
+    audio.volume = 0.3;
+    audio.src = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+    audioRef.current = audio;
+
+    // Try to play on first user interaction
+    const playOnInteraction = () => {
+      if (audioRef.current && !isMusicPlaying) {
+        audioRef.current.play().then(() => {
+          setIsMusicPlaying(true);
+        }).catch(err => console.log("Audio autoplay prevented:", err));
+      }
+      document.removeEventListener("click", playOnInteraction);
+      document.removeEventListener("touchstart", playOnInteraction);
+    };
+
+    document.addEventListener("click", playOnInteraction);
+    document.addEventListener("touchstart", playOnInteraction);
+
+    return () => {
+      audio.pause();
+      audio.currentTime = 0;
+      document.removeEventListener("click", playOnInteraction);
+      document.removeEventListener("touchstart", playOnInteraction);
+    };
+  }, []);
+
+  const toggleMusic = () => {
+    if (audioRef.current) {
+      if (isMusicPlaying) {
+        audioRef.current.pause();
+        setIsMusicPlaying(false);
+      } else {
+        audioRef.current.play().catch(err => console.log("Audio play error:", err));
+        setIsMusicPlaying(true);
+      }
+    }
+  };
 
   useEffect(() => {
     const loadPlayerProfile = () => {
@@ -49,6 +94,23 @@ export default function Home() {
 
   return (
     <div className="min-h-screen pt-8 md:pt-20 pb-8 md:pb-20 flex flex-col">
+      {/* Floating Music Toggle */}
+      <div className="fixed bottom-4 right-2 z-30">
+        <Button
+          size="icon"
+          variant="outline"
+          className="rounded-full bg-primary/20 text-primary hover:bg-primary/40 border-primary/50 w-10 h-10"
+          onClick={toggleMusic}
+          title={isMusicPlaying ? "Mute Music" : "Play Music"}
+          data-testid="button-music-toggle-home"
+        >
+          {isMusicPlaying ? (
+            <Volume2 className="w-4 h-4" />
+          ) : (
+            <VolumeX className="w-4 h-4" />
+          )}
+        </Button>
+      </div>
       <FloatingMarbles />
       <div className="container max-w-6xl mx-auto px-3 md:px-5 flex-1">
         <div className="text-center mb-4 md:mb-8 p-4 md:p-10 marble-glass rounded-2xl md:rounded-3xl neon-glow-cyan">

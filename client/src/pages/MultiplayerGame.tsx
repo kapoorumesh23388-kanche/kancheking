@@ -86,8 +86,38 @@ export default function MultiplayerGame() {
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const nextHiderRef = useRef<string | null>(null);
   const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showSpinWheel, setShowSpinWheel] = useState(false);
+
+  // Initialize background music
+  useEffect(() => {
+    const audio = new Audio();
+    audio.loop = true;
+    audio.volume = 0.3;
+    audio.src = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+    audioRef.current = audio;
+    
+    if (isMusicEnabled) {
+      audio.play().catch(err => console.log("Audio autoplay prevented:", err));
+    }
+
+    return () => {
+      audio.pause();
+      audio.currentTime = 0;
+    };
+  }, []);
+
+  // Toggle music
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isMusicEnabled) {
+        audioRef.current.play().catch(err => console.log("Audio play error:", err));
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [isMusicEnabled]);
 
   // Show celebration when opponent loses all marbles
   useEffect(() => {
