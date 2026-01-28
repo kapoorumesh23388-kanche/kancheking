@@ -140,10 +140,10 @@ export default function GameChat({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 w-80 h-96 bg-card border-2 border-primary/50 rounded-lg shadow-2xl z-40 flex flex-col">
+    <div className="fixed bottom-16 right-2 w-64 sm:w-72 h-72 sm:h-80 bg-card border-2 border-primary/50 rounded-lg shadow-2xl z-40 flex flex-col">
       {/* Header */}
-      <div className="flex justify-between items-center p-4 border-b border-primary/30 bg-gradient-to-r from-primary/20 to-transparent">
-        <h3 className="text-lg font-bold text-primary">💬 Game Chat</h3>
+      <div className="flex justify-between items-center p-2 border-b border-primary/30 bg-gradient-to-r from-primary/20 to-transparent">
+        <h3 className="text-sm font-bold text-primary">💬 Game Chat</h3>
         <Button
           size="icon"
           variant="ghost"
@@ -204,7 +204,7 @@ export default function GameChat({
       </div>
 
       {/* Quick Messages */}
-      <div className="px-3 pt-2 flex flex-wrap gap-1">
+      <div className="px-2 pt-1 flex flex-wrap gap-1">
         {QUICK_MESSAGES.map((msg) => (
           <button
             key={msg}
@@ -213,7 +213,7 @@ export default function GameChat({
                 onSendMessage({ type: "text", content: msg });
               }
             }}
-            className="text-xs px-2 py-1 rounded-full bg-primary/20 hover:bg-primary/40 text-primary border border-primary/30 transition-colors"
+            className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 hover:bg-primary/40 text-primary border border-primary/30 transition-colors"
             data-testid={`quick-msg-${msg.toLowerCase().replace(/\s+/g, "-")}`}
           >
             {msg}

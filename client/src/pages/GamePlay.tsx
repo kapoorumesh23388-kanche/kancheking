@@ -519,31 +519,31 @@ export default function GamePlay() {
 
   return (
     <div className="min-h-screen pt-16 sm:pt-20 md:pt-24 pb-4 sm:pb-8 bg-gradient-to-b from-black via-blue-950 to-black">
-      {/* Music Toggle Button */}
-      <div className="fixed top-20 right-2 sm:right-5 z-30 flex gap-2">
+      {/* Music Toggle & Chat Buttons - Bottom Right */}
+      <div className="fixed bottom-4 right-2 z-30 flex flex-col gap-2">
         <Button
           size="icon"
           variant="outline"
-          className="rounded-full bg-primary/20 text-primary hover:bg-primary/40 border-primary/50"
+          className="rounded-full bg-primary/20 text-primary hover:bg-primary/40 border-primary/50 w-10 h-10"
           onClick={() => setIsMusicEnabled(!isMusicEnabled)}
           title={isMusicEnabled ? "Mute Music" : "Unmute Music"}
           data-testid="button-music-toggle"
         >
           {isMusicEnabled ? (
-            <Volume2 className="w-5 h-5" />
+            <Volume2 className="w-4 h-4" />
           ) : (
-            <VolumeX className="w-5 h-5" />
+            <VolumeX className="w-4 h-4" />
           )}
         </Button>
         
         <Button
           size="icon"
           variant="outline"
-          className="rounded-full bg-primary/20 text-primary hover:bg-primary/40 border-primary/50"
+          className="rounded-full bg-[#00D9FF]/20 text-[#00D9FF] hover:bg-[#00D9FF]/40 border-[#00D9FF]/50 w-10 h-10"
           onClick={() => setIsChatOpen(!isChatOpen)}
           data-testid="button-open-chat"
         >
-          <MessageCircle className="w-5 h-5" />
+          <MessageCircle className="w-4 h-4" />
         </Button>
       </div>
 

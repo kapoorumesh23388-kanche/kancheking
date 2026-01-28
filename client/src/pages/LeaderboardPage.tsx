@@ -80,8 +80,8 @@ export default function LeaderboardPage() {
   const tournamentEntries = useMemo(() => globalEntries.slice(0, 10), [globalEntries]);
 
   return (
-    <div className="min-h-screen pt-20 pb-10">
-      <div className="container max-w-4xl mx-auto px-5">
+    <div className="min-h-screen pt-20 pb-10 overflow-x-hidden">
+      <div className="container max-w-4xl mx-auto px-3 sm:px-5">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3">
             <h1
@@ -105,33 +105,33 @@ export default function LeaderboardPage() {
           </p>
         </div>
 
-        <Card className="bg-gradient-to-r from-[#00D9FF]/10 to-[#E91E8C]/10 border-2 border-[#00D9FF]/40 mb-6">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-3">
-                  <Trophy className="w-8 h-8 text-[#FFD700]" />
+        <Card className="bg-gradient-to-r from-[#00D9FF]/10 to-[#E91E8C]/10 border-2 border-[#00D9FF]/40 mb-6 overflow-hidden">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-3 sm:gap-6">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-[#FFD700] flex-shrink-0" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Your Winning Marbles</p>
-                    <p className="text-2xl font-bold text-[#00FF88]" data-testid="text-your-winning-marbles">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Your Winning Marbles</p>
+                    <p className="text-xl sm:text-2xl font-bold text-[#00FF88]" data-testid="text-your-winning-marbles">
                       {currentPlayer.winningMarbles}
                     </p>
                   </div>
                 </div>
-                <div className="border-l border-white/20 pl-6">
-                  <p className="text-sm text-muted-foreground">Your Rank</p>
-                  <p className="text-2xl font-bold text-[#FFD700]" data-testid="text-your-rank">
+                <div className="border-l border-white/20 pl-3 sm:pl-6">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Your Rank</p>
+                  <p className="text-xl sm:text-2xl font-bold text-[#FFD700]" data-testid="text-your-rank">
                     #{currentPlayer.rank > 0 ? currentPlayer.rank : "-"}
                   </p>
                 </div>
               </div>
-              <div className="flex gap-3 flex-wrap">
-                <Badge className="bg-[#FFD700]/20 text-[#FFD700] border border-[#FFD700]/40 px-3 py-2">
-                  <Star className="w-4 h-4 mr-1" />
+              <div className="flex gap-2 sm:gap-3 flex-wrap">
+                <Badge className="bg-[#FFD700]/20 text-[#FFD700] border border-[#FFD700]/40 px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm">
+                  <Star className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                   Daily #1 = +50 pts
                 </Badge>
-                <Badge className="bg-[#00FF88]/20 text-[#00FF88] border border-[#00FF88]/40 px-3 py-2">
-                  <Target className="w-4 h-4 mr-1" />
+                <Badge className="bg-[#00FF88]/20 text-[#00FF88] border border-[#00FF88]/40 px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm">
+                  <Target className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                   Beat Opponent = +25 pts
                 </Badge>
               </div>
@@ -139,26 +139,26 @@ export default function LeaderboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-[#0C0418]/80 border-2 border-[#E91E8C]/30 mb-6">
-          <CardContent className="p-4">
-            <h3 className="text-lg font-bold text-[#E91E8C] mb-3 flex items-center gap-2">
-              <Clock className="w-5 h-5" />
+        <Card className="bg-[#0C0418]/80 border-2 border-[#E91E8C]/30 mb-6 overflow-hidden">
+          <CardContent className="p-3 sm:p-4">
+            <h3 className="text-base sm:text-lg font-bold text-[#E91E8C] mb-2 sm:mb-3 flex items-center gap-2">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
               Daily Rewards System
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-              <div className="bg-black/30 rounded-lg p-3 text-center">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 text-xs sm:text-sm">
+              <div className="bg-black/30 rounded-lg p-2 sm:p-3 text-center">
                 <p className="text-[#00D9FF] font-bold">10 min Login</p>
                 <p className="text-[#FFD700]">+50 pts</p>
               </div>
-              <div className="bg-black/30 rounded-lg p-3 text-center">
+              <div className="bg-black/30 rounded-lg p-2 sm:p-3 text-center">
                 <p className="text-[#00D9FF] font-bold">Every Hour</p>
                 <p className="text-[#FFD700]">+50 pts</p>
               </div>
-              <div className="bg-black/30 rounded-lg p-3 text-center">
+              <div className="bg-black/30 rounded-lg p-2 sm:p-3 text-center">
                 <p className="text-[#00D9FF] font-bold">Beat AI</p>
                 <p className="text-[#FFD700]">+25 pts</p>
               </div>
-              <div className="bg-black/30 rounded-lg p-3 text-center">
+              <div className="bg-black/30 rounded-lg p-2 sm:p-3 text-center">
                 <p className="text-[#00D9FF] font-bold">Daily #1</p>
                 <p className="text-[#FFD700]">+50 pts</p>
               </div>
