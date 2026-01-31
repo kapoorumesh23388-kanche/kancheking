@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { X, Plus, Minus } from "lucide-react";
 import greenMarbleImage from "@assets/image_1764089214310.png";
 import { useLanguage } from "@/lib/LanguageContext";
 
@@ -47,7 +49,33 @@ export default function MarbleSelector({
   maxMarbles = 20
 }: MarbleSelectorProps) {
   const { t } = useLanguage();
+  const [manualInput, setManualInput] = useState("");
   const marbles = Array.from({ length: maxMarbles }, (_, i) => i);
+
+  const handleManualInputChange = (value: string) => {
+    const num = parseInt(value);
+    if (value === "" || (num >= 0 && num <= maxMarbles)) {
+      setManualInput(value);
+    }
+  };
+
+  const applyManualInput = () => {
+    const count = parseInt(manualInput);
+    if (count > 0 && count <= maxMarbles) {
+      onClearAll();
+      for (let i = 0; i < count; i++) {
+        onToggleMarble(i);
+      }
+      setManualInput("");
+    }
+  };
+
+  const quickSelect = (count: number) => {
+    onClearAll();
+    for (let i = 0; i < Math.min(count, maxMarbles); i++) {
+      onToggleMarble(i);
+    }
+  };
   
   return (
     <div className="space-y-2 sm:space-y-4">
@@ -72,6 +100,48 @@ export default function MarbleSelector({
             Clear
           </Button>
         )}
+      </div>
+
+      {/* Manual Input Section */}
+      <div className="flex items-center gap-2 p-2 bg-black/30 rounded-lg border border-primary/30">
+        <span className="text-xs sm:text-sm text-primary/80 whitespace-nowrap">Quick:</span>
+        <div className="flex gap-1">
+          {[1, 5, 10, 15, 20].filter(n => n <= maxMarbles).map(num => (
+            <Button
+              key={num}
+              size="sm"
+              variant="outline"
+              onClick={() => quickSelect(num)}
+              className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-xs font-bold bg-primary/20 border-primary/40 hover:bg-primary/40"
+              data-testid={`quick-select-${num}`}
+            >
+              {num}
+            </Button>
+          ))}
+        </div>
+        <div className="flex-1" />
+        <div className="flex items-center gap-1">
+          <Input
+            type="number"
+            min="1"
+            max={maxMarbles}
+            value={manualInput}
+            onChange={(e) => handleManualInputChange(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && applyManualInput()}
+            placeholder="0"
+            className="w-12 h-7 sm:w-14 sm:h-8 text-center text-xs sm:text-sm bg-black/40 border-primary/40 px-1"
+            data-testid="input-manual-marble-count"
+          />
+          <Button
+            size="sm"
+            onClick={applyManualInput}
+            disabled={!manualInput || parseInt(manualInput) < 1}
+            className="h-7 sm:h-8 px-2 text-xs bg-[#00FF88] text-black hover:bg-[#00CC6F]"
+            data-testid="button-apply-manual-count"
+          >
+            Set
+          </Button>
+        </div>
       </div>
       
       <div className="p-2 sm:p-4 md:p-6 bg-gradient-to-b from-black/40 to-black/20 rounded-xl sm:rounded-2xl border border-primary/30 shadow-xl">

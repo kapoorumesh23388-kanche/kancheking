@@ -22,34 +22,30 @@ export default function AgeVerificationDialog({
   onClose,
   onVerified,
 }: AgeVerificationDialogProps) {
-  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [age, setAge] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const calculateAge = (dob: string): number => {
-    const birthDate = new Date(dob);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+  const handleAgeChange = (value: string) => {
+    const num = parseInt(value);
+    if (value === "" || (num >= 1 && num <= 120)) {
+      setAge(value);
     }
-    return age;
   };
 
   const handleVerify = async () => {
-    if (!dateOfBirth) {
+    if (!age) {
       toast({
         title: "Error",
-        description: "Please enter your date of birth",
+        description: "Please enter your age",
         variant: "destructive",
       });
       return;
     }
 
-    const age = calculateAge(dateOfBirth);
+    const ageNum = parseInt(age);
 
-    if (age < 15) {
+    if (ageNum < 15) {
       toast({
         title: "Age Restriction",
         description: "You must be at least 15 years old to make purchases",
@@ -61,7 +57,7 @@ export default function AgeVerificationDialog({
     setIsLoading(true);
     try {
       // Save to localStorage for now (later will be saved to backend)
-      localStorage.setItem("playerDateOfBirth", dateOfBirth);
+      localStorage.setItem("playerAge", age);
       localStorage.setItem("playerIsAgeVerified", "true");
 
       // Dispatch event for other components to listen
@@ -104,20 +100,24 @@ export default function AgeVerificationDialog({
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="dob" className="text-base font-semibold">
-              Date of Birth
+            <Label htmlFor="age" className="text-base font-semibold">
+              Your Age
             </Label>
             <Input
-              id="dob"
-              type="date"
-              value={dateOfBirth}
-              onChange={(e) => setDateOfBirth(e.target.value)}
+              id="age"
+              type="number"
+              inputMode="numeric"
+              min="1"
+              max="120"
+              placeholder="Enter your age (e.g., 18)"
+              value={age}
+              onChange={(e) => handleAgeChange(e.target.value)}
               onKeyPress={handleKeyPress}
-              className="border-2 border-primary/30 bg-white/5 text-base h-10"
-              data-testid="input-date-of-birth"
+              className="border-2 border-primary/30 bg-white/5 text-base h-12 text-center text-lg font-semibold"
+              data-testid="input-age"
             />
             <p className="text-xs text-muted-foreground mt-2">
-              We need your date of birth to verify you are 15 or older. This information is kept private and secure.
+              You must be 15 years or older to make purchases. This information is kept private and secure.
             </p>
           </div>
         </div>
@@ -133,7 +133,7 @@ export default function AgeVerificationDialog({
           </Button>
           <Button
             onClick={handleVerify}
-            disabled={isLoading || !dateOfBirth}
+            disabled={isLoading || !age}
             className="flex-1 bg-gradient-to-r from-primary to-[#FFA500]"
             data-testid="button-verify-age"
           >
