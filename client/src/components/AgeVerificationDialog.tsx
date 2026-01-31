@@ -22,30 +22,69 @@ export default function AgeVerificationDialog({
   onClose,
   onVerified,
 }: AgeVerificationDialogProps) {
-  const [age, setAge] = useState("");
+  const [day, setDay] = useState("");
+  const [month, setMonth] = useState("");
+  const [year, setYear] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleAgeChange = (value: string) => {
+  const handleDayChange = (value: string) => {
     const num = parseInt(value);
-    if (value === "" || (num >= 1 && num <= 120)) {
-      setAge(value);
+    if (value === "" || (value.length <= 2 && num >= 0 && num <= 31)) {
+      setDay(value);
     }
   };
 
+  const handleMonthChange = (value: string) => {
+    const num = parseInt(value);
+    if (value === "" || (value.length <= 2 && num >= 0 && num <= 12)) {
+      setMonth(value);
+    }
+  };
+
+  const handleYearChange = (value: string) => {
+    if (value === "" || (value.length <= 4 && /^\d*$/.test(value))) {
+      setYear(value);
+    }
+  };
+
+  const calculateAge = (d: number, m: number, y: number): number => {
+    const today = new Date();
+    const birthDate = new Date(y, m - 1, d);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
   const handleVerify = async () => {
-    if (!age) {
+    const d = parseInt(day);
+    const m = parseInt(month);
+    const y = parseInt(year);
+
+    if (!day || !month || !year || isNaN(d) || isNaN(m) || isNaN(y)) {
       toast({
         title: "Error",
-        description: "Please enter your age",
+        description: "Please enter your complete date of birth",
         variant: "destructive",
       });
       return;
     }
 
-    const ageNum = parseInt(age);
+    if (d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || y > new Date().getFullYear()) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid date of birth",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    if (ageNum < 15) {
+    const age = calculateAge(d, m, y);
+
+    if (age < 15) {
       toast({
         title: "Age Restriction",
         description: "You must be at least 15 years old to make purchases",
@@ -56,11 +95,10 @@ export default function AgeVerificationDialog({
 
     setIsLoading(true);
     try {
-      // Save to localStorage for now (later will be saved to backend)
-      localStorage.setItem("playerAge", age);
+      const dob = `${day.padStart(2, '0')}-${month.padStart(2, '0')}-${year}`;
+      localStorage.setItem("playerDateOfBirth", dob);
       localStorage.setItem("playerIsAgeVerified", "true");
 
-      // Dispatch event for other components to listen
       window.dispatchEvent(new Event("ageVerified"));
 
       toast({
@@ -100,22 +138,46 @@ export default function AgeVerificationDialog({
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="age" className="text-base font-semibold">
-              Your Age
+            <Label className="text-base font-semibold">
+              Date of Birth (DD-MM-YYYY)
             </Label>
-            <Input
-              id="age"
-              type="number"
-              inputMode="numeric"
-              min="1"
-              max="120"
-              placeholder="Enter your age (e.g., 18)"
-              value={age}
-              onChange={(e) => handleAgeChange(e.target.value)}
-              onKeyPress={handleKeyPress}
-              className="border-2 border-primary/30 bg-white/5 text-base h-12 text-center text-lg font-semibold"
-              data-testid="input-age"
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                type="text"
+                inputMode="numeric"
+                placeholder="DD"
+                value={day}
+                onChange={(e) => handleDayChange(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="border-2 border-primary/30 bg-white/5 text-base h-12 text-center text-lg font-semibold w-16"
+                data-testid="input-day"
+                maxLength={2}
+              />
+              <span className="text-xl text-muted-foreground">-</span>
+              <Input
+                type="text"
+                inputMode="numeric"
+                placeholder="MM"
+                value={month}
+                onChange={(e) => handleMonthChange(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="border-2 border-primary/30 bg-white/5 text-base h-12 text-center text-lg font-semibold w-16"
+                data-testid="input-month"
+                maxLength={2}
+              />
+              <span className="text-xl text-muted-foreground">-</span>
+              <Input
+                type="text"
+                inputMode="numeric"
+                placeholder="YYYY"
+                value={year}
+                onChange={(e) => handleYearChange(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="border-2 border-primary/30 bg-white/5 text-base h-12 text-center text-lg font-semibold flex-1"
+                data-testid="input-year"
+                maxLength={4}
+              />
+            </div>
             <p className="text-xs text-muted-foreground mt-2">
               You must be 15 years or older to make purchases. This information is kept private and secure.
             </p>
@@ -133,7 +195,7 @@ export default function AgeVerificationDialog({
           </Button>
           <Button
             onClick={handleVerify}
-            disabled={isLoading || !age}
+            disabled={isLoading || !day || !month || !year}
             className="flex-1 bg-gradient-to-r from-primary to-[#FFA500]"
             data-testid="button-verify-age"
           >
