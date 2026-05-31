@@ -1,440 +1,515 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, Loader2, Share2, Link, MessageCircle, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Copy, Check, Share2, Link, MessageCircle, Users, Tv, Gift, ShoppingBag, History, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import AgeVerificationDialog from "@/components/AgeVerificationDialog";
 import type { CatalogItem } from "@shared/schema";
-import { getTotalMarbles, getRewardPoints, initializeMarbles, addMarbles } from "@/lib/marbleStorage";
+import {
+  getTotalMarbles,
+  getRewardPoints,
+  initializeMarbles,
+  addMarbles,
+  buyMarblesWithPoints,
+} from "@/lib/marbleStorage";
+import {
+  getRedemptionHistory,
+  addRedemptionHistoryEntry,
+  getPointsHistory,
+  type PointsHistoryEntry,
+  type RedemptionHistoryEntry,
+} from "@/lib/rewardsStorage";
 
-// Generate unique referral code from player name
 function generateReferralCode(name: string): string {
-  const cleanName = name.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6);
+  const cleanName = name.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 6);
   const randomNum = Math.floor(1000 + Math.random() * 9000);
-  return `${cleanName || 'PLAYER'}${randomNum}`;
+  return `${cleanName || "PLAYER"}${randomNum}`;
 }
+
+// Ad packs — player must watch ALL ads to earn marbles; no cancel button
+const AD_PACKS = [
+  { id: "ad1", adsCount: 1, marbles: 15, label: "Watch 1 Ad → 15 Marbles" },
+  { id: "ad2", adsCount: 3, marbles: 40, label: "Watch 3 Ads → 40 Marbles" },
+  { id: "ad3", adsCount: 5, marbles: 75, label: "Watch 5 Ads → 75 Marbles" },
+  { id: "ad4", adsCount: 10, marbles: 170, label: "Watch 10 Ads → 170 Marbles" },
+];
+
+// Marble packs buyable with reward points
+const MARBLE_PACKS_POINTS = [
+  { points: 500, marbles: 50 },
+  { points: 900, marbles: 100 },
+  { points: 2000, marbles: 250 },
+  { points: 5000, marbles: 700 },
+  { points: 10000, marbles: 1600 },
+];
+
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+const POINT_TYPE_LABELS: Record<PointsHistoryEntry["type"], string> = {
+  daily_login: "🌅 Daily Login Bonus",
+  hourly_play: "⏱️ Play Time Reward",
+  ai_defeat: "🤖 AI Defeat Bonus",
+  tournament_win: "🏆 Tournament Win",
+  leaderboard_bonus: "👑 Monthly #1 Bonus",
+  pvp_win: "⚔️ PvP Win Bonus",
+};
 
 export default function Shop() {
   const { toast } = useToast();
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [marbleCount, setMarbleCount] = useState(0);
   const [pointCount, setPointCount] = useState(0);
-  const [gamesWon, setGamesWon] = useState(0);
-  const [isAgeVerified, setIsAgeVerified] = useState(() => 
-    localStorage.getItem("playerIsAgeVerified") === "true"
-  );
-  const [showAgeDialog, setShowAgeDialog] = useState(false);
-  const userId = localStorage.getItem("userId") || "test-user";
-  
-  // Generate and persist unique referral code per player
+  const [activeTab, setActiveTab] = useState<"ads" | "points" | "referral" | "catalog" | "history">("ads");
+  const [adWatchState, setAdWatchState] = useState<{
+    packId: string | null;
+    adsWatched: number;
+    adsTotal: number;
+    marblesReward: number;
+    watching: boolean;
+    countdown: number;
+  }>({ packId: null, adsWatched: 0, adsTotal: 0, marblesReward: 0, watching: false, countdown: 30 });
+  const [pointsHistory, setPointsHistory] = useState<PointsHistoryEntry[]>([]);
+  const [redemptionHistory, setRedemptionHistory] = useState<RedemptionHistoryEntry[]>([]);
+
   const [referralCode] = useState(() => {
     const storedCode = localStorage.getItem("playerReferralCode");
     if (storedCode) return storedCode;
-    
     const playerName = localStorage.getItem("playerName") || "Player";
     const newCode = generateReferralCode(playerName);
     localStorage.setItem("playerReferralCode", newCode);
     return newCode;
   });
-  
-  // Track referral stats
+
   const referralCount = parseInt(localStorage.getItem("referralCount") || "0");
-  const referralEarnings = referralCount * 50; // 50 marbles per referral
-  
-  // Get referral link
+  const referralEarnings = referralCount * 50;
   const referralLink = `${window.location.origin}?ref=${referralCode}`;
 
-  // Initialize marbles on first load
   useEffect(() => {
     initializeMarbles();
   }, []);
 
-  // Real-time update of stats
   const updateStats = useCallback(() => {
     setMarbleCount(getTotalMarbles());
     setPointCount(getRewardPoints());
-    setGamesWon(parseInt(localStorage.getItem("gamesWon") || "0"));
+    setPointsHistory(getPointsHistory());
+    setRedemptionHistory(getRedemptionHistory());
   }, []);
 
-  // Update stats every 2 seconds for real-time display
   useEffect(() => {
     updateStats();
     const interval = setInterval(updateStats, 2000);
-    
-    const handleStorageChange = () => updateStats();
-    window.addEventListener("storage", handleStorageChange);
-    
-    const handleAgeVerified = () => {
-      setIsAgeVerified(true);
-      toast({
-        title: "Success",
-        description: "Age verified! You can now purchase marbles.",
-      });
-    };
-    window.addEventListener("ageVerified", handleAgeVerified);
-    
+    window.addEventListener("storage", updateStats);
+    window.addEventListener("rewardPointsUpdate", updateStats);
+    window.addEventListener("marbleUpdate", updateStats);
     return () => {
       clearInterval(interval);
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("ageVerified", handleAgeVerified);
+      window.removeEventListener("storage", updateStats);
+      window.removeEventListener("rewardPointsUpdate", updateStats);
+      window.removeEventListener("marbleUpdate", updateStats);
     };
-  }, [toast, updateStats]);
+  }, [updateStats]);
 
-  const { data: catalogItems = [], isLoading: isLoadingCatalog } = useQuery<CatalogItem[]>({
-    queryKey: ["/api/catalog"],
-  });
+  const { data: catalogItems = [] } = useQuery<CatalogItem[]>({ queryKey: ["/api/catalog"] });
 
-  const marblePacks = [
-    { price: 10, marbles: 50, savings: 0 },
-    { price: 20, marbles: 120, savings: 0 },
-    { price: 50, marbles: 350, savings: 0 },
-    { price: 100, marbles: 800, savings: 0 },
-    { price: 200, marbles: 1800, savings: 0 },
-    { price: 500, marbles: 5000, savings: 0 },
-  ];
+  // --- Ad watching logic ---
+  const startWatchingAds = (pack: typeof AD_PACKS[0]) => {
+    setAdWatchState({
+      packId: pack.id,
+      adsWatched: 0,
+      adsTotal: pack.adsCount,
+      marblesReward: pack.marbles,
+      watching: true,
+      countdown: 30,
+    });
+    startSingleAd();
+  };
 
+  const startSingleAd = () => {
+    // Each ad is 30 seconds; no cancel allowed
+    setAdWatchState((prev) => ({ ...prev, countdown: 30 }));
+  };
+
+  useEffect(() => {
+    if (!adWatchState.watching) return;
+
+    if (adWatchState.countdown > 0) {
+      const timer = setTimeout(() => {
+        setAdWatchState((prev) => ({ ...prev, countdown: prev.countdown - 1 }));
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else {
+      // Ad finished
+      const nextWatched = adWatchState.adsWatched + 1;
+      if (nextWatched >= adWatchState.adsTotal) {
+        // All ads done — reward marbles
+        addMarbles("ads", adWatchState.marblesReward);
+        toast({
+          title: "🎉 Ads Complete!",
+          description: `You earned ${adWatchState.marblesReward} marbles!`,
+        });
+        setAdWatchState({ packId: null, adsWatched: 0, adsTotal: 0, marblesReward: 0, watching: false, countdown: 30 });
+      } else {
+        // Next ad
+        setAdWatchState((prev) => ({ ...prev, adsWatched: nextWatched, countdown: 30 }));
+      }
+    }
+  }, [adWatchState.watching, adWatchState.countdown]);
+
+  // --- Buy marbles with points ---
+  const handleBuyWithPoints = (pack: typeof MARBLE_PACKS_POINTS[0]) => {
+    if (pointCount < pack.points) {
+      toast({ title: "Not enough points", description: `You need ${pack.points} points.`, variant: "destructive" });
+      return;
+    }
+    const success = buyMarblesWithPoints(pack.marbles, pack.points);
+    if (success) {
+      addRedemptionHistoryEntry({
+        date: new Date().toISOString(),
+        type: "marble_purchase",
+        pointsSpent: pack.points,
+        marblesReceived: pack.marbles,
+        description: `Bought ${pack.marbles} marbles for ${pack.points} points`,
+      });
+      updateStats();
+      toast({ title: "✅ Purchase Successful!", description: `${pack.marbles} marbles added to your account.` });
+    }
+  };
+
+  // --- Referral actions ---
   const copyReferralCode = () => {
     navigator.clipboard.writeText(referralCode);
     setCopiedCode(true);
-    toast({
-      title: "Copied!",
-      description: "Referral code copied to clipboard",
-    });
+    toast({ title: "Copied!", description: "Referral code copied to clipboard" });
     setTimeout(() => setCopiedCode(false), 2000);
   };
-  
+
   const copyReferralLink = () => {
     navigator.clipboard.writeText(referralLink);
     setCopiedLink(true);
-    toast({
-      title: "Link Copied!",
-      description: "Referral link copied to clipboard",
-    });
+    toast({ title: "Link Copied!", description: "Referral link copied to clipboard" });
     setTimeout(() => setCopiedLink(false), 2000);
   };
-  
+
   const shareViaWhatsApp = () => {
     const message = `Hey! Join me on Kanchey King - the classic marble game! Use my code ${referralCode} to get bonus marbles. Download now: ${referralLink}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
   };
-  
+
   const shareNative = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: 'Join Kanchey King!',
-          text: `Play the classic marble game with me! Use code ${referralCode} for bonus marbles.`,
-          url: referralLink,
-        });
-      } catch (err) {
-        // User cancelled or share failed, fallback to copy
+        await navigator.share({ title: "Join Kanchey King!", text: `Play the classic marble game! Use code ${referralCode}`, url: referralLink });
+      } catch {
         copyReferralLink();
       }
     } else {
-      // Fallback for browsers without native share
       copyReferralLink();
     }
   };
 
-  const handleBuyMarbles = async (pack: typeof marblePacks[0]) => {
-    if (!isAgeVerified) {
-      setShowAgeDialog(true);
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const res = await apiRequest("POST", "/api/marble-purchase", {
-        userId,
-        marblesCount: pack.marbles,
-        amount: pack.price,
-      });
-      const data = await res.json();
-      
-      if (data.url) {
-        // Redirect to Stripe Checkout
-        window.location.href = data.url;
-      } else {
-        toast({
-          title: "Error",
-          description: data.error || "Failed to create checkout session",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to process payment",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handle payment success/cancel from URL params
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const paymentStatus = urlParams.get('payment');
-    const sessionId = urlParams.get('session_id');
-    
-    if (paymentStatus === 'success' && sessionId) {
-      // Verify payment and add marbles
-      const verifyPayment = async () => {
-        try {
-          const res = await apiRequest("POST", "/api/marble-purchase/verify", {
-            sessionId,
-          });
-          const data = await res.json();
-          
-          if (data.success && !data.alreadyProcessed) {
-            updateStats();
-            toast({
-              title: "Payment Successful!",
-              description: "Marbles have been added to your account!",
-            });
-          } else if (data.alreadyProcessed) {
-            toast({
-              title: "Already Processed",
-              description: "This payment was already verified.",
-            });
-          }
-        } catch (error) {
-          console.error("Payment verification error:", error);
-        }
-        
-        // Clean up URL params
-        window.history.replaceState({}, '', '/shop');
-      };
-      
-      verifyPayment();
-    } else if (paymentStatus === 'cancelled') {
-      toast({
-        title: "Payment Cancelled",
-        description: "Your payment was cancelled.",
-        variant: "destructive",
-      });
-      window.history.replaceState({}, '', '/shop');
-    }
-  }, []);
+  const tabs = [
+    { id: "ads", label: "Watch Ads", icon: <Tv className="w-4 h-4" /> },
+    { id: "points", label: "Redeem Points", icon: <Gift className="w-4 h-4" /> },
+    { id: "catalog", label: "Catalog", icon: <ShoppingBag className="w-4 h-4" /> },
+    { id: "referral", label: "Referral", icon: <Users className="w-4 h-4" /> },
+    { id: "history", label: "History", icon: <History className="w-4 h-4" /> },
+  ] as const;
 
   return (
     <div className="min-h-screen pt-20 pb-10">
-      <AgeVerificationDialog 
-        isOpen={showAgeDialog}
-        onClose={() => setShowAgeDialog(false)}
-        onVerified={() => {
-          setShowAgeDialog(false);
-          setIsAgeVerified(true);
-        }}
-      />
-      <div className="container max-w-6xl mx-auto px-5">
-        <h2 className="text-5xl font-bold text-primary mb-8 text-center" style={{ textShadow: '0 0 20px rgba(255,215,0,0.5)' }}>
-          Shop & Marketplace
+      <div className="container max-w-4xl mx-auto px-4">
+        <h2 className="text-4xl font-bold text-primary mb-2 text-center" style={{ textShadow: "0 0 20px rgba(255,215,0,0.5)" }}>
+          Shop & Rewards
         </h2>
 
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        {/* Stats bar */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
           <Card className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/30">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-muted-foreground mb-2">Available Marbles</p>
-                <p className="text-3xl font-bold text-yellow-500">{marbleCount}</p>
-              </div>
+            <CardContent className="pt-4 pb-4 text-center">
+              <p className="text-muted-foreground text-sm">🪨 Marbles</p>
+              <p className="text-2xl font-bold text-yellow-400">{marbleCount}</p>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-purple-500/30">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-muted-foreground mb-2">Redeemable Points</p>
-                <p className="text-3xl font-bold text-purple-500">{pointCount}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-500/30">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-muted-foreground mb-2">Games Won</p>
-                <p className="text-3xl font-bold text-blue-500" data-testid="text-games-won">{gamesWon}</p>
-              </div>
+            <CardContent className="pt-4 pb-4 text-center">
+              <p className="text-muted-foreground text-sm">⭐ Reward Points</p>
+              <p className="text-2xl font-bold text-purple-400">{pointCount.toLocaleString()}</p>
             </CardContent>
           </Card>
         </div>
 
-        <Card className="mb-8 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-6 h-6 text-green-400" />
-              Referral Program - Earn 50 Marbles per Friend
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Stats Row */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-green-500/20 rounded-lg p-4 text-center">
-                <p className="text-sm text-muted-foreground">Friends Referred</p>
-                <p className="text-3xl font-bold text-green-400" data-testid="text-referral-count">{referralCount}</p>
-              </div>
-              <div className="bg-yellow-500/20 rounded-lg p-4 text-center">
-                <p className="text-sm text-muted-foreground">Marbles Earned</p>
-                <p className="text-3xl font-bold text-yellow-400" data-testid="text-referral-earnings">{referralEarnings}</p>
-              </div>
-            </div>
+        {/* Ad Watch Modal */}
+        {adWatchState.watching && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <Card className="w-full max-w-sm mx-4 bg-gradient-to-b from-[#1a0a2e] to-[#0d0416] border-2 border-[#00D9FF]/50">
+              <CardHeader>
+                <CardTitle className="text-center text-[#00D9FF]">
+                  📺 Watching Ad {adWatchState.adsWatched + 1} of {adWatchState.adsTotal}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-center">
+                <div className="relative mx-auto w-24 h-24">
+                  <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#ffffff20" strokeWidth="8" />
+                    <circle
+                      cx="50" cy="50" r="45" fill="none"
+                      stroke="#00D9FF" strokeWidth="8"
+                      strokeDasharray={`${2 * Math.PI * 45}`}
+                      strokeDashoffset={`${2 * Math.PI * 45 * (adWatchState.countdown / 30)}`}
+                      strokeLinecap="round"
+                      style={{ transition: "stroke-dashoffset 1s linear" }}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-3xl font-bold text-white">{adWatchState.countdown}</span>
+                  </div>
+                </div>
+                <div className="bg-black/40 rounded-xl p-4 flex items-center justify-center" style={{ minHeight: 120 }}>
+                  <p className="text-[#00D9FF]/70 text-sm">[ Ad Playing... ]</p>
+                </div>
+                <p className="text-yellow-400 font-semibold">
+                  Reward: {adWatchState.marblesReward} marbles after all ads
+                </p>
+                <div className="flex gap-2 justify-center">
+                  {Array.from({ length: adWatchState.adsTotal }).map((_, i) => (
+                    <div
+                      key={i}
+                      className={`w-3 h-3 rounded-full ${i < adWatchState.adsWatched ? "bg-green-400" : i === adWatchState.adsWatched ? "bg-[#00D9FF] animate-pulse" : "bg-white/20"}`}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">⚠️ You must watch all ads to receive marbles.</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-            {/* Referral Code */}
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">Your Unique Referral Code</p>
-              <div className="bg-background rounded-lg p-4 flex items-center justify-between gap-2">
-                <code className="text-xl font-mono font-bold text-primary tracking-wider" data-testid="text-referral-code">{referralCode}</code>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={copyReferralCode}
-                  className="gap-2"
-                  data-testid="button-copy-referral"
-                >
-                  {copiedCode ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copiedCode ? "Copied" : "Copy Code"}
-                </Button>
-              </div>
-            </div>
+        {/* Tab nav */}
+        <div className="flex gap-1 mb-6 bg-black/30 p-1 rounded-xl overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
+                activeTab === tab.id
+                  ? "bg-primary text-primary-foreground shadow"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </div>
 
-            {/* Share Options */}
-            <div>
-              <p className="text-sm text-muted-foreground mb-3">Share with friends</p>
-              <div className="grid grid-cols-3 gap-3">
-                <Button
-                  onClick={shareViaWhatsApp}
-                  className="bg-green-600 hover:bg-green-700 gap-2"
-                  data-testid="button-share-whatsapp"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  WhatsApp
-                </Button>
-                <Button
-                  onClick={copyReferralLink}
-                  variant="outline"
-                  className="gap-2"
-                  data-testid="button-copy-link"
-                >
-                  {copiedLink ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
-                  {copiedLink ? "Copied!" : "Copy Link"}
-                </Button>
-                <Button
-                  onClick={shareNative}
-                  variant="secondary"
-                  className="gap-2"
-                  data-testid="button-share-native"
-                >
-                  <Share2 className="w-4 h-4" />
-                  Share
-                </Button>
-              </div>
+        {/* Watch Ads Tab */}
+        {activeTab === "ads" && (
+          <div className="space-y-4">
+            <div className="text-center mb-2">
+              <p className="text-muted-foreground text-sm">Watch ads to earn free marbles. You must watch every ad — no skipping!</p>
             </div>
-
-            {/* Referral Link Preview */}
-            <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground mb-1">Your Referral Link</p>
-              <p className="text-sm font-mono text-muted-foreground truncate" data-testid="text-referral-link">{referralLink}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="mb-8">
-          <h3 className="text-2xl font-bold mb-4">💎 Premium Catalog - Redeem with Points</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {catalogItems && catalogItems.length > 0 ? (
-              catalogItems.map((item) => (
-                <Card key={item.id} className="hover:shadow-lg transition-shadow border-primary/20">
-                  <CardHeader>
-                    <CardTitle className="text-lg">{item.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-center space-y-3">
-                    <p className="text-muted-foreground text-sm">{item.description}</p>
-                    <p className="text-2xl font-bold text-purple-400">{item.pointsCost?.toLocaleString()} Points</p>
-                    <p className="text-xs text-muted-foreground">Worth ~₹{(item.pointsCost || 0 / 10).toLocaleString()}</p>
-                    <Button 
-                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold"
-                      disabled={pointCount < (item.pointsCost || 0)}
-                      data-testid={`button-redeem-${item.id}`}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {AD_PACKS.map((pack) => (
+                <Card key={pack.id} className="border-[#00D9FF]/30 bg-gradient-to-br from-[#00D9FF]/10 to-transparent">
+                  <CardContent className="pt-5 pb-5 text-center space-y-3">
+                    <div className="text-4xl">📺</div>
+                    <p className="font-bold text-lg text-[#00D9FF]">{pack.label}</p>
+                    <p className="text-sm text-muted-foreground">{pack.adsCount} × 30s ads</p>
+                    <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/40">
+                      +{pack.marbles} Marbles
+                    </Badge>
+                    <Button
+                      className="w-full bg-gradient-to-r from-[#00D9FF] to-[#E91E8C] font-bold"
+                      onClick={() => startWatchingAds(pack)}
                     >
-                      {pointCount >= (item.pointsCost || 0) ? "Redeem" : "Not Enough Points"}
+                      Watch Now
                     </Button>
                   </CardContent>
                 </Card>
-              ))
-            ) : (
-              <Card className="col-span-full bg-blue-500/10 border-blue-500/30">
-                <CardContent className="pt-6 text-center">
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Redeem Points Tab */}
+        {activeTab === "points" && (
+          <div className="space-y-4">
+            <div className="text-center mb-2">
+              <p className="text-muted-foreground text-sm">
+                Use your Reward Points to buy marbles. Your balance: <span className="text-purple-400 font-bold">{pointCount.toLocaleString()} pts</span>
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {MARBLE_PACKS_POINTS.map((pack) => (
+                <Card key={pack.points} className="border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-transparent">
+                  <CardContent className="pt-5 pb-5 text-center space-y-3">
+                    <div className="text-4xl">💎</div>
+                    <p className="text-2xl font-bold text-yellow-400">{pack.marbles} Marbles</p>
+                    <p className="text-purple-400 font-semibold">{pack.points.toLocaleString()} Points</p>
+                    <Button
+                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 font-bold"
+                      disabled={pointCount < pack.points}
+                      onClick={() => handleBuyWithPoints(pack)}
+                    >
+                      {pointCount >= pack.points ? "Redeem" : "Need More Points"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Catalog Tab */}
+        {activeTab === "catalog" && (
+          <div className="space-y-4">
+            <div className="text-center mb-2">
+              <p className="text-muted-foreground text-sm">Exclusive items redeemable with Reward Points. Updated quarterly by admin.</p>
+            </div>
+            {catalogItems.length === 0 ? (
+              <Card className="bg-blue-500/10 border-blue-500/30">
+                <CardContent className="pt-6 text-center py-10">
                   <p className="text-muted-foreground mb-2">📦 No Premium Items Available</p>
-                  <p className="text-sm text-muted-foreground">Check back when catalog updates quarterly with exclusive items!</p>
+                  <p className="text-sm text-muted-foreground">Check back when catalog updates quarterly!</p>
                 </CardContent>
               </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {catalogItems.map((item) => (
+                  <Card key={item.id} className="border-primary/20">
+                    <CardHeader>
+                      <CardTitle className="text-lg">{item.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-center space-y-3">
+                      <p className="text-muted-foreground text-sm">{item.description}</p>
+                      <p className="text-2xl font-bold text-purple-400">{item.pointsCost?.toLocaleString()} Points</p>
+                      <Button
+                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 font-bold"
+                        disabled={pointCount < (item.pointsCost || 0)}
+                        data-testid={`button-redeem-${item.id}`}
+                      >
+                        {pointCount >= (item.pointsCost || 0) ? "Redeem" : "Not Enough Points"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             )}
           </div>
-        </div>
+        )}
 
-        <div className="mb-8">
-          <h3 className="text-2xl font-bold mb-6">💎 Buy Marbles</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {marblePacks.map((pack) => (
-              <Card key={pack.price} className="hover:shadow-lg transition-shadow border-primary/20">
-                <CardHeader>
-                  <CardTitle className="text-center">₹{pack.price}/-</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                  <p className="text-4xl font-bold text-yellow-500 mb-4">{pack.marbles}</p>
-                  <p className="text-muted-foreground mb-4">Marbles</p>
-                  {pack.savings > 0 && (
-                    <p className="text-sm text-green-500 font-semibold mb-4">Save {pack.savings}%</p>
-                  )}
-                  <Button 
-                    onClick={() => handleBuyMarbles(pack)}
-                    className="w-full"
-                    disabled={isLoading}
-                    data-testid={`button-buy-${pack.marbles}`}
-                  >
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                    {isAgeVerified ? "Buy Now" : "Verify Age to Buy"}
+        {/* Referral Tab */}
+        {activeTab === "referral" && (
+          <Card className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-6 h-6 text-green-400" />
+                Referral Program — Earn 50 Marbles per Friend
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-green-500/20 rounded-lg p-4 text-center">
+                  <p className="text-sm text-muted-foreground">Friends Referred</p>
+                  <p className="text-3xl font-bold text-green-400" data-testid="text-referral-count">{referralCount}</p>
+                </div>
+                <div className="bg-yellow-500/20 rounded-lg p-4 text-center">
+                  <p className="text-sm text-muted-foreground">Marbles Earned</p>
+                  <p className="text-3xl font-bold text-yellow-400" data-testid="text-referral-earnings">{referralEarnings}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Your Unique Referral Code</p>
+                <div className="bg-background rounded-lg p-4 flex items-center justify-between gap-2">
+                  <code className="text-xl font-mono font-bold text-primary tracking-wider" data-testid="text-referral-code">{referralCode}</code>
+                  <Button size="sm" variant="outline" onClick={copyReferralCode} className="gap-2" data-testid="button-copy-referral">
+                    {copiedCode ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copiedCode ? "Copied" : "Copy Code"}
                   </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-2xl font-bold mb-6">🎪 Points Catalog (Updated quarterly by admin)</h3>
-          <Card>
-            <CardContent className="pt-6">
-              {isLoadingCatalog ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin" />
                 </div>
-              ) : catalogItems.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No items in catalog yet</p>
-                  <p className="text-sm">Admin will add items each quarter.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {catalogItems.map((item) => (
-                    <div key={item.id} className="flex justify-between items-center p-3 bg-white/5 rounded-lg border border-primary/20">
-                      <div>
-                        <p className="font-semibold text-primary">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">{item.description}</p>
-                      </div>
-                      <p className="font-bold text-purple-400">{item.pointsCost?.toLocaleString()} pts</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <Button onClick={shareViaWhatsApp} className="bg-green-600 hover:bg-green-700 gap-2" data-testid="button-share-whatsapp">
+                  <MessageCircle className="w-4 h-4" /> WhatsApp
+                </Button>
+                <Button onClick={copyReferralLink} variant="outline" className="gap-2" data-testid="button-copy-link">
+                  {copiedLink ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
+                  {copiedLink ? "Copied!" : "Copy Link"}
+                </Button>
+                <Button onClick={shareNative} variant="secondary" className="gap-2" data-testid="button-share-native">
+                  <Share2 className="w-4 h-4" /> Share
+                </Button>
+              </div>
+              <div className="bg-muted/50 rounded-lg p-3">
+                <p className="text-xs text-muted-foreground mb-1">Your Referral Link</p>
+                <p className="text-sm font-mono text-muted-foreground truncate" data-testid="text-referral-link">{referralLink}</p>
+              </div>
             </CardContent>
           </Card>
-        </div>
+        )}
+
+        {/* History Tab */}
+        {activeTab === "history" && (
+          <div className="space-y-6">
+            {/* Points History */}
+            <Card className="border-purple-500/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-purple-400">
+                  <Clock className="w-5 h-5" /> Points Earned History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {pointsHistory.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-6">No points earned yet. Play to start earning!</p>
+                ) : (
+                  <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                    {pointsHistory.map((entry) => (
+                      <div key={entry.id} className="flex items-center justify-between bg-black/30 rounded-lg px-3 py-2">
+                        <div>
+                          <p className="font-semibold text-sm">{POINT_TYPE_LABELS[entry.type] || entry.type}</p>
+                          <p className="text-xs text-muted-foreground">{formatDate(entry.date)}</p>
+                          <p className="text-xs text-muted-foreground/70">{entry.description}</p>
+                        </div>
+                        <span className="text-green-400 font-bold text-lg">+{entry.points}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Redemption History */}
+            <Card className="border-yellow-500/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-yellow-400">
+                  <History className="w-5 h-5" /> Points Redemption History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {redemptionHistory.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-6">No redemptions yet. Use points to buy marbles!</p>
+                ) : (
+                  <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                    {redemptionHistory.map((entry) => (
+                      <div key={entry.id} className="flex items-center justify-between bg-black/30 rounded-lg px-3 py-2">
+                        <div>
+                          <p className="font-semibold text-sm">🪨 {entry.marblesReceived} Marbles</p>
+                          <p className="text-xs text-muted-foreground">{formatDate(entry.date)}</p>
+                          <p className="text-xs text-muted-foreground/70">{entry.description}</p>
+                        </div>
+                        <span className="text-red-400 font-bold text-lg">-{entry.pointsSpent} pts</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );

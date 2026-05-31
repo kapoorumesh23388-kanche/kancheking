@@ -7,6 +7,7 @@ import { Link } from "wouter";
 import { useLanguage } from "@/lib/LanguageContext";
 import { t, LANGUAGES, getMarbleName, type Language } from "@/lib/translations";
 import { Volume2, VolumeX } from "lucide-react";
+import { checkAndClaimDailyLoginBonus, initializeDailyRewards } from "@/lib/rewardsStorage";
 
 export default function Home() {
   const { language, setLanguage } = useLanguage();
@@ -60,6 +61,16 @@ export default function Home() {
       }
     }
   };
+
+  // Claim daily login bonus on first visit each day
+  useEffect(() => {
+    initializeDailyRewards();
+    const result = checkAndClaimDailyLoginBonus();
+    if (result.claimed) {
+      // Dispatch so UI updates
+      window.dispatchEvent(new Event("rewardPointsUpdate"));
+    }
+  }, []);
 
   useEffect(() => {
     const loadPlayerProfile = () => {

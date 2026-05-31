@@ -80,7 +80,7 @@ export default function Tournament() {
   
   const entryFee = 2500;
   const winnerPoints = 250000;
-  const pointValue = 25000;
+  
   
   // Initialize marbles on first load
   useEffect(() => {
@@ -144,7 +144,7 @@ export default function Tournament() {
       const needed = getMarblesNeededForTournament();
       toast({
         title: "Not Eligible",
-        description: `You need ${needed.toLocaleString()} more eligible marbles (purchased or PvP wins). AI wins don't count.`,
+        description: `You need ${needed.toLocaleString()} more PvP Win Marbles. Only PvP wins count for tournament eligibility.`,
         variant: "destructive",
       });
       return;
@@ -224,7 +224,7 @@ export default function Tournament() {
                 <p className="text-2xl font-bold text-yellow-500" data-testid="text-eligible-marbles">
                   {eligibleMarbles.toLocaleString()}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">Purchased + PvP Wins</p>
+                <p className="text-xs text-muted-foreground mt-1">PvP Wins Only</p>
               </div>
             </CardContent>
           </Card>
@@ -296,11 +296,9 @@ export default function Tournament() {
               <div>
                 <p className="text-sm font-semibold text-primary">Tournament Winner</p>
                 <p className="text-2xl font-bold text-yellow-400">{winnerPoints.toLocaleString()} Points</p>
-                <p className="text-xs text-muted-foreground mt-1">Worth ~₹{(winnerPoints / 10).toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-sm font-semibold text-primary">Points Value</p>
-                <p className="text-2xl font-bold text-green-400">~₹{pointValue.toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground mt-1">Approx redemption value</p>
               </div>
               <div>
@@ -507,7 +505,7 @@ export default function Tournament() {
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">2.</span>
-                <span>Entry fee: 2500 eligible marbles (Purchased + PvP wins only)</span>
+                <span>Entry fee: 2500 PvP Win Marbles (only PvP wins count)</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">3.</span>
@@ -525,7 +523,7 @@ export default function Tournament() {
             <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
               <p className="text-sm text-yellow-400 font-semibold mb-2">Marble Types:</p>
               <ul className="text-xs text-muted-foreground space-y-1">
-                <li>• <span className="text-green-400">Purchased Marbles</span> - Count for tournament</li>
+                <li>• <span className="text-green-400">Purchased Marbles</span> - Gameplay only (not tournament)</li>
                 <li>• <span className="text-green-400">PvP Win Marbles</span> - Count for tournament</li>
                 <li>• <span className="text-yellow-400">AI Win Marbles</span> - Gameplay only</li>
                 <li>• <span className="text-yellow-400">Free Marbles (150)</span> - Gameplay only</li>

@@ -7,8 +7,10 @@ import ResultDisplay from "@/components/ResultDisplay";
 import MarbleSelector from "@/components/MarbleSelector";
 import GameChat from "@/components/GameChat";
 import { SpinWheel } from "@/components/SpinWheel";
+import LiveGameAvatar from "@/components/LiveGameAvatar";
+import SoundThemeSelector from "@/components/SoundThemeSelector";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Volume2, VolumeX } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +32,15 @@ import {
   checkAndClaimHourlyRewards,
   checkAndClaimDefeatBonuses,
 } from "@/lib/rewardsStorage";
+import {
+  startBGM, stopBGM, switchBGM, isBGMEnabled,
+  playSfxMarbleHide, playSfxReveal, playSfxWin, playSfxLose, playSfxGuess, playSfxMarbleClick,
+  type BGMTheme,
+} from "@/lib/soundSystem";
+import {
+  announceResult, announceHiding, announceGuess, announceWin, announceLose,
+  type GameLanguage,
+} from "@/lib/voiceAnnouncer";
 import { useToast } from "@/hooks/use-toast";
 import { RotateCcw, Home } from "lucide-react";
 
@@ -75,6 +86,12 @@ export default function GamePlay() {
   const [adRewardPlayer, setAdRewardPlayer] = useState<"player1" | "player2" | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isMusicEnabled, setIsMusicEnabled] = useState(true);
+  const [bgmTheme, setBgmTheme] = useState<BGMTheme>(() => (localStorage.getItem("bgmTheme") as BGMTheme) || "dholak");
+  const [gameLanguage, setGameLanguage] = useState<GameLanguage>(() => (localStorage.getItem("gameLanguage") as GameLanguage) || "hi");
+  // Avatar phases
+  const [playerAvatarPhase, setPlayerAvatarPhase] = useState<"idle"|"hiding"|"hidden"|"revealing"|"revealed">("idle");
+  const [aiAvatarPhase, setAiAvatarPhase] = useState<"idle"|"hiding"|"hidden"|"revealing"|"revealed">("idle");
+  const [isPlayerWinner, setIsPlayerWinner] = useState(false);
   const [chatMessages, setChatMessages] = useState<Array<{
     id: string;
     sender: string;
@@ -92,36 +109,16 @@ export default function GamePlay() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [showSpinWheel, setShowSpinWheel] = useState(false);
 
-  // Initialize background music
+  // Start BGM on mount
   useEffect(() => {
-    // Create audio element for background music
-    const audio = new Audio();
-    audio.loop = true;
-    audio.volume = 0.3;
-    
-    // Use a royalty-free game music URL (Incompetech)
-    audio.src = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
-    
-    audioRef.current = audio;
-    if (isMusicEnabled) {
-      audio.play().catch(err => console.log("Audio autoplay prevented:", err));
-    }
-
-    return () => {
-      audio.pause();
-      audio.currentTime = 0;
-    };
+    if (isMusicEnabled) startBGM(bgmTheme);
+    return () => stopBGM();
   }, []);
 
   // Toggle music
   useEffect(() => {
-    if (audioRef.current) {
-      if (isMusicEnabled) {
-        audioRef.current.play().catch(err => console.log("Audio play error:", err));
-      } else {
-        audioRef.current.pause();
-      }
-    }
+    if (isMusicEnabled) startBGM(bgmTheme);
+    else stopBGM();
   }, [isMusicEnabled]);
 
   // Trigger header update when marbles change
@@ -155,60 +152,32 @@ export default function GamePlay() {
     return () => window.removeEventListener("profileUpdated", loadProfile);
   }, []);
 
-  // Play guessing sound when in guessing phase
+  // SFX on phase changes
   useEffect(() => {
-    if (phase === "guessing") {
-      // Create guessing audio if it doesn't exist
-      if (!guessingAudioRef.current) {
-        const guessingAudio = new Audio();
-        guessingAudio.src = "/guessing-sound.mp3";
-        guessingAudio.loop = true;
-        guessingAudio.volume = 0.5;
-        guessingAudioRef.current = guessingAudio;
-      }
-      // Play the guessing sound
-      guessingAudioRef.current.currentTime = 0;
-      guessingAudioRef.current.play().catch(err => console.log("Guessing sound play error:", err));
-    } else if (phase === "revealing" || phase === "result" || phase === "selecting") {
-      // Stop the guessing sound when phase changes
-      if (guessingAudioRef.current) {
-        guessingAudioRef.current.pause();
-        guessingAudioRef.current.currentTime = 0;
-      }
-    }
+    if (phase === "guessing") playSfxGuess();
+    if (phase === "revealing") playSfxReveal();
   }, [phase]);
 
-  // Play win/loss sounds when result is revealed
+  // Sound + voice on result
   useEffect(() => {
     if (gameResult) {
-      // Pause background music
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-
-      // Play appropriate sound with a small delay using Web Audio API
+      const isOdd = (isHiderPlayer1 ? selectedMarbleIds.length : aiHiddenCount) % 2 !== 0;
+      // Announce result in selected language
       setTimeout(() => {
-        try {
-          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-          
-          if (gameResult.won) {
-            // Win sound: Two ascending notes - celebratory
-            // First note
-            const osc1 = audioContext.createOscillator();
-            const gain1 = audioContext.createGain();
-            osc1.type = "sine";
-            osc1.frequency.setValueAtTime(523, audioContext.currentTime); // C5
-            osc1.frequency.setValueAtTime(659, audioContext.currentTime + 0.2); // E5
-            gain1.gain.setValueAtTime(0.5, audioContext.currentTime);
-            gain1.gain.setValueAtTime(0, audioContext.currentTime + 0.3);
-            osc1.connect(gain1);
-            gain1.connect(audioContext.destination);
-            osc1.start(audioContext.currentTime);
-            osc1.stop(audioContext.currentTime + 0.3);
-
-            // Second note
-            const osc2 = audioContext.createOscillator();
-            const gain2 = audioContext.createGain();
+        announceResult(isOdd, gameLanguage);
+        if (gameResult.won) { playSfxWin(); announceWin(gameLanguage); setIsPlayerWinner(true); }
+        else { playSfxLose(); announceLose(gameLanguage); setIsPlayerWinner(false); }
+      }, 600);
+      // Avatar phases
+      if (isHiderPlayer1) {
+        setPlayerAvatarPhase("revealed");
+        setAiAvatarPhase("revealed");
+      } else {
+        setAiAvatarPhase("revealed");
+        setPlayerAvatarPhase("revealed");
+      }
+    }
+  }, [gameResult]);
             osc2.type = "sine";
             osc2.frequency.setValueAtTime(659, audioContext.currentTime + 0.3); // E5
             osc2.frequency.setValueAtTime(784, audioContext.currentTime + 0.5); // G5
@@ -228,43 +197,11 @@ export default function GamePlay() {
             gain3.gain.setValueAtTime(0.6, audioContext.currentTime + 0.6);
             gain3.gain.setValueAtTime(0, audioContext.currentTime + 0.9);
             osc3.connect(gain3);
-            gain3.connect(audioContext.destination);
-            osc3.start(audioContext.currentTime + 0.6);
-            osc3.stop(audioContext.currentTime + 0.9);
 
-            console.log("Win sound playing!");
-          } else {
-            // Loss sound: Descending tone - sad
-            const osc = audioContext.createOscillator();
-            const gain = audioContext.createGain();
-            osc.type = "sine";
-            
-            osc.frequency.setValueAtTime(400, audioContext.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.4);
-            
-            gain.gain.setValueAtTime(0.5, audioContext.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0, audioContext.currentTime + 0.5);
-            
-            osc.connect(gain);
-            gain.connect(audioContext.destination);
-            osc.start(audioContext.currentTime);
-            osc.stop(audioContext.currentTime + 0.5);
-
-            console.log("Loss sound playing!");
-          }
-        } catch (error) {
-          console.log("Sound play error:", error);
-        }
-      }, 500);
-    }
-  }, [gameResult]);
-
-  // Resume background music when result dialog closes
+  // Resume BGM when result dialog closes
   useEffect(() => {
-    if (!gameResult && isMusicEnabled && audioRef.current) {
-      audioRef.current.play().catch(() => {});
-    }
-  }, [gameResult, isMusicEnabled]);
+    if (!gameResult && isMusicEnabled) startBGM(bgmTheme);
+  }, [gameResult]);
 
   // Show celebration when AI loses all marbles
   useEffect(() => {
@@ -324,7 +261,12 @@ export default function GamePlay() {
 
   const handleConfirmSelection = () => {
     setPhase("guessing");
+    // Avatar: player hiding
     if (isHiderPlayer1) {
+      setPlayerAvatarPhase("hiding");
+      playSfxMarbleHide();
+      announceHiding(gameLanguage);
+      setTimeout(() => setPlayerAvatarPhase("hidden"), 700);
       setTimeout(() => {
         const guesses = ["kali", "jotta"];
         const randomGuess = guesses[Math.floor(Math.random() * guesses.length)];
@@ -333,23 +275,34 @@ export default function GamePlay() {
         setLastGuess(randomGuess);
         setLastBet(randomBet);
         setShowRevealButton(true);
-        console.log(`AI Guessed: ${randomGuess}, Bet: ${randomBet} marbles`);
+        announceGuess(randomGuess === "kali", gameLanguage);
+        setAiAvatarPhase("hidden");
       }, 1500);
+    } else {
+      // AI is hiding
+      setAiAvatarPhase("hiding");
+      playSfxMarbleHide();
+      setTimeout(() => setAiAvatarPhase("hidden"), 700);
     }
-    console.log("Moving to guessing phase with", selectedMarbleIds.length, "marbles");
   };
 
   const handleGuess = (guess: string, bet: number) => {
-    console.log(`Guess: ${guess}, Bet: ${bet}`);
     setLastGuess(guess);
     setLastBet(bet);
     setShowRevealButton(true);
+    playSfxGuess();
+    announceGuess(guess === "kali", gameLanguage);
+    setPlayerAvatarPhase("hidden");
   };
 
   const handleReveal = () => {
     setPhase("revealing");
     setFistOpen(true);
     setShowRevealButton(false);
+    // Avatar reveal animation
+    setPlayerAvatarPhase("revealing");
+    setAiAvatarPhase("revealing");
+    playSfxReveal();
     
     setTimeout(() => {
       const actualCount = isHiderPlayer1 ? selectedMarbleIds.length : aiHiddenCount;
@@ -452,7 +405,6 @@ export default function GamePlay() {
   };
 
   const handlePlayAgain = () => {
-    // If guesser won, they BECOME the hider in next round
     if (gameResult?.roleSwitched) {
       setIsHiderPlayer1(!isHiderPlayer1);
     }
@@ -461,15 +413,10 @@ export default function GamePlay() {
     setFistOpen(false);
     setGameResult(null);
     setShowRevealButton(false);
-    
-    // Resume background music
-    setTimeout(() => {
-      if (isMusicEnabled && audioRef.current) {
-        audioRef.current.play().catch(() => {});
-      }
-    }, 100);
-    
-    console.log("Starting new game, hider is now:", !isHiderPlayer1 ? "Player 1" : "AI");
+    setPlayerAvatarPhase("idle");
+    setAiAvatarPhase("idle");
+    setIsPlayerWinner(false);
+    if (isMusicEnabled) startBGM(bgmTheme);
   };
 
   const handleWatchAd = () => {
@@ -524,27 +471,31 @@ export default function GamePlay() {
         <Button
           size="icon"
           variant="outline"
-          className="rounded-full bg-primary/20 text-primary hover:bg-primary/40 border-primary/50 w-10 h-10"
-          onClick={() => setIsMusicEnabled(!isMusicEnabled)}
-          title={isMusicEnabled ? "Mute Music" : "Unmute Music"}
-          data-testid="button-music-toggle"
-        >
-          {isMusicEnabled ? (
-            <Volume2 className="w-4 h-4" />
-          ) : (
-            <VolumeX className="w-4 h-4" />
-          )}
-        </Button>
-        
-        <Button
-          size="icon"
-          variant="outline"
           className="rounded-full bg-[#00D9FF]/20 text-[#00D9FF] hover:bg-[#00D9FF]/40 border-[#00D9FF]/50 w-10 h-10"
           onClick={() => setIsChatOpen(!isChatOpen)}
           data-testid="button-open-chat"
         >
           <MessageCircle className="w-4 h-4" />
         </Button>
+      </div>
+
+      {/* Sound theme selector — top left */}
+      <div className="fixed top-16 left-2 z-30">
+        <SoundThemeSelector
+          currentTheme={bgmTheme}
+          currentLanguage={gameLanguage}
+          isMusicOn={isMusicEnabled}
+          onThemeChange={(t) => {
+            setBgmTheme(t);
+            localStorage.setItem("bgmTheme", t);
+            switchBGM(t);
+          }}
+          onLanguageChange={(l) => {
+            setGameLanguage(l);
+            localStorage.setItem("gameLanguage", l);
+          }}
+          onMusicToggle={() => setIsMusicEnabled(p => !p)}
+        />
       </div>
 
       <div className="container max-w-7xl mx-auto px-1 sm:px-3 md:px-5">
@@ -575,6 +526,31 @@ export default function GamePlay() {
                 isActive={!isHiderPlayer1 ? phase === "selecting" : phase === "guessing"}
                 gender="boy"
                 isGuesser={isHiderPlayer1 && phase === "guessing"}
+              />
+            </div>
+          </div>
+
+          {/* Live Avatars Row */}
+          <div className="grid grid-cols-3 gap-1 items-end mt-2">
+            <div className="flex justify-center">
+              <LiveGameAvatar
+                phase={playerAvatarPhase}
+                marbleCount={isHiderPlayer1 ? selectedMarbleIds.length : 0}
+                gender={player1Gender}
+                name={player1Name}
+                isWinner={isPlayerWinner}
+              />
+            </div>
+            <div className="flex justify-center items-center">
+              <div className="text-2xl opacity-50">🪙</div>
+            </div>
+            <div className="flex justify-center">
+              <LiveGameAvatar
+                phase={aiAvatarPhase}
+                marbleCount={!isHiderPlayer1 ? aiHiddenCount : 0}
+                isAI
+                name="AI"
+                isWinner={gameResult ? !isPlayerWinner : false}
               />
             </div>
           </div>
