@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Plus, Minus } from "lucide-react";
-import greenMarbleImage from "@assets/image_1764089214310.png";
+// Marble image removed - using CSS instead
 import { useLanguage } from "@/lib/LanguageContext";
 
 interface MarbleSelectorProps {

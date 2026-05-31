@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import gameIcon from "@assets/generated_images/kali_jotta_game_icon_with_marbles.png";
+// Game icon removed - using emoji instead
 
 export default function GameHeader() {
   const [location, setLocation] = useLocation();
@@ -129,7 +129,7 @@ export default function GameHeader() {
               title="Kanche King"
               data-testid="button-home-icon"
             >
-              <img src={gameIcon} alt="Kanche King" className="w-5 h-5 rounded-full" />
+              <span className="text-lg">🪨</span>
             </Button>
             {showBackButton && (
               <Button
