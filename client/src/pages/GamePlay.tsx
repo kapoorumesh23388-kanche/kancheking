@@ -102,8 +102,7 @@ export default function GamePlay() {
     audioUrl?: string;
   }>>([]);
   
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const guessingAudioRef = useRef<HTMLAudioElement | null>(null);
+  // Sound refs removed - using soundSystem.ts instead
   const winAudioRef = useRef<HTMLAudioElement | null>(null);
   const lossAudioRef = useRef<HTMLAudioElement | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -178,25 +177,6 @@ export default function GamePlay() {
       }
     }
   }, [gameResult]);
-            osc2.type = "sine";
-            osc2.frequency.setValueAtTime(659, audioContext.currentTime + 0.3); // E5
-            osc2.frequency.setValueAtTime(784, audioContext.currentTime + 0.5); // G5
-            gain2.gain.setValueAtTime(0.5, audioContext.currentTime + 0.3);
-            gain2.gain.setValueAtTime(0, audioContext.currentTime + 0.6);
-            osc2.connect(gain2);
-            gain2.connect(audioContext.destination);
-            osc2.start(audioContext.currentTime + 0.3);
-            osc2.stop(audioContext.currentTime + 0.6);
-
-            // Third note - high
-            const osc3 = audioContext.createOscillator();
-            const gain3 = audioContext.createGain();
-            osc3.type = "sine";
-            osc3.frequency.setValueAtTime(784, audioContext.currentTime + 0.6); // G5
-            osc3.frequency.setValueAtTime(1047, audioContext.currentTime + 0.8); // C6
-            gain3.gain.setValueAtTime(0.6, audioContext.currentTime + 0.6);
-            gain3.gain.setValueAtTime(0, audioContext.currentTime + 0.9);
-            osc3.connect(gain3);
 
   // Resume BGM when result dialog closes
   useEffect(() => {
