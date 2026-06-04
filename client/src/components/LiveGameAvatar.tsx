@@ -138,7 +138,7 @@ function CartoonCharacter({ gender, isAI, isWinner, phase }: { gender: Gender; i
 
       {/* Body detail */}
       {isAIChar ? (
-        <text x="45" y="95" textAnchor="middle" fontSize="18">🤖</text>
+        <rect x="30" y="80" width="30" height="20" rx="4" fill="#00D9FF" opacity="0.5"/>
       ) : (
         <>
           <rect x="30" y="76" width="30" height="4" rx="2" fill="rgba(255,255,255,0.3)" />
@@ -224,12 +224,12 @@ function CartoonCharacter({ gender, isAI, isWinner, phase }: { gender: Gender; i
       {/* Excited effect */}
       {isExcited && (
         <>
-          <text x="12" y="25" fontSize="10" className="animate-bounce">⭐</text>
-          <text x="68" y="25" fontSize="10" className="animate-bounce">⭐</text>
+          <circle cx="12" cy="22" r="4" fill="#FFD700"/>
+          <circle cx="68" cy="22" r="4" fill="#FFD700"/>
         </>
       )}
       {isWinner && (
-        <text x="30" y="14" fontSize="16">👑</text>
+        <polygon points="38,14 45,6 52,14 56,8 60,14 40,14" fill="#FFD700"/>
       )}
     </svg>
   );
