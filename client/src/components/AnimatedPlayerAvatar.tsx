@@ -57,7 +57,26 @@ export default function AnimatedPlayerAvatar({
       if (isWinner) {
         ctx.font = `${18 * scale}px serif`;
         ctx.textAlign = "center";
-        ctx.fillText("👑", cx, baseY - 68 * scale);
+        // Winner crown — drawn with canvas shapes
+      if (isWinner) {
+        ctx.save();
+        ctx.fillStyle = "#FFD700";
+        ctx.strokeStyle = "#FFA000";
+        ctx.lineWidth = 1 * scale;
+        const crownY = baseY - 70 * scale;
+        ctx.beginPath();
+        ctx.moveTo(cx - 10 * scale, crownY + 8 * scale);
+        ctx.lineTo(cx - 10 * scale, crownY);
+        ctx.lineTo(cx - 5 * scale, crownY + 5 * scale);
+        ctx.lineTo(cx, crownY - 2 * scale);
+        ctx.lineTo(cx + 5 * scale, crownY + 5 * scale);
+        ctx.lineTo(cx + 10 * scale, crownY);
+        ctx.lineTo(cx + 10 * scale, crownY + 8 * scale);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
       }
 
       // Guesser glow ring
@@ -320,7 +339,20 @@ function drawGirl(
   ctx.fillStyle = "#ff4db2";
   ctx.font = `${10 * s}px serif`;
   ctx.textAlign = "center";
-  ctx.fillText("★", cx, baseY + 2 * s);
+  // Draw star shape on body
+  ctx.save();
+  ctx.fillStyle = "#ff4db2";
+  ctx.beginPath();
+  const starX = cx, starY = baseY + 2 * s, starR = 5 * s;
+  for (let i = 0; i < 5; i++) {
+    const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+    const x = starX + starR * Math.cos(angle);
+    const y = starY + starR * Math.sin(angle);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
   ctx.restore();
 
   // Arms
