@@ -447,7 +447,15 @@ export default function GamePlay() {
   return (
     <div className="min-h-screen pt-16 sm:pt-20 md:pt-24 pb-4 sm:pb-8 bg-gradient-to-b from-black via-blue-950 to-black">
       {/* Music Toggle & Chat Buttons - Bottom Right */}
-      <div className="fixed bottom-4 right-2 z-30 flex flex-col gap-2">
+      <div className="fixed bottom-4 right-2 z-30 flex flex-col items-end gap-2">
+        <SoundThemeSelector
+          currentTheme={bgmTheme}
+          currentLanguage={gameLanguage}
+          isMusicOn={isMusicEnabled}
+          onThemeChange={(t) => { setBgmTheme(t); localStorage.setItem("bgmTheme", t); switchBGM(t); }}
+          onLanguageChange={(l) => { setGameLanguage(l); localStorage.setItem("gameLanguage", l); }}
+          onMusicToggle={() => setIsMusicEnabled(p => !p)}
+        />
         <Button
           size="icon"
           variant="outline"
@@ -457,25 +465,6 @@ export default function GamePlay() {
         >
           <MessageCircle className="w-4 h-4" />
         </Button>
-      </div>
-
-      {/* Sound theme selector — top left */}
-      <div className="fixed top-16 left-2 z-30">
-        <SoundThemeSelector
-          currentTheme={bgmTheme}
-          currentLanguage={gameLanguage}
-          isMusicOn={isMusicEnabled}
-          onThemeChange={(t) => {
-            setBgmTheme(t);
-            localStorage.setItem("bgmTheme", t);
-            switchBGM(t);
-          }}
-          onLanguageChange={(l) => {
-            setGameLanguage(l);
-            localStorage.setItem("gameLanguage", l);
-          }}
-          onMusicToggle={() => setIsMusicEnabled(p => !p)}
-        />
       </div>
 
       <div className="container max-w-7xl mx-auto px-1 sm:px-3 md:px-5">
@@ -490,10 +479,12 @@ export default function GamePlay() {
                 isActive={isHiderPlayer1 ? phase === "selecting" : phase === "guessing"}
                 gender={player1Gender}
                 isGuesser={!isHiderPlayer1 && phase === "guessing"}
+                phase={playerAvatarPhase}
+                isWinner={isPlayerWinner}
               />
             </div>
             <div className="text-center flex flex-col items-center justify-center">
-              <div className="text-lg sm:text-xl md:text-3xl font-black text-primary animate-pulse" style={{ textShadow: '0 0 20px rgba(255,215,0,0.8)' }}>
+              <div className="text-lg sm:text-xl md:text-3xl font-black text-primary animate-pulse" style={{ textShadow: "0 0 20px rgba(255,215,0,0.8)" }}>
                 ⚔️
               </div>
               <p className="text-[8px] sm:text-xs text-muted-foreground uppercase tracking-wider font-bold">Battle</p>
@@ -506,30 +497,8 @@ export default function GamePlay() {
                 isActive={!isHiderPlayer1 ? phase === "selecting" : phase === "guessing"}
                 gender="boy"
                 isGuesser={isHiderPlayer1 && phase === "guessing"}
-              />
-            </div>
-          </div>
-
-          {/* Live Avatars Row */}
-          <div className="grid grid-cols-3 gap-1 items-end mt-2">
-            <div className="flex justify-center">
-              <LiveGameAvatar
-                phase={playerAvatarPhase}
-                marbleCount={isHiderPlayer1 ? selectedMarbleIds.length : 0}
-                gender={player1Gender}
-                name={player1Name}
-                isWinner={isPlayerWinner}
-              />
-            </div>
-            <div className="flex justify-center items-center">
-              <div className="text-2xl opacity-50">🪙</div>
-            </div>
-            <div className="flex justify-center">
-              <LiveGameAvatar
                 phase={aiAvatarPhase}
-                marbleCount={!isHiderPlayer1 ? aiHiddenCount : 0}
-                isAI
-                name="AI"
+                isAI={true}
                 isWinner={gameResult ? !isPlayerWinner : false}
               />
             </div>

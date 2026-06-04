@@ -1,28 +1,21 @@
-// ============================================================
-// SOUND SYSTEM — BGM themes + game sound effects
-// ============================================================
-
-export type BGMTheme = "dholak" | "shehnai" | "tabla" | "flute" | "electronic";
+export type BGMTheme = "street" | "dhol" | "festival" | "electronic" | "chill";
 
 const BGM_THEMES: Record<BGMTheme, { name: string; emoji: string; desc: string }> = {
-  dholak:     { name: "Dholak Beats",    emoji: "🥁", desc: "Traditional dhol rhythm" },
-  shehnai:    { name: "Shehnai Classic", emoji: "🎺", desc: "Wedding shehnai vibes" },
-  tabla:      { name: "Tabla Groove",    emoji: "🎵", desc: "Classic tabla taal" },
-  flute:      { name: "Bansuri Flow",    emoji: "🎶", desc: "Peaceful bansuri melody" },
-  electronic: { name: "Street Electronic", emoji: "⚡", desc: "Modern Indian fusion" },
+  street:     { name: "Street Rush",     emoji: "🏃", desc: "Energetic street vibe" },
+  dhol:       { name: "Dhol Beats",      emoji: "🥁", desc: "Powerful dhol rhythm" },
+  festival:   { name: "Festival Hype",   emoji: "🎊", desc: "Celebration energy" },
+  electronic: { name: "Electric Storm",  emoji: "⚡", desc: "Modern electronic" },
+  chill:      { name: "Chill Groove",    emoji: "🎶", desc: "Relaxed Indian melody" },
 };
 
-export function getBGMThemes() {
-  return BGM_THEMES;
-}
+export function getBGMThemes() { return BGM_THEMES; }
 
-// Web Audio context (singleton)
 let ctx: AudioContext | null = null;
-let currentBGMNodes: AudioNode[] = [];
-let bgmGain: GainNode | null = null;
-let isBGMPlaying = false;
-let currentTheme: BGMTheme = "dholak";
+let masterGain: GainNode | null = null;
 let bgmIntervalId: ReturnType<typeof setInterval> | null = null;
+let isBGMPlaying = false;
+let currentTheme: BGMTheme = "street";
+let beatCount = 0;
 
 function getCtx(): AudioContext {
   if (!ctx || ctx.state === "closed") {
@@ -32,196 +25,244 @@ function getCtx(): AudioContext {
   return ctx;
 }
 
-// ---- Tone generator helpers ----
-function playNote(freq: number, start: number, dur: number, vol = 0.3, type: OscillatorType = "sine") {
+function tone(freq: number, start: number, dur: number, vol = 0.3, type: OscillatorType = "sine", detune = 0) {
   const c = getCtx();
+  if (!masterGain) return;
   const osc = c.createOscillator();
   const g = c.createGain();
   osc.type = type;
-  osc.frequency.setValueAtTime(freq, c.currentTime + start);
-  g.gain.setValueAtTime(0, c.currentTime + start);
-  g.gain.linearRampToValueAtTime(vol, c.currentTime + start + 0.02);
+  osc.frequency.value = freq;
+  osc.detune.value = detune;
+  g.gain.setValueAtTime(0.001, c.currentTime + start);
+  g.gain.linearRampToValueAtTime(vol, c.currentTime + start + 0.01);
   g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + start + dur);
   osc.connect(g);
-  if (bgmGain) g.connect(bgmGain);
-  else g.connect(c.destination);
+  g.connect(masterGain);
   osc.start(c.currentTime + start);
   osc.stop(c.currentTime + start + dur + 0.05);
-  currentBGMNodes.push(osc, g);
 }
 
-function playDrum(freq: number, start: number, vol = 0.4) {
+function kick(start: number, vol = 0.6) {
   const c = getCtx();
-  const osc = c.createOscillator();
+  if (!masterGain) return;
+  const o = c.createOscillator();
   const g = c.createGain();
-  osc.type = "triangle";
-  osc.frequency.setValueAtTime(freq, c.currentTime + start);
-  osc.frequency.exponentialRampToValueAtTime(20, c.currentTime + start + 0.2);
+  o.type = "sine";
+  o.frequency.setValueAtTime(180, c.currentTime + start);
+  o.frequency.exponentialRampToValueAtTime(40, c.currentTime + start + 0.15);
   g.gain.setValueAtTime(vol, c.currentTime + start);
   g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + start + 0.3);
-  osc.connect(g);
-  if (bgmGain) g.connect(bgmGain);
-  else g.connect(c.destination);
-  osc.start(c.currentTime + start);
-  osc.stop(c.currentTime + start + 0.4);
-  currentBGMNodes.push(osc, g);
+  o.connect(g); g.connect(masterGain!);
+  o.start(c.currentTime + start);
+  o.stop(c.currentTime + start + 0.35);
 }
 
-// ---- BGM Theme patterns (looping bars) ----
-function playDholakBar() {
-  // Strong dholak beat: dhaa ge na tee na kaa
-  const hits = [0, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75];
-  const freqs = [80, 200, 120, 80, 200, 150, 80];
-  const vols  = [0.5, 0.3, 0.2, 0.4, 0.25, 0.2, 0.5];
-  hits.forEach((t, i) => playDrum(freqs[i], t, vols[i]));
-  // Melodic undertone
-  [0, 0.5, 1.0, 1.5].forEach(t => playNote(196, t, 0.4, 0.08, "sawtooth"));
+function snare(start: number, vol = 0.4) {
+  const c = getCtx();
+  if (!masterGain) return;
+  const buf = c.createBuffer(1, c.sampleRate * 0.15, c.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  const g = c.createGain();
+  const filt = c.createBiquadFilter();
+  filt.type = "highpass";
+  filt.frequency.value = 1500;
+  g.gain.setValueAtTime(vol, c.currentTime + start);
+  g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + start + 0.15);
+  src.connect(filt); filt.connect(g); g.connect(masterGain!);
+  src.start(c.currentTime + start);
 }
 
-function playTablaBar() {
-  const hits = [0, 0.33, 0.66, 1.0, 1.33, 1.66];
-  const freqs = [90, 250, 90, 90, 150, 90];
-  hits.forEach((t, i) => playDrum(freqs[i], t, 0.3));
-  playNote(261, 0, 0.3, 0.07, "triangle");
-  playNote(329, 0.66, 0.3, 0.07, "triangle");
+function hihat(start: number, vol = 0.2) {
+  const c = getCtx();
+  if (!masterGain) return;
+  const buf = c.createBuffer(1, c.sampleRate * 0.05, c.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  const g = c.createGain();
+  const filt = c.createBiquadFilter();
+  filt.type = "highpass";
+  filt.frequency.value = 7000;
+  g.gain.setValueAtTime(vol, c.currentTime + start);
+  g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + start + 0.05);
+  src.connect(filt); filt.connect(g); g.connect(masterGain!);
+  src.start(c.currentTime + start);
 }
 
-function playShehnaiBar() {
-  // Simple shehnai-like rising melody
-  const scale = [293, 329, 369, 392, 440, 392, 369, 329];
-  scale.forEach((f, i) => playNote(f, i * 0.25, 0.28, 0.2, "sawtooth"));
-  [0, 0.5, 1.0, 1.5].forEach(t => playDrum(100, t, 0.2));
+// ─── THEME PATTERNS ──────────────────────────────────────────────────────────
+// Street Rush — fast, energetic like subway surfers
+function playStreet(beat: number) {
+  const b = beat % 4;
+  // Hard kick pattern
+  [0, 0.25, 0.5, 0.75].forEach(t => kick(t, 0.5));
+  // Snare on 2 and 4
+  snare(0.5, 0.5); snare(1.5, 0.5);
+  // Hi-hats every 8th
+  for (let i = 0; i < 8; i++) hihat(i * 0.25, 0.25);
+  // Energetic bass run
+  const bassNotes = [110, 130, 155, 110, 98, 110, 130, 155];
+  bassNotes.forEach((f, i) => tone(f, i * 0.25, 0.22, 0.25, "sawtooth"));
+  // Lead melody — upbeat
+  const melody = b === 0 ? [523, 659, 784, 659] : b === 1 ? [784, 880, 784, 659] : b === 2 ? [659, 784, 880, 1047] : [1047, 880, 784, 659];
+  melody.forEach((f, i) => tone(f, i * 0.5, 0.4, 0.15, "square"));
 }
 
-function playFluteBar() {
-  // Pentatonic bansuri phrase
-  const scale = [523, 587, 659, 784, 880, 784, 659, 523];
-  scale.forEach((f, i) => playNote(f, i * 0.25, 0.3, 0.15, "sine"));
+// Dhol Beats — powerful Indian percussion
+function playDhol(beat: number) {
+  const dhol1 = [0, 0.33, 0.5, 0.83, 1.0, 1.33, 1.5, 1.83];
+  dhol1.forEach((t, i) => kick(t, i % 3 === 0 ? 0.6 : 0.35));
+  snare(0.66, 0.5); snare(1.16, 0.5); snare(1.66, 0.5);
+  for (let i = 0; i < 16; i++) hihat(i * 0.125, 0.15);
+  const scale = [196, 220, 261, 293, 329, 261, 220, 196];
+  scale.forEach((f, i) => tone(f, i * 0.25, 0.23, 0.2, "triangle"));
+  const melody = [392, 440, 523, 587, 523, 440, 392, 349];
+  melody.forEach((f, i) => tone(f, i * 0.25, 0.22, 0.12, "sawtooth", beat % 2 === 0 ? 5 : -5));
 }
 
-function playElectronicBar() {
-  // Electronic beats with synth bass
-  [0, 0.5, 1.0, 1.5].forEach(t => playDrum(55, t, 0.5));
-  [0.25, 0.75, 1.25, 1.75].forEach(t => playDrum(180, t, 0.2));
-  [0, 0.5, 1.0, 1.5].forEach(t => playNote(110, t, 0.45, 0.18, "square"));
-  [0.25, 0.75].forEach(t => playNote(329, t, 0.2, 0.1, "square"));
+// Festival Hype
+function playFestival(beat: number) {
+  [0, 0.375, 0.75, 1.125, 1.5, 1.875].forEach(t => kick(t, 0.5));
+  [0.5, 1.0, 1.5].forEach(t => snare(t, 0.5));
+  for (let i = 0; i < 16; i++) hihat(i * 0.125, 0.2);
+  const bass = [87, 87, 98, 110, 87, 87, 98, 130];
+  bass.forEach((f, i) => tone(f, i * 0.25, 0.23, 0.3, "sawtooth"));
+  const lead = beat % 2 === 0
+    ? [523, 659, 784, 880, 784, 659, 784, 659]
+    : [659, 784, 880, 1047, 880, 784, 659, 784];
+  lead.forEach((f, i) => tone(f, i * 0.25, 0.22, 0.15, "square", 10));
 }
 
-function playThemeBar(theme: BGMTheme) {
+// Electric Storm
+function playElectronic(beat: number) {
+  [0, 0.5, 1.0, 1.5].forEach(t => kick(t, 0.6));
+  [0.25, 0.75, 1.25, 1.75].forEach(t => snare(t, 0.4));
+  for (let i = 0; i < 16; i++) hihat(i * 0.125, 0.2);
+  const bass = [55, 55, 73, 55, 55, 82, 55, 73];
+  bass.forEach((f, i) => tone(f, i * 0.25, 0.24, 0.35, "square"));
+  const arp = beat % 4 === 0 ? [440, 554, 659, 880] : beat % 4 === 1 ? [494, 622, 740, 988] : beat % 4 === 2 ? [523, 659, 784, 1047] : [392, 494, 587, 784];
+  arp.forEach((f, i) => { tone(f, i * 0.25, 0.1, 0.2, "square"); tone(f * 2, i * 0.25 + 0.125, 0.08, 0.1, "square"); });
+}
+
+// Chill Groove
+function playChill(beat: number) {
+  [0, 1.0].forEach(t => kick(t, 0.4));
+  snare(0.5, 0.35); snare(1.5, 0.35);
+  for (let i = 0; i < 8; i++) hihat(i * 0.25, 0.15);
+  const bass = [110, 110, 130, 147, 130, 110, 98, 110];
+  bass.forEach((f, i) => tone(f, i * 0.25, 0.24, 0.2, "sine"));
+  const pentatonic = [523, 659, 784, 880, 784, 659, 523, 440];
+  pentatonic.forEach((f, i) => tone(f, i * 0.25, 0.3, 0.1, "sine"));
+}
+
+function playBeat(theme: BGMTheme, beat: number) {
   switch (theme) {
-    case "dholak":     return playDholakBar();
-    case "tabla":      return playTablaBar();
-    case "shehnai":    return playShehnaiBar();
-    case "flute":      return playFluteBar();
-    case "electronic": return playElectronicBar();
+    case "street":     return playStreet(beat);
+    case "dhol":       return playDhol(beat);
+    case "festival":   return playFestival(beat);
+    case "electronic": return playElectronic(beat);
+    case "chill":      return playChill(beat);
   }
 }
 
-export function startBGM(theme: BGMTheme = "dholak", volume = 0.4) {
+export function startBGM(theme: BGMTheme = "street", volume = 0.35) {
   stopBGM();
   currentTheme = theme;
   isBGMPlaying = true;
+  beatCount = 0;
 
   const c = getCtx();
-  bgmGain = c.createGain();
-  bgmGain.gain.value = volume;
-  bgmGain.connect(c.destination);
+  masterGain = c.createGain();
+  masterGain.gain.value = volume;
+  masterGain.connect(c.destination);
 
-  // Play immediately and then loop every 2 seconds
-  playThemeBar(theme);
+  playBeat(theme, beatCount++);
   bgmIntervalId = setInterval(() => {
-    if (isBGMPlaying) playThemeBar(currentTheme);
+    if (isBGMPlaying) playBeat(currentTheme, beatCount++);
   }, 2000);
 }
 
 export function stopBGM() {
   isBGMPlaying = false;
   if (bgmIntervalId) { clearInterval(bgmIntervalId); bgmIntervalId = null; }
-  currentBGMNodes.forEach(n => { try { (n as OscillatorNode).stop?.(); } catch {} });
-  currentBGMNodes = [];
-  if (bgmGain) { try { bgmGain.disconnect(); } catch {} bgmGain = null; }
+  if (masterGain) { try { masterGain.disconnect(); } catch {} masterGain = null; }
+  beatCount = 0;
 }
 
 export function switchBGM(theme: BGMTheme) {
-  if (isBGMPlaying) {
-    stopBGM();
-    startBGM(theme);
-  } else {
-    currentTheme = theme;
-  }
+  if (isBGMPlaying) { stopBGM(); startBGM(theme); }
+  else currentTheme = theme;
 }
 
 export function setBGMVolume(vol: number) {
-  if (bgmGain) bgmGain.gain.value = Math.max(0, Math.min(1, vol));
+  if (masterGain) masterGain.gain.value = Math.max(0, Math.min(1, vol));
 }
 
 export function isBGMEnabled() { return isBGMPlaying; }
 
-// ---- Game Sound Effects ----
+// ─── SFX ─────────────────────────────────────────────────────────────────────
 export function playSfxMarbleHide() {
+  if (!ctx && !masterGain) return;
   const c = getCtx();
-  // Rapid shake sound
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 5; i++) {
     const o = c.createOscillator();
     const g = c.createGain();
     o.type = "sine";
-    o.frequency.value = 800 + Math.random() * 400;
-    g.gain.setValueAtTime(0.3, c.currentTime + i * 0.06);
-    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + i * 0.06 + 0.08);
-    o.connect(g); g.connect(c.destination);
-    o.start(c.currentTime + i * 0.06);
-    o.stop(c.currentTime + i * 0.06 + 0.1);
+    o.frequency.value = 600 + Math.random() * 600;
+    g.gain.setValueAtTime(0.3, c.currentTime + i * 0.04);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + i * 0.04 + 0.08);
+    o.connect(g); g.connect(masterGain || c.destination);
+    o.start(c.currentTime + i * 0.04);
+    o.stop(c.currentTime + i * 0.04 + 0.1);
   }
 }
 
 export function playSfxReveal() {
   const c = getCtx();
-  // Whoosh + sparkle
-  const freqs = [400, 500, 650, 800, 1000, 1200];
-  freqs.forEach((f, i) => {
+  [300, 400, 550, 750, 1000, 1300].forEach((f, i) => {
     const o = c.createOscillator();
     const g = c.createGain();
     o.type = "sine";
-    o.frequency.setValueAtTime(f, c.currentTime + i * 0.04);
-    g.gain.setValueAtTime(0.25, c.currentTime + i * 0.04);
-    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + i * 0.04 + 0.15);
-    o.connect(g); g.connect(c.destination);
-    o.start(c.currentTime + i * 0.04);
-    o.stop(c.currentTime + i * 0.04 + 0.2);
+    o.frequency.value = f;
+    g.gain.setValueAtTime(0.25, c.currentTime + i * 0.05);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + i * 0.05 + 0.2);
+    o.connect(g); g.connect(masterGain || c.destination);
+    o.start(c.currentTime + i * 0.05);
+    o.stop(c.currentTime + i * 0.05 + 0.25);
   });
 }
 
 export function playSfxWin() {
   const c = getCtx();
-  // Ascending fanfare
-  const notes = [523, 659, 784, 1047, 1319];
-  notes.forEach((f, i) => {
+  // Subway surfers style win — fast ascending + chime
+  [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => {
     const o = c.createOscillator();
     const g = c.createGain();
-    o.type = "sine";
+    o.type = i < 3 ? "square" : "sine";
     o.frequency.value = f;
-    g.gain.setValueAtTime(0.4, c.currentTime + i * 0.15);
-    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + i * 0.15 + 0.35);
-    o.connect(g); g.connect(c.destination);
-    o.start(c.currentTime + i * 0.15);
-    o.stop(c.currentTime + i * 0.15 + 0.4);
+    g.gain.setValueAtTime(0.4, c.currentTime + i * 0.1);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + i * 0.1 + 0.3);
+    o.connect(g); g.connect(masterGain || c.destination);
+    o.start(c.currentTime + i * 0.1);
+    o.stop(c.currentTime + i * 0.1 + 0.35);
   });
 }
 
 export function playSfxLose() {
   const c = getCtx();
-  // Descending sad tones
-  const notes = [400, 350, 300, 250];
-  notes.forEach((f, i) => {
+  [400, 350, 300, 250, 200].forEach((f, i) => {
     const o = c.createOscillator();
     const g = c.createGain();
     o.type = "triangle";
     o.frequency.value = f;
-    g.gain.setValueAtTime(0.3, c.currentTime + i * 0.2);
-    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + i * 0.2 + 0.3);
-    o.connect(g); g.connect(c.destination);
-    o.start(c.currentTime + i * 0.2);
-    o.stop(c.currentTime + i * 0.2 + 0.35);
+    g.gain.setValueAtTime(0.3, c.currentTime + i * 0.15);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + i * 0.15 + 0.25);
+    o.connect(g); g.connect(masterGain || c.destination);
+    o.start(c.currentTime + i * 0.15);
+    o.stop(c.currentTime + i * 0.15 + 0.3);
   });
 }
 
@@ -230,13 +271,13 @@ export function playSfxGuess() {
   const o = c.createOscillator();
   const g = c.createGain();
   o.type = "sine";
-  o.frequency.setValueAtTime(600, c.currentTime);
-  o.frequency.linearRampToValueAtTime(900, c.currentTime + 0.1);
-  g.gain.setValueAtTime(0.25, c.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.2);
-  o.connect(g); g.connect(c.destination);
+  o.frequency.setValueAtTime(500, c.currentTime);
+  o.frequency.linearRampToValueAtTime(900, c.currentTime + 0.15);
+  g.gain.setValueAtTime(0.3, c.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.25);
+  o.connect(g); g.connect(masterGain || c.destination);
   o.start(c.currentTime);
-  o.stop(c.currentTime + 0.25);
+  o.stop(c.currentTime + 0.3);
 }
 
 export function playSfxMarbleClick() {
@@ -244,10 +285,10 @@ export function playSfxMarbleClick() {
   const o = c.createOscillator();
   const g = c.createGain();
   o.type = "sine";
-  o.frequency.value = 1200 + Math.random() * 300;
+  o.frequency.value = 1200 + Math.random() * 400;
   g.gain.setValueAtTime(0.15, c.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.07);
-  o.connect(g); g.connect(c.destination);
+  g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.06);
+  o.connect(g); g.connect(masterGain || c.destination);
   o.start(c.currentTime);
   o.stop(c.currentTime + 0.08);
 }
