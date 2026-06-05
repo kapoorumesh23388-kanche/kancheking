@@ -1,169 +1,148 @@
-// ============================================================
-// VOICE ANNOUNCER — "Kali hai" / "Jotta hai" in 9 languages
-// Uses Web Speech API (works in browser/Android WebView)
-// ============================================================
-
 export type GameLanguage =
   | "hi" | "en" | "ta" | "te" | "kn" | "ml" | "bn" | "mr" | "gu";
 
 interface VoiceLines {
-  odd: string[];
-  even: string[];
+  oddWin: string[];
+  oddLose: string[];
+  evenWin: string[];
+  evenLose: string[];
   hiding: string[];
   guessOdd: string[];
   guessEven: string[];
-  win: string[];
-  lose: string[];
 }
 
 const VOICE_LINES: Record<GameLanguage, VoiceLines> = {
   hi: {
-    odd:       ["कली है!", "कली! विषम संख्या!", "अरे, कली निकली!"],
-    even:      ["जोट्टा है!", "जोट्टा! सम संख्या!", "वाह, जोट्टा!"],
-    hiding:    ["मुट्ठी बंद करो!", "छुपाओ!", "देखने मत देना!"],
-    guessOdd:  ["कली लगाई!", "विषम का दांव!", "कली बोला!"],
-    guessEven: ["जोट्टा लगाया!", "सम का दांव!", "जोट्टा बोला!"],
-    win:       ["जीत गए! शाबाश!", "वाह! क्या खेल है!"],
-    lose:      ["हार गए! अगली बार!", "कोई बात नहीं, फिर खेलो!"],
+    oddWin:   ["बधाई हो! कली है, तुम जीत गए!", "कली है! शाबाश, जीत गए!", "कली निकली, तुम जीत गए! वाह!"],
+    oddLose:  ["कली है, तुम हार गए!", "हाय! कली थी, अगली बार जीतना!", "कली निकली, हार गए!"],
+    evenWin:  ["बधाई हो! जोट्टा है, तुम जीत गए!", "जोट्टा है! शाबाश!", "जोट्टा निकला, तुम जीत गए!"],
+    evenLose: ["जोट्टा है, तुम हार गए!", "जोट्टा था, हार गए! अगली बार!", "जोट्टा निकला, हार गए!"],
+    hiding:   ["मुट्ठी बंद करो!", "छुपाओ कांचे!", "देखने मत देना!"],
+    guessOdd: ["कली! मेरा दांव कली पर!", "कली लगाई!", "विषम — कली बोला!"],
+    guessEven:["जोट्टा! मेरा दांव जोट्टा पर!", "जोट्टा लगाया!", "सम — जोट्टा बोला!"],
   },
   en: {
-    odd:       ["Kali! It's odd!", "Kali hai — odd number!", "Odd! Kali wins!"],
-    even:      ["Jotta! It's even!", "Jotta hai — even number!", "Even! Jotta wins!"],
-    hiding:    ["Hiding marbles!", "Close your fist!", "Don't show them!"],
-    guessOdd:  ["Guessing odd — Kali!", "I say Kali!", "Odd is my bet!"],
-    guessEven: ["Guessing even — Jotta!", "I say Jotta!", "Even is my bet!"],
-    win:       ["You win! Amazing!", "Brilliant play!"],
-    lose:      ["Better luck next time!", "Try again!"],
+    oddWin:   ["Kali! You win! Congratulations!", "It's Kali — odd! You won!", "Kali hai — you win!"],
+    oddLose:  ["Kali! Odd — you lose!", "It's Kali, better luck next time!", "Kali hai — you lost!"],
+    evenWin:  ["Jotta! Even — you win!", "It's Jotta — you won! Well done!", "Jotta hai — you win!"],
+    evenLose: ["Jotta! Even — you lose!", "It's Jotta, better luck next time!", "Jotta hai — you lost!"],
+    hiding:   ["Hide your marbles!", "Close your fist!", "Don't let them see!"],
+    guessOdd: ["I guess Kali — odd!", "My bet is Kali!", "Going with Kali!"],
+    guessEven:["I guess Jotta — even!", "My bet is Jotta!", "Going with Jotta!"],
   },
   ta: {
-    odd:       ["கலி! ஒற்றை எண்!", "கலி ஐ!", "ஒற்றை — கலி!"],
-    even:      ["ஜோட்டா! இரட்டை எண்!", "ஜோட்டா ஐ!", "இரட்டை — ஜோட்டா!"],
-    hiding:    ["மறைத்துக்கொள்ளுங்கள்!", "கை மூடுங்கள்!"],
-    guessOdd:  ["கலி என்று சொல்கிறேன்!"],
-    guessEven: ["ஜோட்டா என்று சொல்கிறேன்!"],
-    win:       ["வென்றீர்கள்! சபாஷ்!"],
-    lose:      ["அடுத்த முறை வெல்வீர்கள்!"],
+    oddWin:   ["வாழ்த்துக்கள்! கலி — நீங்கள் வென்றீர்கள்!"],
+    oddLose:  ["கலி — நீங்கள் தோற்றீர்கள்!"],
+    evenWin:  ["வாழ்த்துக்கள்! ஜோட்டா — நீங்கள் வென்றீர்கள்!"],
+    evenLose: ["ஜோட்டா — நீங்கள் தோற்றீர்கள்!"],
+    hiding:   ["மறைத்துக்கொள்ளுங்கள்!"],
+    guessOdd: ["கலி என்று சொல்கிறேன்!"],
+    guessEven:["ஜோட்டா என்று சொல்கிறேன்!"],
   },
   te: {
-    odd:       ["కలి! బేసి సంఖ్య!", "కలి ఐ!", "బేసి — కలి!"],
-    even:      ["జోట్టా! సరి సంఖ్య!", "జోట్టా ఐ!", "సరి — జోట్టా!"],
-    hiding:    ["దాచండి!", "చేయి మూయండి!"],
-    guessOdd:  ["కలి అంటున్నాను!"],
-    guessEven: ["జోట్టా అంటున్నాను!"],
-    win:       ["గెలిచారు! బాగుంది!"],
-    lose:      ["తర్వాత గెలవండి!"],
+    oddWin:   ["అభినందనలు! కలి — మీరు గెలిచారు!"],
+    oddLose:  ["కలి — మీరు ఓడిపోయారు!"],
+    evenWin:  ["అభినందనలు! జోట్టా — మీరు గెలిచారు!"],
+    evenLose: ["జోట్టా — మీరు ఓడిపోయారు!"],
+    hiding:   ["దాచండి!"],
+    guessOdd: ["కలి అంటున్నాను!"],
+    guessEven:["జోట్టా అంటున్నాను!"],
   },
   kn: {
-    odd:       ["ಕಲಿ! ಬೆಸ ಸಂಖ್ಯೆ!", "ಕಲಿ ಐ!", "ಬೆಸ — ಕಲಿ!"],
-    even:      ["ಜೋಟ್ಟಾ! ಸಮ ಸಂಖ್ಯೆ!", "ಜೋಟ್ಟಾ ಐ!", "ಸಮ — ಜೋಟ್ಟಾ!"],
-    hiding:    ["ಅಡಗಿಸಿ!", "ಕೈ ಮುಚ್ಚಿ!"],
-    guessOdd:  ["ಕಲಿ ಎನ್ನುತ್ತೇನೆ!"],
-    guessEven: ["ಜೋಟ್ಟಾ ಎನ್ನುತ್ತೇನೆ!"],
-    win:       ["ಗೆದ್ದಿರಿ! ಭಲೇ!"],
-    lose:      ["ಮುಂದಿನ ಸಲ ಗೆಲ್ಲಿ!"],
+    oddWin:   ["ಅಭಿನಂದನೆಗಳು! ಕಲಿ — ನೀವು ಗೆದ್ದಿರಿ!"],
+    oddLose:  ["ಕಲಿ — ನೀವು ಸೋತಿರಿ!"],
+    evenWin:  ["ಅಭಿನಂದನೆಗಳು! ಜೋಟ್ಟಾ — ನೀವು ಗೆದ್ದಿರಿ!"],
+    evenLose: ["ಜೋಟ್ಟಾ — ನೀವು ಸೋತಿರಿ!"],
+    hiding:   ["ಅಡಗಿಸಿ!"],
+    guessOdd: ["ಕಲಿ ಎನ್ನುತ್ತೇನೆ!"],
+    guessEven:["ಜೋಟ್ಟಾ ಎನ್ನುತ್ತೇನೆ!"],
   },
   ml: {
-    odd:       ["കലി! ഒറ്റ സംഖ്യ!", "കലി ആണ്!", "ഒറ്റ — കലി!"],
-    even:      ["ജോട്ടാ! ഇരട്ട സംഖ്യ!", "ജോട്ടാ ആണ്!", "ഇരട്ട — ജോട്ടാ!"],
-    hiding:    ["ഒളിപ്പിക്കൂ!", "കൈ അടക്കൂ!"],
-    guessOdd:  ["കലി എന്ന് ഞാൻ പറയുന്നു!"],
-    guessEven: ["ജോട്ടാ എന്ന് ഞാൻ പറയുന്നു!"],
-    win:       ["ജയിച്ചു! ഗംഭീരം!"],
-    lose:      ["അടുത്ത തവണ ജയിക്കൂ!"],
+    oddWin:   ["അഭിനന്ദനങ്ങൾ! കലി — നിങ്ങൾ ജയിച്ചു!"],
+    oddLose:  ["കലി — നിങ്ങൾ തോറ്റു!"],
+    evenWin:  ["അഭിനന്ദനങ്ങൾ! ജോട്ടാ — നിങ്ങൾ ജയിച്ചു!"],
+    evenLose: ["ജോട്ടാ — നിങ്ങൾ തോറ്റു!"],
+    hiding:   ["ഒളിപ്പിക്കൂ!"],
+    guessOdd: ["കലി എന്ന് ഞാൻ പറയുന്നു!"],
+    guessEven:["ജോട്ടാ എന്ന് ഞാൻ പറയുന്നു!"],
   },
   bn: {
-    odd:       ["কালি! বিজোড় সংখ্যা!", "কালি হাই!", "বিজোড় — কালি!"],
-    even:      ["জোট্টা! জোড় সংখ্যা!", "জোট্টা হাই!", "জোড় — জোট্টা!"],
-    hiding:    ["লুকিয়ে ফেলো!", "হাত বন্ধ করো!"],
-    guessOdd:  ["কালি বলছি!"],
-    guessEven: ["জোট্টা বলছি!"],
-    win:       ["জিতেছ! দারুণ!"],
-    lose:      ["পরের বার জিতবে!"],
+    oddWin:   ["অভিনন্দন! কালি — তুমি জিতেছ!"],
+    oddLose:  ["কালি — তুমি হেরেছ!"],
+    evenWin:  ["অভিনন্দন! জোট্টা — তুমি জিতেছ!"],
+    evenLose: ["জোট্টা — তুমি হেরেছ!"],
+    hiding:   ["লুকিয়ে ফেলো!"],
+    guessOdd: ["কালি বলছি!"],
+    guessEven:["জোট্টা বলছি!"],
   },
   mr: {
-    odd:       ["काळी! विषम संख्या!", "काळी आहे!", "विषम — काळी!"],
-    even:      ["जोट्टा! सम संख्या!", "जोट्टा आहे!", "सम — जोट्टा!"],
-    hiding:    ["लपवा!", "मूठ बंद करा!"],
-    guessOdd:  ["काळी म्हणतो!"],
-    guessEven: ["जोट्टा म्हणतो!"],
-    win:       ["जिंकलात! शाब्बास!"],
-    lose:      ["पुढच्या वेळी जिंका!"],
+    oddWin:   ["अभिनंदन! काळी — तुम्ही जिंकलात!"],
+    oddLose:  ["काळी — तुम्ही हरलात!"],
+    evenWin:  ["अभिनंदन! जोट्टा — तुम्ही जिंकलात!"],
+    evenLose: ["जोट्टा — तुम्ही हरलात!"],
+    hiding:   ["लपवा!"],
+    guessOdd: ["काळी म्हणतो!"],
+    guessEven:["जोट्टा म्हणतो!"],
   },
   gu: {
-    odd:       ["કળી! વિષમ સંખ્યા!", "કળી છે!", "વિષમ — કળી!"],
-    even:      ["જોટ્ટા! સમ સંખ્યા!", "જોટ્ટા છે!", "સમ — જોટ્ટા!"],
-    hiding:    ["છુપાવો!", "મુઠ્ઠી બંધ કરો!"],
-    guessOdd:  ["કળી કહું છું!"],
-    guessEven: ["જોટ્ટા કહું છું!"],
-    win:       ["જીત્યા! શાબ્બાશ!"],
-    lose:      ["આગળ વખતે જીતો!"],
+    oddWin:   ["અભિનંદન! કળી — તમે જીત્યા!"],
+    oddLose:  ["કળી — તમે હાર્યા!"],
+    evenWin:  ["અભિનંદન! જોટ્ટા — તમે જીત્યા!"],
+    evenLose: ["જોટ્ટા — તમે હાર્યા!"],
+    hiding:   ["છુપાવો!"],
+    guessOdd: ["કળી કહું છું!"],
+    guessEven:["જોટ્ટા કહું છું!"],
   },
 };
 
-// Language display names
 export const LANGUAGE_NAMES: Record<GameLanguage, string> = {
-  hi: "हिंदी",
-  en: "English",
-  ta: "தமிழ்",
-  te: "తెలుగు",
-  kn: "ಕನ್ನಡ",
-  ml: "മലയാളം",
-  bn: "বাংলা",
-  mr: "मराठी",
-  gu: "ગુજરાતી",
+  hi: "हिंदी", en: "English", ta: "தமிழ்", te: "తెలుగు",
+  kn: "ಕನ್ನಡ", ml: "മലയാളം", bn: "বাংলা", mr: "मराठी", gu: "ગુજરાતી",
 };
-
-function pick<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function isSpeechAvailable(): boolean {
-  return typeof window !== "undefined" && "speechSynthesis" in window;
-}
-
-function speak(text: string, lang: string) {
-  if (!isSpeechAvailable()) return;
-  window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = lang;
-  utter.rate = 1.0;
-  utter.pitch = 1.1;
-  utter.volume = 1.0;
-
-  // Try to pick a voice for the language
-  const voices = window.speechSynthesis.getVoices();
-  const match = voices.find(v => v.lang.startsWith(lang.split("-")[0]));
-  if (match) utter.voice = match;
-
-  window.speechSynthesis.speak(utter);
-}
 
 const LANG_CODES: Record<GameLanguage, string> = {
   hi: "hi-IN", en: "en-IN", ta: "ta-IN", te: "te-IN",
   kn: "kn-IN", ml: "ml-IN", bn: "bn-IN", mr: "mr-IN", gu: "gu-IN",
 };
 
-export function announceResult(isOdd: boolean, language: GameLanguage) {
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function speak(text: string, lang: string) {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = lang;
+  utter.rate = 0.9;
+  utter.pitch = 1.1;
+  utter.volume = 1.0;
+  const voices = window.speechSynthesis.getVoices();
+  const match = voices.find(v => v.lang.startsWith(lang.split("-")[0]));
+  if (match) utter.voice = match;
+  window.speechSynthesis.speak(utter);
+}
+
+// Main result announcement — "Kali hai tum jeete!" style
+export function announceResult(isOdd: boolean, playerWon: boolean, language: GameLanguage) {
   const lines = VOICE_LINES[language];
-  const text = isOdd ? pick(lines.odd) : pick(lines.even);
+  let text: string;
+  if (isOdd && playerWon)   text = pick(lines.oddWin);
+  else if (isOdd && !playerWon)  text = pick(lines.oddLose);
+  else if (!isOdd && playerWon)  text = pick(lines.evenWin);
+  else                           text = pick(lines.evenLose);
   speak(text, LANG_CODES[language]);
 }
 
 export function announceHiding(language: GameLanguage) {
-  const text = pick(VOICE_LINES[language].hiding);
-  speak(text, LANG_CODES[language]);
+  speak(pick(VOICE_LINES[language].hiding), LANG_CODES[language]);
 }
 
 export function announceGuess(isOdd: boolean, language: GameLanguage) {
   const lines = VOICE_LINES[language];
-  const text = isOdd ? pick(lines.guessOdd) : pick(lines.guessEven);
-  speak(text, LANG_CODES[language]);
+  speak(isOdd ? pick(lines.guessOdd) : pick(lines.guessEven), LANG_CODES[language]);
 }
 
-export function announceWin(language: GameLanguage) {
-  speak(pick(VOICE_LINES[language].win), LANG_CODES[language]);
-}
-
-export function announceLose(language: GameLanguage) {
-  speak(pick(VOICE_LINES[language].lose), LANG_CODES[language]);
-}
+// Keep these for backward compatibility
+export function announceWin(_language: GameLanguage) {}
+export function announceLose(_language: GameLanguage) {}
