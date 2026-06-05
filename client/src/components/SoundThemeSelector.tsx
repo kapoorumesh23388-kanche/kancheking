@@ -20,6 +20,7 @@ export default function SoundThemeSelector({
 }: SoundThemeSelectorProps) {
   const [open, setOpen] = useState(false);
   const themes = getBGMThemes();
+  const safeTheme = themes[currentTheme] ? currentTheme : (Object.keys(themes)[0] as BGMTheme);
 
   return (
     <div className="relative z-20">
@@ -35,7 +36,7 @@ export default function SoundThemeSelector({
           }}
         >
           {isMusicOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-          {themes[currentTheme].emoji} {isMusicOn ? themes[currentTheme].name : "Muted"}
+          {themes[safeTheme].emoji} {isMusicOn ? themes[safeTheme].name : "Muted"}
         </button>
         <button
           onClick={() => setOpen(p => !p)}
