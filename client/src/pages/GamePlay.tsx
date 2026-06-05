@@ -7,7 +7,6 @@ import ResultDisplay from "@/components/ResultDisplay";
 import MarbleSelector from "@/components/MarbleSelector";
 import GameChat from "@/components/GameChat";
 import { SpinWheel } from "@/components/SpinWheel";
-import LiveGameAvatar from "@/components/LiveGameAvatar";
 import SoundThemeSelector from "@/components/SoundThemeSelector";
 import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
@@ -86,7 +85,7 @@ export default function GamePlay() {
   const [adRewardPlayer, setAdRewardPlayer] = useState<"player1" | "player2" | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isMusicEnabled, setIsMusicEnabled] = useState(true);
-  const [bgmTheme, setBgmTheme] = useState<BGMTheme>(() => (localStorage.getItem("bgmTheme") as BGMTheme) || "dholak");
+  const [bgmTheme, setBgmTheme] = useState<BGMTheme>(() => (localStorage.getItem("bgmTheme") as BGMTheme) || "street");
   const [gameLanguage, setGameLanguage] = useState<GameLanguage>(() => (localStorage.getItem("gameLanguage") as GameLanguage) || "hi");
   // Avatar phases
   const [playerAvatarPhase, setPlayerAvatarPhase] = useState<"idle"|"hiding"|"hidden"|"revealing"|"revealed">("idle");
