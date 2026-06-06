@@ -244,7 +244,7 @@ export default function GamePlay() {
     if (isHiderPlayer1) {
       setPlayerAvatarPhase("hiding");
       playSfxMarbleHide();
-      announceHiding(gameLanguage);
+
       setTimeout(() => setPlayerAvatarPhase("hidden"), 700);
       setTimeout(() => {
         const guesses = ["kali", "jotta"];
@@ -254,7 +254,7 @@ export default function GamePlay() {
         setLastGuess(randomGuess);
         setLastBet(randomBet);
         setShowRevealButton(true);
-        announceGuess(randomGuess === "kali", gameLanguage);
+
         setAiAvatarPhase("hidden");
       }, 1500);
     } else {
@@ -270,7 +270,7 @@ export default function GamePlay() {
     setLastBet(bet);
     setShowRevealButton(true);
     playSfxGuess();
-    announceGuess(guess === "kali", gameLanguage);
+
     setPlayerAvatarPhase("hidden");
   };
 
@@ -292,10 +292,10 @@ export default function GamePlay() {
       // Logic: Odd marbles = Kali, Even marbles (0,2,4...) = Jotta
       if (lastGuess === "kali") {
         won = isOdd;
-        message = won ? "Kali Hai! 🎉" : "Jotta Hai! 😢";
+        message = won ? "बधाई हो! कली है — तुम जीत गए! 🎉" : "जोट्टा है! अरे नहीं 😢";
       } else if (lastGuess === "jotta") {
         won = !isOdd;
-        message = won ? "Jotta Hai! 🎉" : "Kali Hai! 😢";
+        message = won ? "बधाई हो! जोट्टा है — तुम जीत गए! 🎉" : "कली है! अरे नहीं 😢";
       }
       
       // Determine if player won or lost this round
