@@ -129,7 +129,7 @@ export default function GameHeader() {
               title="Kanche King"
               data-testid="button-home-icon"
             >
-              <span className="text-lg">🪨</span>
+              <img src="/favicon.png" alt="Kanche King" style={{ width: 28, height: 28, borderRadius: 8 }} />
             </Button>
             {showBackButton && (
               <Button
