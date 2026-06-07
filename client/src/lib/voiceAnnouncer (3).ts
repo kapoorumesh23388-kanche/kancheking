@@ -13,13 +13,13 @@ interface VoiceLines {
 
 const VOICE_LINES: Record<GameLanguage, VoiceLines> = {
   hi: {
-    oddWin:   ["बधाई हो! कली है, तुम जीत गए!", "वाह! कली है, तुम जीत गए!", "शाबाश! कली है, तुम जीत गए!"],
-    oddLose:  ["अगली बार अच्छा खेलो! कली है, तुम हार गए!", "कली है, तुम हार गए! हिम्मत रखो!", "कली है, तुम हार गए!"],
-    evenWin:  ["बधाई हो! जोट्टा है, तुम जीत गए!", "वाह! जोट्टा है, तुम जीत गए!", "शाबाश! जोट्टा है, तुम जीत गए!"],
-    evenLose: ["अगली बार अच्छा खेलो! जोट्टा है, तुम हार गए!", "जोट्टा है, तुम हार गए! हिम्मत रखो!", "जोट्टा है, तुम हार गए!"],
-    hiding:   [""],
-    guessOdd: [""],
-    guessEven:[""],
+    oddWin:   ["बधाई हो! कली है, तुम जीत गए!", "कली है! शाबाश, जीत गए!", "कली निकली, तुम जीत गए! वाह!"],
+    oddLose:  ["कली है, तुम हार गए!", "हाय! कली थी, अगली बार जीतना!", "कली निकली, हार गए!"],
+    evenWin:  ["बधाई हो! जोट्टा है, तुम जीत गए!", "जोट्टा है! शाबाश!", "जोट्टा निकला, तुम जीत गए!"],
+    evenLose: ["जोट्टा है, तुम हार गए!", "जोट्टा था, हार गए! अगली बार!", "जोट्टा निकला, हार गए!"],
+    hiding:   ["मुट्ठी बंद करो!", "छुपाओ कांचे!", "देखने मत देना!"],
+    guessOdd: ["कली! मेरा दांव कली पर!", "कली लगाई!", "विषम — कली बोला!"],
+    guessEven:["जोट्टा! मेरा दांव जोट्टा पर!", "जोट्टा लगाया!", "सम — जोट्टा बोला!"],
   },
   en: {
     oddWin:   ["Kali! You win! Congratulations!", "It's Kali — odd! You won!", "Kali hai — you win!"],
@@ -112,15 +112,38 @@ function pick<T>(arr: T[]): T {
 function speak(text: string, lang: string) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = lang;
-  utter.rate = 0.9;
-  utter.pitch = 1.1;
-  utter.volume = 1.0;
+
+  const doSpeak = () => {
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = lang;
+    utter.rate = 0.88;
+    utter.pitch = 0.95;
+    utter.volume = 1.0;
+
+    const voices = window.speechSynthesis.getVoices();
+    const langCode = lang.split("-")[0]; // e.g. "hi"
+
+    // Priority: exact lang match Indian voice → any lang match → default
+    const indianVoice =
+      voices.find(v => v.lang === lang && (v.name.toLowerCase().includes("india") || v.name.toLowerCase().includes("hindi"))) ||
+      voices.find(v => v.lang === lang) ||
+      voices.find(v => v.lang.startsWith(langCode) && v.name.toLowerCase().includes("india")) ||
+      voices.find(v => v.lang.startsWith(langCode));
+
+    if (indianVoice) utter.voice = indianVoice;
+
+    window.speechSynthesis.speak(utter);
+  };
+
   const voices = window.speechSynthesis.getVoices();
-  const match = voices.find(v => v.lang.startsWith(lang.split("-")[0]));
-  if (match) utter.voice = match;
-  window.speechSynthesis.speak(utter);
+  if (voices.length > 0) {
+    doSpeak();
+  } else {
+    window.speechSynthesis.onvoiceschanged = () => {
+      window.speechSynthesis.onvoiceschanged = null;
+      doSpeak();
+    };
+  }
 }
 
 // Main result announcement — "Kali hai tum jeete!" style

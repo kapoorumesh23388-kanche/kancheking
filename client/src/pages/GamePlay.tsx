@@ -161,9 +161,11 @@ export default function GamePlay() {
     if (gameResult) {
       const isOdd = (isHiderPlayer1 ? selectedMarbleIds.length : aiHiddenCount) % 2 !== 0;
       // Announce result in selected language
+      // playerActuallyWon: agar mai hider hoon toh guesser(AI) ka result ulta mera result hai
+      const playerActuallyWon = isHiderPlayer1 ? !gameResult.won : gameResult.won;
       setTimeout(() => {
-        announceResult(isOdd, gameResult.won, gameLanguage);
-        if (gameResult.won) { playSfxWin(); setIsPlayerWinner(true); }
+        announceResult(isOdd, playerActuallyWon, gameLanguage);
+        if (playerActuallyWon) { playSfxWin(); setIsPlayerWinner(true); }
         else { playSfxLose(); setIsPlayerWinner(false); }
       }, 600);
       // Avatar phases
