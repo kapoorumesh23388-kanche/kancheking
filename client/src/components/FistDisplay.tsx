@@ -8,45 +8,65 @@ interface FistDisplayProps {
 }
 
 const glassColors = [
-  { c1: "#ff4444", c2: "#cc0000", swirl: "#ffcc00" },
-  { c1: "#00cc44", c2: "#006622", swirl: "#88ffaa" },
-  { c1: "#00aaff", c2: "#0044cc", swirl: "#88ddff" },
-  { c1: "#ffcc00", c2: "#ff8800", swirl: "#ffffff" },
-  { c1: "#cc44ff", c2: "#6600cc", swirl: "#ffaaff" },
-  { c1: "#00cccc", c2: "#006688", swirl: "#aaffff" },
+  { c1: "#ff2222", c2: "#990000", swirl: "#ffaa00", t: "0.55" },
+  { c1: "#22bb22", c2: "#005500", swirl: "#aaffaa", t: "0.5" },
+  { c1: "#2288ff", c2: "#0033aa", swirl: "#aaddff", t: "0.5" },
+  { c1: "#ffcc00", c2: "#cc7700", swirl: "#fff8aa", t: "0.5" },
+  { c1: "#cc22ff", c2: "#660099", swirl: "#ffaaff", t: "0.5" },
+  { c1: "#00cccc", c2: "#005566", swirl: "#aaffff", t: "0.5" },
 ];
 
-const GlassMarble = ({ color, size = 40, delay = 0 }: { color: typeof glassColors[0], size?: number, delay?: number }) => {
-  const uid = color.c1.replace('#', '') + delay;
+const GlassMarble = ({ color, size = 40 }: { color: typeof glassColors[0], size?: number }) => {
+  const uid = `m${color.c1.replace('#','')}${size}`;
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"
-      style={{ display: 'block', animation: `bounce 1s ease-in-out ${delay}s infinite alternate` }}>
+    <svg width={size} height={size} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <radialGradient id={`b-${uid}`} cx="38%" cy="35%" r="65%">
-          <stop offset="0%" stopColor="white" stopOpacity="0.95"/>
-          <stop offset="15%" stopColor={color.c1} stopOpacity="0.85"/>
-          <stop offset="55%" stopColor={color.c2} stopOpacity="0.7"/>
-          <stop offset="100%" stopColor="#000" stopOpacity="0.8"/>
+        {/* Base transparent glass color */}
+        <radialGradient id={`base-${uid}`} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor={color.c1} stopOpacity="0.7"/>
+          <stop offset="70%" stopColor={color.c2} stopOpacity="0.85"/>
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.6"/>
         </radialGradient>
-        <radialGradient id={`s-${uid}`} cx="30%" cy="26%" r="36%">
-          <stop offset="0%" stopColor="white" stopOpacity="1"/>
-          <stop offset="55%" stopColor="white" stopOpacity="0.3"/>
+        {/* Main top-left shine */}
+        <radialGradient id={`shine1-${uid}`} cx="35%" cy="30%" r="35%">
+          <stop offset="0%" stopColor="white" stopOpacity="0.95"/>
+          <stop offset="40%" stopColor="white" stopOpacity="0.4"/>
           <stop offset="100%" stopColor="white" stopOpacity="0"/>
         </radialGradient>
-        <radialGradient id={`d-${uid}`} cx="62%" cy="66%" r="42%">
-          <stop offset="0%" stopColor={color.c2} stopOpacity="0.5"/>
-          <stop offset="100%" stopColor="#000" stopOpacity="0"/>
+        {/* Bottom right depth */}
+        <radialGradient id={`depth-${uid}`} cx="65%" cy="68%" r="40%">
+          <stop offset="0%" stopColor={color.c2} stopOpacity="0.6"/>
+          <stop offset="100%" stopColor="transparent" stopOpacity="0"/>
         </radialGradient>
-        <filter id={`sh-${uid}`}>
-          <feDropShadow dx="1" dy="3" stdDeviation="3" floodColor="#000" floodOpacity="0.6"/>
+        {/* Inner swirl gradient */}
+        <radialGradient id={`swirl-${uid}`} cx="40%" cy="55%" r="30%">
+          <stop offset="0%" stopColor={color.swirl} stopOpacity="0.35"/>
+          <stop offset="100%" stopColor={color.swirl} stopOpacity="0"/>
+        </radialGradient>
+        {/* Small secondary shine */}
+        <radialGradient id={`shine2-${uid}`} cx="68%" cy="72%" r="15%">
+          <stop offset="0%" stopColor="white" stopOpacity="0.4"/>
+          <stop offset="100%" stopColor="white" stopOpacity="0"/>
+        </radialGradient>
+        <filter id={`shadow-${uid}`} x="-20%" y="-20%" width="150%" height="150%">
+          <feDropShadow dx="2" dy="4" stdDeviation="4" floodColor="#000000" floodOpacity="0.5"/>
         </filter>
       </defs>
-      <circle cx="24" cy="24" r="22" fill={`url(#b-${uid})`} filter={`url(#sh-${uid})`}/>
-      <ellipse cx="27" cy="28" rx="10" ry="4" fill={color.swirl} opacity="0.2" transform="rotate(-40 27 28)"/>
-      <ellipse cx="18" cy="20" rx="6" ry="2.5" fill={color.swirl} opacity="0.13" transform="rotate(25 18 20)"/>
-      <circle cx="24" cy="24" r="22" fill={`url(#d-${uid})`}/>
-      <ellipse cx="16" cy="14" rx="9" ry="6" fill={`url(#s-${uid})`}/>
-      <circle cx="31" cy="33" r="2.5" fill="white" opacity="0.15"/>
+      {/* Main glass sphere */}
+      <circle cx="50" cy="50" r="46" fill={`url(#base-${uid})`} filter={`url(#shadow-${uid})`}/>
+      {/* Swirl inside */}
+      <ellipse cx="42" cy="58" rx="22" ry="10" fill={color.swirl} opacity="0.22" transform="rotate(-35 42 58)"/>
+      <ellipse cx="58" cy="38" rx="14" ry="6" fill={color.swirl} opacity="0.15" transform="rotate(20 58 38)"/>
+      {/* Inner swirl glow */}
+      <circle cx="50" cy="50" r="46" fill={`url(#swirl-${uid})`}/>
+      {/* Depth shadow bottom right */}
+      <circle cx="50" cy="50" r="46" fill={`url(#depth-${uid})`}/>
+      {/* Main shine top left */}
+      <ellipse cx="33" cy="28" rx="22" ry="14" fill={`url(#shine1-${uid})`}/>
+      {/* Small secondary shine bottom right */}
+      <circle cx="68" cy="70" r="8" fill={`url(#shine2-${uid})`}/>
+      {/* Tiny specular highlight */}
+      <ellipse cx="28" cy="24" rx="7" ry="4" fill="white" opacity="0.7" transform="rotate(-20 28 24)"/>
     </svg>
   );
 };
@@ -63,18 +83,8 @@ export default function FistDisplay({
     setTimeout(() => setAnimate(false), 1000);
   };
 
-  const renderMarbles = () => {
-    const count = Math.min(marbleCount, 20);
-    return Array.from({ length: count }, (_, i) => (
-      <div key={i} style={{ display: 'inline-block' }}>
-        <GlassMarble
-          color={glassColors[i % glassColors.length]}
-          size={42}
-          delay={i * 0.08}
-        />
-      </div>
-    ));
-  };
+  const count = Math.min(marbleCount, 20);
+  const palmMarbleCount = Math.min(marbleCount, 6);
 
   return (
     <Card className="bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/40 shadow-xl">
@@ -86,35 +96,46 @@ export default function FistDisplay({
           {label}
         </h3>
 
+        {/* Revealed: show all marbles above open hand */}
         {isOpen && marbleCount > 0 && (
-          <div className="mb-3 sm:mb-6 flex flex-wrap justify-center gap-1.5 sm:gap-2 animate-in fade-in duration-500">
-            {renderMarbles()}
+          <div className="mb-3 sm:mb-4 flex flex-wrap justify-center gap-1 sm:gap-2 animate-in fade-in duration-500">
+            {Array.from({ length: count }, (_, i) => (
+              <GlassMarble key={i} color={glassColors[i % glassColors.length]} size={40}/>
+            ))}
           </div>
         )}
 
-        {/* Palm hand with marbles on top when hidden */}
-        <div style={{ position: 'relative', display: 'inline-block' }}>
+        {/* Hand + marbles sitting on palm */}
+        <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
+          {/* Marbles sitting ON the palm — shown when hidden */}
           {!isOpen && marbleCount > 0 && (
             <div style={{
-              position: 'absolute',
-              top: -36,
-              left: '50%',
-              transform: 'translateX(-50%)',
               display: 'flex',
-              gap: 4,
+              gap: 2,
               flexWrap: 'wrap',
               justifyContent: 'center',
-              width: 120,
+              width: 140,
+              marginBottom: -8,
+              zIndex: 2,
+              position: 'relative',
             }}>
-              {Array.from({ length: Math.min(marbleCount, 5) }, (_, i) => (
-                <GlassMarble key={i} color={glassColors[i % glassColors.length]} size={28} delay={i * 0.1} />
+              {Array.from({ length: palmMarbleCount }, (_, i) => (
+                <GlassMarble key={i} color={glassColors[i % glassColors.length]} size={32}/>
               ))}
+              {marbleCount > 6 && (
+                <span style={{ fontSize: 11, color: '#00FF88', alignSelf: 'center', fontWeight: 'bold' }}>
+                  +{marbleCount - 6}
+                </span>
+              )}
             </div>
           )}
+
+          {/* Fist / Palm emoji */}
           <div
-            className={`text-5xl sm:text-7xl md:text-8xl cursor-pointer transition-all duration-500 ${
+            className={`text-6xl sm:text-7xl md:text-8xl cursor-pointer transition-all duration-500 ${
               animate ? "animate-bounce scale-105" : "hover:scale-105"
             }`}
+            style={{ lineHeight: 1, zIndex: 1 }}
             onClick={handleClick}
             data-testid="fist-icon"
           >
@@ -123,7 +144,7 @@ export default function FistDisplay({
         </div>
 
         {marbleCount > 0 && !isOpen && (
-          <div className="mt-6 sm:mt-8 text-base sm:text-xl font-bold text-[#00FF88]"
+          <div className="mt-3 text-base sm:text-xl font-bold text-[#00FF88]"
             style={{ textShadow: '0 0 10px rgba(0,255,136,0.5)' }}>
             {marbleCount} marble{marbleCount !== 1 ? 's' : ''} hidden 🔒
           </div>
