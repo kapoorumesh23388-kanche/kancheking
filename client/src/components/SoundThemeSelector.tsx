@@ -47,13 +47,15 @@ export default function SoundThemeSelector({
         </button>
       </div>
 
-      {/* Dropdown panel */}
+      {/* Dropdown panel - opens UPWARD */}
       {open && (
         <div
-          className="absolute top-10 left-0 w-72 rounded-2xl border p-4 shadow-2xl z-50 space-y-4"
+          className="absolute bottom-10 right-0 w-72 rounded-2xl border p-4 shadow-2xl z-50 space-y-4"
           style={{
             background: "linear-gradient(135deg, #0d0416 0%, #1a0a2e 100%)",
             borderColor: "#00D9FF40",
+            maxHeight: "60vh",
+            overflowY: "auto",
           }}
         >
           {/* BGM Themes */}
