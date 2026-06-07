@@ -160,6 +160,7 @@ export default function GamePlay() {
   useEffect(() => {
     if (gameResult) {
       const isOdd = (isHiderPlayer1 ? selectedMarbleIds.length : aiHiddenCount) % 2 !== 0;
+      // Announce result in selected language
       setTimeout(() => {
         announceResult(isOdd, gameResult.won, gameLanguage);
         if (gameResult.won) { playSfxWin(); setIsPlayerWinner(true); }
