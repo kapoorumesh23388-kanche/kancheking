@@ -36,7 +36,10 @@ import {
   playSfxMarbleHide, playSfxReveal, playSfxWin, playSfxLose, playSfxGuess, playSfxMarbleClick,
   type BGMTheme,
 } from "@/lib/soundSystem";
-import { type GameLanguage } from "@/lib/voiceAnnouncer";
+import {
+  announceResult,
+  type GameLanguage,
+} from "@/lib/voiceAnnouncer";
 import { useToast } from "@/hooks/use-toast";
 import { RotateCcw, Home } from "lucide-react";
 
@@ -157,8 +160,8 @@ export default function GamePlay() {
   useEffect(() => {
     if (gameResult) {
       const isOdd = (isHiderPlayer1 ? selectedMarbleIds.length : aiHiddenCount) % 2 !== 0;
-      // Sound effects only
       setTimeout(() => {
+        announceResult(isOdd, gameResult.won, gameLanguage);
         if (gameResult.won) { playSfxWin(); setIsPlayerWinner(true); }
         else { playSfxLose(); setIsPlayerWinner(false); }
       }, 600);
