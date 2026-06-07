@@ -10,6 +10,7 @@ import GameChat from "@/components/GameChat";
 import { SpinWheel } from "@/components/SpinWheel";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Volume2, VolumeX, ArrowLeft, RotateCcw, Home } from "lucide-react";
+import { announceResult, type GameLanguage } from "@/lib/voiceAnnouncer";
 import {
   Dialog,
   DialogContent,
@@ -344,6 +345,13 @@ export default function MultiplayerGame() {
           pointsEarned: pointChange,
         });
         setPhase("result");
+
+        // Voice announcement in player's language
+        setTimeout(() => {
+          const lang = (localStorage.getItem("gameLanguage") as GameLanguage) || "hi";
+          const isOdd = message.data.hiddenCount % 2 !== 0;
+          announceResult(isOdd, won, lang);
+        }, 600);
         
         toast({
           title: won ? "+5 Points!" : "-5 Points",
