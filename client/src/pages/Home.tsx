@@ -125,6 +125,20 @@ export default function Home() {
       <FloatingMarbles />
       <div className="container max-w-6xl mx-auto px-3 md:px-5 flex-1">
         <div className="text-center mb-4 md:mb-8 p-4 md:p-10 marble-glass rounded-2xl md:rounded-3xl neon-glow-cyan">
+          {/* Game Logo */}
+          <div className="flex justify-center mb-3 md:mb-5">
+            <img
+              src="/favicon.png"
+              alt="Kanche King Logo"
+              style={{
+                width: 100,
+                height: 100,
+                borderRadius: 24,
+                boxShadow: '0 0 30px rgba(0,217,255,0.5), 0 0 60px rgba(233,30,140,0.3)',
+              }}
+            />
+          </div>
+
           <h1
             className={`${language !== 'en' ? 'text-4xl md:text-7xl leading-tight' : 'text-3xl md:text-6xl'} font-bold mb-2 md:mb-3 bg-gradient-to-r from-[#00D9FF] via-[#E91E8C] to-[#00D9FF] bg-clip-text text-transparent neon-text-cyan lang-${language}`}
             lang={language}
