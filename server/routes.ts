@@ -1304,7 +1304,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.saveOTP(adminId, otp);
 
       const { sendOTPSMS } = await import('./twilioClient');
-      await sendOTPSMS(phoneNumber, otp);
+      const sent = await sendOTPSMS(phoneNumber, otp);
+
+      if (!sent) {
+        return res.status(500).json({ error: "Failed to send OTP" });
+      }
 
       res.json({ 
         success: true, 
