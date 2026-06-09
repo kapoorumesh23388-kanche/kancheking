@@ -9,15 +9,15 @@ async function getClient() {
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   
   if (!accountSid || !authToken) {
-    console.warn('Twilio not configured');
+    console.warn('Twilio not configured - TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN missing');
     return null;
   }
   
+  console.log('Twilio client initialized with Account SID:', accountSid.slice(0, 10) + '...');
   twilioClient = twilio(accountSid, authToken);
   return twilioClient;
 }
 
-// Send OTP using Twilio Verify API
 export async function sendOTPSMS(phoneNumber: string, otp: string): Promise<boolean> {
   try {
     const client = await getClient();
@@ -28,7 +28,7 @@ export async function sendOTPSMS(phoneNumber: string, otp: string): Promise<bool
     }
 
     const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
-    
+
     // Format phone number for India
     let toPhoneNumber = phoneNumber;
     if (!phoneNumber.startsWith('+')) {
@@ -40,59 +40,29 @@ export async function sendOTPSMS(phoneNumber: string, otp: string): Promise<bool
     }
 
     if (serviceSid) {
-      // Use Twilio Verify API (no phone number needed)
-      console.log(`Sending OTP via Verify to: ${toPhoneNumber}`);
+      console.log(`Sending OTP via Twilio Verify to: ${toPhoneNumber}`);
       await client.verify.v2.services(serviceSid)
         .verifications
         .create({ to: toPhoneNumber, channel: 'sms' });
-      console.log(`OTP sent successfully to ${toPhoneNumber}`);
+      console.log(`OTP sent successfully via Verify to ${toPhoneNumber}`);
     } else {
-      // Fallback: use regular SMS
       const fromNumber = process.env.TWILIO_PHONE_NUMBER;
       if (!fromNumber) {
         console.log(`[DEVELOPMENT] OTP for ${phoneNumber}: ${otp}`);
         return true;
       }
+      console.log(`Sending SMS to: ${toPhoneNumber} from: ${fromNumber}`);
       await client.messages.create({
         body: `Your Kanche King Admin OTP is: ${otp}. Valid for 5 minutes.`,
         from: fromNumber,
         to: toPhoneNumber,
       });
+      console.log(`SMS sent successfully to ${toPhoneNumber}`);
     }
 
     return true;
   } catch (error) {
     console.error('Error sending OTP SMS:', error);
-    return false;
-  }
-}
-
-// Verify OTP using Twilio Verify API
-export async function verifyOTP(phoneNumber: string, otp: string): Promise<boolean> {
-  try {
-    const client = await getClient();
-    const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
-    
-    if (!client || !serviceSid) {
-      return true; // Development mode
-    }
-
-    let toPhoneNumber = phoneNumber;
-    if (!phoneNumber.startsWith('+')) {
-      if (phoneNumber.length === 10) {
-        toPhoneNumber = '+91' + phoneNumber;
-      } else if (phoneNumber.length === 12 && phoneNumber.startsWith('91')) {
-        toPhoneNumber = '+' + phoneNumber;
-      }
-    }
-
-    const verification = await client.verify.v2.services(serviceSid)
-      .verificationChecks
-      .create({ to: toPhoneNumber, code: otp });
-
-    return verification.status === 'approved';
-  } catch (error) {
-    console.error('Error verifying OTP:', error);
     return false;
   }
 }
