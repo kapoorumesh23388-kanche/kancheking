@@ -12,96 +12,80 @@ var __export = (target, all) => {
 var twilioClient_exports = {};
 __export(twilioClient_exports, {
   getTwilioClient: () => getTwilioClient,
-  sendOTPSMS: () => sendOTPSMS
+  sendOTPSMS: () => sendOTPSMS,
+  sendOTPViaTwilio: () => sendOTPViaTwilio,
+  verifyOTPViaTwilio: () => verifyOTPViaTwilio
 });
 import twilio from "twilio";
-async function getTwilioCredentials() {
-  if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
-    return {
-      accountSid: process.env.TWILIO_ACCOUNT_SID,
-      authToken: process.env.TWILIO_AUTH_TOKEN,
-      phoneNumber: process.env.TWILIO_PHONE_NUMBER
-    };
-  }
-  try {
-    const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-    const xReplitToken = process.env.REPL_IDENTITY ? "repl " + process.env.REPL_IDENTITY : process.env.WEB_REPL_RENEWAL ? "depl " + process.env.WEB_REPL_RENEWAL : null;
-    if (!xReplitToken || !hostname) {
-      return null;
-    }
-    const connectorName = "twilio";
-    const url = new URL(`https://${hostname}/api/v2/connection`);
-    url.searchParams.set("include_secrets", "true");
-    url.searchParams.set("connector_names", connectorName);
-    const response = await fetch(url.toString(), {
-      headers: {
-        "Accept": "application/json",
-        "X_REPLIT_TOKEN": xReplitToken
-      }
-    });
-    const data = await response.json();
-    const connectionSettings2 = data.items?.[0];
-    if (!connectionSettings2) {
-      return null;
-    }
-    return {
-      accountSid: connectionSettings2.settings.account_sid,
-      authToken: connectionSettings2.settings.auth_token,
-      phoneNumber: connectionSettings2.settings.phone_number
-    };
-  } catch (error) {
-    console.warn("Twilio connector not available, checking environment variables...");
+async function getClient() {
+  if (twilioClient) return twilioClient;
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  if (!accountSid || !authToken) {
+    console.warn("Twilio not configured - TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN missing");
     return null;
   }
+  console.log("Twilio client initialized with Account SID:", accountSid.slice(0, 10) + "...");
+  twilioClient = twilio(accountSid, authToken);
+  return twilioClient;
 }
-async function getTwilioClient() {
-  if (twilioClient && twilioPhoneNumber) {
-    return { client: twilioClient, phoneNumber: twilioPhoneNumber };
-  }
-  const credentials = await getTwilioCredentials();
-  if (!credentials) {
-    console.warn("Twilio not configured - SMS OTP will not be sent");
-    return null;
-  }
-  twilioClient = twilio(credentials.accountSid, credentials.authToken);
-  twilioPhoneNumber = credentials.phoneNumber;
-  return { client: twilioClient, phoneNumber: twilioPhoneNumber };
+function formatPhone(phoneNumber) {
+  if (phoneNumber.startsWith("+")) return phoneNumber;
+  if (phoneNumber.length === 10) return "+91" + phoneNumber;
+  if (phoneNumber.length === 12 && phoneNumber.startsWith("91")) return "+" + phoneNumber;
+  return phoneNumber;
 }
-async function sendOTPSMS(phoneNumber, otp) {
+async function sendOTPViaTwilio(phoneNumber) {
   try {
-    const twilioCredentials = await getTwilioClient();
-    if (!twilioCredentials) {
-      console.log(`[DEVELOPMENT] OTP for ${phoneNumber}: ${otp}`);
-      return true;
+    const client = await getClient();
+    if (!client) {
+      console.log(`[DEV] Twilio not configured - OTP not sent`);
+      return false;
     }
-    const { client, phoneNumber: fromNumber } = twilioCredentials;
-    let toPhoneNumber = phoneNumber;
-    if (!phoneNumber.startsWith("+")) {
-      if (phoneNumber.length === 10) {
-        toPhoneNumber = "+91" + phoneNumber;
-      } else if (phoneNumber.length === 12 && phoneNumber.startsWith("91")) {
-        toPhoneNumber = "+" + phoneNumber;
-      }
+    const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
+    if (!serviceSid) {
+      console.error("TWILIO_VERIFY_SERVICE_SID missing");
+      return false;
     }
-    console.log(`Sending SMS to: ${toPhoneNumber} from: ${fromNumber}`);
-    await client.messages.create({
-      body: `Your Kanche King Admin OTP is: ${otp}. Valid for 5 minutes.`,
-      from: fromNumber,
-      to: toPhoneNumber
-    });
-    console.log(`SMS sent successfully to ${toPhoneNumber}`);
+    const toPhone = formatPhone(phoneNumber);
+    console.log(`Sending OTP via Twilio Verify to: ${toPhone}`);
+    await client.verify.v2.services(serviceSid).verifications.create({ to: toPhone, channel: "sms" });
+    console.log(`OTP sent successfully to ${toPhone}`);
     return true;
   } catch (error) {
-    console.error("Error sending OTP SMS:", error);
+    console.error("Twilio send error:", error);
     return false;
   }
 }
-var twilioClient, twilioPhoneNumber;
+async function verifyOTPViaTwilio(phoneNumber, code) {
+  try {
+    const client = await getClient();
+    if (!client) return false;
+    const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
+    if (!serviceSid) return false;
+    const toPhone = formatPhone(phoneNumber);
+    console.log(`Verifying OTP for: ${toPhone}`);
+    const result = await client.verify.v2.services(serviceSid).verificationChecks.create({ to: toPhone, code });
+    console.log(`OTP verify status: ${result.status}`);
+    return result.status === "approved";
+  } catch (error) {
+    console.error("Twilio verify error:", error);
+    return false;
+  }
+}
+async function sendOTPSMS(phoneNumber, otp) {
+  return sendOTPViaTwilio(phoneNumber);
+}
+async function getTwilioClient() {
+  const client = await getClient();
+  if (!client) return null;
+  return { client, phoneNumber: process.env.TWILIO_PHONE_NUMBER || "" };
+}
+var twilioClient;
 var init_twilioClient = __esm({
   "server/twilioClient.ts"() {
     "use strict";
     twilioClient = null;
-    twilioPhoneNumber = "";
   }
 });
 
@@ -2702,10 +2686,11 @@ async function registerRoutes(app2) {
         phoneNumber = "9211979518";
         await storage.updateAdminPhone(adminId, phoneNumber);
       }
-      const otp = Math.floor(1e5 + Math.random() * 9e5).toString();
-      await storage.saveOTP(adminId, otp);
-      const { sendOTPSMS: sendOTPSMS2 } = await Promise.resolve().then(() => (init_twilioClient(), twilioClient_exports));
-      await sendOTPSMS2(phoneNumber, otp);
+      const { sendOTPViaTwilio: sendOTPViaTwilio2 } = await Promise.resolve().then(() => (init_twilioClient(), twilioClient_exports));
+      const sent = await sendOTPViaTwilio2(phoneNumber);
+      if (!sent) {
+        return res.status(500).json({ error: "Failed to send OTP" });
+      }
       res.json({
         success: true,
         message: "OTP sent to your phone",
@@ -2722,9 +2707,12 @@ async function registerRoutes(app2) {
       if (!adminId || !otp) {
         return res.status(400).json({ error: "Admin ID and OTP required" });
       }
-      const isValid = await storage.verifyOTP(adminId, otp);
+      let phoneNumber = await storage.getAdminPhone(adminId);
+      if (!phoneNumber) phoneNumber = "9211979518";
+      const { verifyOTPViaTwilio: verifyOTPViaTwilio2 } = await Promise.resolve().then(() => (init_twilioClient(), twilioClient_exports));
+      const isValid = await verifyOTPViaTwilio2(phoneNumber, otp);
       if (!isValid) {
-        return res.status(401).json({ error: "Invalid OTP" });
+        return res.status(401).json({ error: "Invalid or expired OTP" });
       }
       const token = `admin-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       res.json({ success: true, token, adminId });

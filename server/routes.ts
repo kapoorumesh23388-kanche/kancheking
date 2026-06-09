@@ -1295,16 +1295,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let phoneNumber = await storage.getAdminPhone(adminId);
       if (!phoneNumber) {
-        // Default to admin phone
         phoneNumber = "9211979518";
         await storage.updateAdminPhone(adminId, phoneNumber);
       }
 
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      await storage.saveOTP(adminId, otp);
-
-      const { sendOTPSMS } = await import('./twilioClient');
-      const sent = await sendOTPSMS(phoneNumber, otp);
+      const { sendOTPViaTwilio } = await import('./twilioClient');
+      const sent = await sendOTPViaTwilio(phoneNumber);
 
       if (!sent) {
         return res.status(500).json({ error: "Failed to send OTP" });
@@ -1329,9 +1325,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Admin ID and OTP required" });
       }
 
-      const isValid = await storage.verifyOTP(adminId, otp);
+      let phoneNumber = await storage.getAdminPhone(adminId);
+      if (!phoneNumber) phoneNumber = "9211979518";
+
+      const { verifyOTPViaTwilio } = await import('./twilioClient');
+      const isValid = await verifyOTPViaTwilio(phoneNumber, otp);
+
       if (!isValid) {
-        return res.status(401).json({ error: "Invalid OTP" });
+        return res.status(401).json({ error: "Invalid or expired OTP" });
       }
 
       const token = `admin-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
