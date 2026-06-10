@@ -163,9 +163,11 @@ export default function GamePlay() {
       // Announce result in selected language
       // playerActuallyWon: agar mai hider hoon toh guesser(AI) ka result ulta mera result hai
       const playerActuallyWon = isHiderPlayer1 ? !gameResult.won : gameResult.won;
-      announceResult(isOdd, playerActuallyWon, gameLanguage);
-      if (playerActuallyWon) { playSfxWin(); setIsPlayerWinner(true); }
-      else { playSfxLose(); setIsPlayerWinner(false); }
+      setTimeout(() => {
+        announceResult(isOdd, playerActuallyWon, gameLanguage);
+        if (playerActuallyWon) { playSfxWin(); setIsPlayerWinner(true); }
+        else { playSfxLose(); setIsPlayerWinner(false); }
+      }, 600);
       // Avatar phases
       if (isHiderPlayer1) {
         setPlayerAvatarPhase("revealed");
@@ -445,16 +447,8 @@ export default function GamePlay() {
 
   return (
     <div className="min-h-screen pt-16 sm:pt-20 md:pt-24 pb-4 sm:pb-8 bg-gradient-to-b from-black via-blue-950 to-black">
-      {/* Music Toggle & Chat Buttons - Bottom Right */}
+      {/* Chat Button - Bottom Right */}
       <div className="fixed bottom-4 right-2 z-30 flex flex-col items-end gap-2">
-        <SoundThemeSelector
-          currentTheme={bgmTheme}
-          currentLanguage={gameLanguage}
-          isMusicOn={isMusicEnabled}
-          onThemeChange={(t) => { setBgmTheme(t); localStorage.setItem("bgmTheme", t); switchBGM(t); }}
-          onLanguageChange={(l) => { setGameLanguage(l); localStorage.setItem("gameLanguage", l); }}
-          onMusicToggle={() => setIsMusicEnabled(p => !p)}
-        />
         <Button
           size="icon"
           variant="outline"

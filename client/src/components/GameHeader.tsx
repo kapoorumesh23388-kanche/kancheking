@@ -1,4 +1,7 @@
 import { Settings, User, ArrowLeft, Upload, Globe, HelpCircle, MessageCircle, Volume2, Volume1, VolumeX } from "lucide-react";
+import SoundThemeSelector from "@/components/SoundThemeSelector";
+import { switchBGM, startBGM, stopBGM, isBGMEnabled, type BGMTheme } from "@/lib/soundSystem";
+import type { GameLanguage } from "@/lib/voiceAnnouncer";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useState, useRef, useEffect } from "react";
@@ -27,6 +30,9 @@ export default function GameHeader() {
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [volume, setVolume] = useState(70);
+  const [bgmTheme, setBgmTheme] = useState<BGMTheme>(() => (localStorage.getItem("bgmTheme") as BGMTheme) || "street");
+  const [gameLanguage, setGameLanguage] = useState<GameLanguage>(() => (localStorage.getItem("gameLanguage") as GameLanguage) || "hi");
+  const [isMusicOn, setIsMusicOn] = useState(() => localStorage.getItem("musicEnabled") !== "false");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [lastUpdate, setLastUpdate] = useState(() => localStorage.getItem("lastProfileUpdate") || "0");
 
@@ -372,6 +378,28 @@ export default function GameHeader() {
                   हिंदी
                 </Button>
               </div>
+            </div>
+
+            {/* Music Theme & Voice Language */}
+            <div className="p-4 bg-primary/10 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-foreground font-medium flex items-center gap-2">
+                  🎵 Music & Voice Language
+                </span>
+              </div>
+              <SoundThemeSelector
+                currentTheme={bgmTheme}
+                currentLanguage={gameLanguage}
+                isMusicOn={isMusicOn}
+                onThemeChange={(t) => { setBgmTheme(t); localStorage.setItem("bgmTheme", t); switchBGM(t); }}
+                onLanguageChange={(l) => { setGameLanguage(l); localStorage.setItem("gameLanguage", l); }}
+                onMusicToggle={() => {
+                  const next = !isMusicOn;
+                  setIsMusicOn(next);
+                  localStorage.setItem("musicEnabled", String(next));
+                  if (next) startBGM(bgmTheme); else stopBGM();
+                }}
+              />
             </div>
           </div>
         </DialogContent>
