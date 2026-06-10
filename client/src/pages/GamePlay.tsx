@@ -163,11 +163,9 @@ export default function GamePlay() {
       // Announce result in selected language
       // playerActuallyWon: agar mai hider hoon toh guesser(AI) ka result ulta mera result hai
       const playerActuallyWon = isHiderPlayer1 ? !gameResult.won : gameResult.won;
-      setTimeout(() => {
-        announceResult(isOdd, playerActuallyWon, gameLanguage);
-        if (playerActuallyWon) { playSfxWin(); setIsPlayerWinner(true); }
-        else { playSfxLose(); setIsPlayerWinner(false); }
-      }, 600);
+      announceResult(isOdd, playerActuallyWon, gameLanguage);
+      if (playerActuallyWon) { playSfxWin(); setIsPlayerWinner(true); }
+      else { playSfxLose(); setIsPlayerWinner(false); }
       // Avatar phases
       if (isHiderPlayer1) {
         setPlayerAvatarPhase("revealed");

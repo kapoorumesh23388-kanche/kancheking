@@ -109,8 +109,24 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+// Voices ko app start pe preload karo
+let voicesLoaded = false;
+if (typeof window !== "undefined" && "speechSynthesis" in window) {
+  const preload = () => {
+    window.speechSynthesis.getVoices();
+    voicesLoaded = true;
+  };
+  if (window.speechSynthesis.getVoices().length > 0) {
+    voicesLoaded = true;
+  } else {
+    window.speechSynthesis.onvoiceschanged = preload;
+  }
+}
+
 function speak(text: string, lang: string) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+
+  // Cancel any ongoing speech
   window.speechSynthesis.cancel();
 
   const doSpeak = () => {
@@ -121,9 +137,8 @@ function speak(text: string, lang: string) {
     utter.volume = 1.0;
 
     const voices = window.speechSynthesis.getVoices();
-    const langCode = lang.split("-")[0]; // e.g. "hi"
+    const langCode = lang.split("-")[0];
 
-    // Priority: exact lang match Indian voice → any lang match → default
     const indianVoice =
       voices.find(v => v.lang === lang && (v.name.toLowerCase().includes("india") || v.name.toLowerCase().includes("hindi"))) ||
       voices.find(v => v.lang === lang) ||
@@ -132,7 +147,19 @@ function speak(text: string, lang: string) {
 
     if (indianVoice) utter.voice = indianVoice;
 
+    // Mobile Chrome fix — resume if paused
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
+
     window.speechSynthesis.speak(utter);
+
+    // Mobile Chrome bug fix — re-trigger if stuck after 500ms
+    setTimeout(() => {
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+    }, 500);
   };
 
   const voices = window.speechSynthesis.getVoices();
@@ -143,6 +170,12 @@ function speak(text: string, lang: string) {
       window.speechSynthesis.onvoiceschanged = null;
       doSpeak();
     };
+    // Fallback — agar onvoiceschanged nahi fire hua 300ms mein
+    setTimeout(() => {
+      if (window.speechSynthesis.getVoices().length > 0) {
+        doSpeak();
+      }
+    }, 300);
   }
 }
 
