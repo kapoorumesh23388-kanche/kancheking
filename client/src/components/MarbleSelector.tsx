@@ -12,66 +12,66 @@ interface MarbleSelectorProps {
 }
 
 const marbleColors = [
-  { c1: "#ff4444", c2: "#cc0000", swirl: "#ffcc00" },
-  { c1: "#00aaff", c2: "#0044cc", swirl: "#88ddff" },
-  { c1: "#00cc44", c2: "#006622", swirl: "#88ffaa" },
-  { c1: "#cc44ff", c2: "#6600cc", swirl: "#ffaaff" },
-  { c1: "#ffcc00", c2: "#ff8800", swirl: "#ffffff" },
-  { c1: "#00cccc", c2: "#006688", swirl: "#aaffff" },
-  { c1: "#ff4488", c2: "#cc0044", swirl: "#ffaacc" },
-  { c1: "#88cc00", c2: "#446600", swirl: "#ccff44" },
-  { c1: "#ff6600", c2: "#cc2200", swirl: "#ffaa44" },
-  { c1: "#4444ff", c2: "#000099", swirl: "#aaaaff" },
+  { swirl: "#00e8cc", swirl2: "#006655" },
+  { swirl: "#2288ff", swirl2: "#003388" },
+  { swirl: "#ff8822", swirl2: "#883300" },
+  { swirl: "#22cc44", swirl2: "#005522" },
+  { swirl: "#ddcc00", swirl2: "#665500" },
+  { swirl: "#aaddee", swirl2: "#335566" },
+  { swirl: "#ff4488", swirl2: "#880022" },
+  { swirl: "#88cc00", swirl2: "#335500" },
+  { swirl: "#aa66ff", swirl2: "#440088" },
+  { swirl: "#ff6622", swirl2: "#882200" },
 ];
 
-const GlassMarble = ({ color, isSelected, order }: { color: typeof marbleColors[0], isSelected: boolean, order: number | null }) => {
-  const uid = color.c1.replace('#', '') + color.c2.replace('#', '');
+const TransparentMarble = ({ color, isSelected, order }: { color: typeof marbleColors[0], isSelected: boolean, order: number | null }) => {
+  const uid = color.swirl.replace('#', '') + color.swirl2.replace('#', '');
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
-      <svg width="44" height="44" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+      <svg width="38" height="38" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
         <defs>
-          <radialGradient id={`base-${uid}`} cx="38%" cy="35%" r="65%">
-            <stop offset="0%" stopColor="white" stopOpacity="0.92"/>
-            <stop offset="18%" stopColor={color.c1} stopOpacity="0.8"/>
-            <stop offset="55%" stopColor={color.c2} stopOpacity="0.65"/>
-            <stop offset="100%" stopColor="#000" stopOpacity="0.75"/>
+          <radialGradient id={`sw-${uid}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={color.swirl} stopOpacity="0.0"/>
+            <stop offset="35%" stopColor={color.swirl} stopOpacity="0.55"/>
+            <stop offset="100%" stopColor={color.swirl2} stopOpacity="0.78"/>
           </radialGradient>
-          <radialGradient id={`shine-${uid}`} cx="30%" cy="26%" r="36%">
-            <stop offset="0%" stopColor="white" stopOpacity="1"/>
+          <radialGradient id={`gl-${uid}`} cx="38%" cy="32%" r="70%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55"/>
+            <stop offset="18%" stopColor="#d8f0f5" stopOpacity="0.32"/>
+            <stop offset="45%" stopColor="#90ccd8" stopOpacity="0.18"/>
+            <stop offset="75%" stopColor="#4a8fa0" stopOpacity="0.14"/>
+            <stop offset="100%" stopColor="#1a4a55" stopOpacity="0.42"/>
+          </radialGradient>
+          <radialGradient id={`sp1-${uid}`} cx="35%" cy="28%" r="28%">
+            <stop offset="0%" stopColor="white" stopOpacity="0.92"/>
             <stop offset="55%" stopColor="white" stopOpacity="0.25"/>
             <stop offset="100%" stopColor="white" stopOpacity="0"/>
           </radialGradient>
-          <radialGradient id={`depth-${uid}`} cx="62%" cy="66%" r="42%">
-            <stop offset="0%" stopColor={color.c2} stopOpacity="0.45"/>
-            <stop offset="100%" stopColor="#000" stopOpacity="0"/>
+          <radialGradient id={`sp2-${uid}`} cx="68%" cy="72%" r="18%">
+            <stop offset="0%" stopColor="white" stopOpacity="0.3"/>
+            <stop offset="100%" stopColor="white" stopOpacity="0"/>
           </radialGradient>
-          <filter id={`shadow-${uid}`}>
-            <feDropShadow dx="1" dy="2.5" stdDeviation="2.5" floodColor="#000" floodOpacity="0.6"/>
+          <filter id={`shd-${uid}`}>
+            <feDropShadow dx="1" dy="2" stdDeviation="2" floodColor="#000" floodOpacity="0.5"/>
           </filter>
         </defs>
-        {/* Main glass body */}
-        <circle cx="24" cy="24" r="22" fill={`url(#base-${uid})`} filter={`url(#shadow-${uid})`}/>
-        {/* Inner glass swirls */}
-        <ellipse cx="27" cy="28" rx="10" ry="4.5" fill={color.swirl} opacity="0.16" transform="rotate(-40 27 28)"/>
-        <ellipse cx="19" cy="21" rx="6" ry="2.5" fill={color.swirl} opacity="0.11" transform="rotate(25 19 21)"/>
-        {/* Depth */}
-        <circle cx="24" cy="24" r="22" fill={`url(#depth-${uid})`}/>
-        {/* Main shine highlight */}
-        <ellipse cx="16" cy="14" rx="9" ry="6" fill={`url(#shine-${uid})`}/>
-        {/* Small bottom shine */}
-        <circle cx="31" cy="33" r="2.5" fill="white" opacity="0.13"/>
-        {/* Selected ring */}
+        <circle cx="24" cy="24" r="22" fill={`url(#sw-${uid})`} filter={`url(#shd-${uid})`} opacity="0.88"/>
+        <path d={`M16,8 C20,16 12,24 18,34 C22,40 16,42 18,44`} stroke={color.swirl} strokeWidth="2.8" fill="none" strokeOpacity="0.65" strokeLinecap="round"/>
+        <path d={`M26,6 C30,14 22,22 28,32`} stroke={color.swirl} strokeWidth="1.5" fill="none" strokeOpacity="0.38" strokeLinecap="round"/>
+        <circle cx="24" cy="24" r="22" fill={`url(#gl-${uid})`}/>
+        <circle cx="24" cy="24" r="22" fill={`url(#sp1-${uid})`}/>
+        <circle cx="24" cy="24" r="22" fill={`url(#sp2-${uid})`}/>
+        <circle cx="24" cy="24" r="21.5" fill="none" stroke={color.swirl} strokeWidth="0.7" strokeOpacity="0.28"/>
         {isSelected && <circle cx="24" cy="24" r="21.5" fill="none" stroke="#00FF88" strokeWidth="2.8" opacity="0.95"/>}
       </svg>
-      {/* Selection number badge */}
       {isSelected && order !== null && (
         <div style={{
           position: 'absolute', top: -4, right: -4,
-          width: 18, height: 18,
+          width: 16, height: 16,
           background: 'linear-gradient(135deg, #00FF88, #00CC6F)',
           borderRadius: '50%',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 9, fontWeight: 'bold', color: '#000',
+          fontSize: 8, fontWeight: 'bold', color: '#000',
           border: '1.5px solid white',
           boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
           zIndex: 20,
@@ -143,7 +143,6 @@ export default function MarbleSelector({
         )}
       </div>
 
-      {/* Quick Select */}
       <div className="flex items-center gap-2 p-2 bg-black/30 rounded-lg border border-primary/30">
         <span className="text-xs sm:text-sm text-primary/80 whitespace-nowrap">Quick:</span>
         <div className="flex gap-1">
@@ -185,21 +184,17 @@ export default function MarbleSelector({
         </div>
       </div>
 
-      {/* Glass Marbles Grid */}
       <div className="p-2 sm:p-4 md:p-6 bg-gradient-to-b from-black/40 to-black/20 rounded-xl sm:rounded-2xl border border-primary/30 shadow-xl">
         <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 gap-1 sm:gap-2 md:gap-3">
           {marbles.map((id) => {
             const isSelected = selectedMarbleIds.includes(id);
             const order = isSelected ? selectedMarbleIds.indexOf(id) + 1 : null;
             const color = marbleColors[id % marbleColors.length];
-
             return (
               <button
                 key={id}
                 onClick={() => onToggleMarble(id)}
-                className={`rounded-full cursor-pointer transition-all duration-200 transform hover:scale-110 relative flex items-center justify-center ${
-                  isSelected ? "scale-110 z-10" : ""
-                }`}
+                className={`rounded-full cursor-pointer transition-all duration-200 transform hover:scale-110 relative flex items-center justify-center ${isSelected ? "scale-110 z-10" : ""}`}
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -208,7 +203,7 @@ export default function MarbleSelector({
                 }}
                 data-testid={`marble-${id}`}
               >
-                <GlassMarble color={color} isSelected={isSelected} order={order} />
+                <TransparentMarble color={color} isSelected={isSelected} order={order} />
               </button>
             );
           })}

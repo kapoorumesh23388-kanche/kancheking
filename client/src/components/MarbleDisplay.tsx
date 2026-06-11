@@ -6,44 +6,51 @@ interface MarbleDisplayProps {
 }
 
 const glassColors = [
-  { c1: "#ff4444", c2: "#cc0000", swirl: "#ffcc00" },
-  { c1: "#00cc44", c2: "#006622", swirl: "#88ffaa" },
-  { c1: "#00aaff", c2: "#0044cc", swirl: "#88ddff" },
-  { c1: "#ffcc00", c2: "#ff8800", swirl: "#ffffff" },
-  { c1: "#cc44ff", c2: "#6600cc", swirl: "#ffaaff" },
-  { c1: "#00cccc", c2: "#006688", swirl: "#aaffff" },
+  { swirl: "#00e8cc", swirl2: "#006655" },
+  { swirl: "#2288ff", swirl2: "#003388" },
+  { swirl: "#ff8822", swirl2: "#883300" },
+  { swirl: "#22cc44", swirl2: "#005522" },
+  { swirl: "#ddcc00", swirl2: "#665500" },
+  { swirl: "#aaddee", swirl2: "#335566" },
 ];
 
-const GlassMarble = ({ color, px, selected }: { color: typeof glassColors[0], px: number, selected: boolean }) => {
-  const uid = color.c1.replace('#', '') + px;
+const TransparentMarble = ({ color, px, selected }: { color: typeof glassColors[0], px: number, selected: boolean }) => {
+  const uid = color.swirl.replace('#', '') + px;
   return (
     <svg width={px} height={px} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
       <defs>
-        <radialGradient id={`b-${uid}`} cx="38%" cy="35%" r="65%">
-          <stop offset="0%" stopColor="white" stopOpacity="0.95"/>
-          <stop offset="15%" stopColor={color.c1} stopOpacity="0.85"/>
-          <stop offset="55%" stopColor={color.c2} stopOpacity="0.7"/>
-          <stop offset="100%" stopColor="#000" stopOpacity="0.8"/>
+        <radialGradient id={`sw-${uid}`} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor={color.swirl} stopOpacity="0.0"/>
+          <stop offset="35%" stopColor={color.swirl} stopOpacity="0.55"/>
+          <stop offset="100%" stopColor={color.swirl2} stopOpacity="0.78"/>
         </radialGradient>
-        <radialGradient id={`s-${uid}`} cx="30%" cy="26%" r="36%">
-          <stop offset="0%" stopColor="white" stopOpacity="1"/>
-          <stop offset="55%" stopColor="white" stopOpacity="0.3"/>
+        <radialGradient id={`gl-${uid}`} cx="38%" cy="32%" r="70%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55"/>
+          <stop offset="18%" stopColor="#d8f0f5" stopOpacity="0.32"/>
+          <stop offset="45%" stopColor="#90ccd8" stopOpacity="0.18"/>
+          <stop offset="75%" stopColor="#4a8fa0" stopOpacity="0.14"/>
+          <stop offset="100%" stopColor="#1a4a55" stopOpacity="0.42"/>
+        </radialGradient>
+        <radialGradient id={`sp1-${uid}`} cx="35%" cy="28%" r="28%">
+          <stop offset="0%" stopColor="white" stopOpacity="0.92"/>
+          <stop offset="55%" stopColor="white" stopOpacity="0.25"/>
           <stop offset="100%" stopColor="white" stopOpacity="0"/>
         </radialGradient>
-        <radialGradient id={`d-${uid}`} cx="62%" cy="66%" r="42%">
-          <stop offset="0%" stopColor={color.c2} stopOpacity="0.5"/>
-          <stop offset="100%" stopColor="#000" stopOpacity="0"/>
+        <radialGradient id={`sp2-${uid}`} cx="68%" cy="72%" r="18%">
+          <stop offset="0%" stopColor="white" stopOpacity="0.3"/>
+          <stop offset="100%" stopColor="white" stopOpacity="0"/>
         </radialGradient>
-        <filter id={`sh-${uid}`}>
-          <feDropShadow dx="1" dy="3" stdDeviation="3" floodColor="#000" floodOpacity="0.6"/>
+        <filter id={`shd-${uid}`}>
+          <feDropShadow dx="1" dy="2.5" stdDeviation="2.5" floodColor="#000" floodOpacity="0.55"/>
         </filter>
       </defs>
-      <circle cx="24" cy="24" r="22" fill={`url(#b-${uid})`} filter={`url(#sh-${uid})`}/>
-      <ellipse cx="27" cy="28" rx="10" ry="4" fill={color.swirl} opacity="0.2" transform="rotate(-40 27 28)"/>
-      <ellipse cx="18" cy="20" rx="6" ry="2.5" fill={color.swirl} opacity="0.13" transform="rotate(25 18 20)"/>
-      <circle cx="24" cy="24" r="22" fill={`url(#d-${uid})`}/>
-      <ellipse cx="16" cy="14" rx="9" ry="6" fill={`url(#s-${uid})`}/>
-      <circle cx="31" cy="33" r="2.5" fill="white" opacity="0.15"/>
+      <circle cx="24" cy="24" r="22" fill={`url(#sw-${uid})`} filter={`url(#shd-${uid})`} opacity="0.88"/>
+      <path d="M16,8 C20,16 12,24 18,34 C22,40 16,42 18,44" stroke={color.swirl} strokeWidth="2.8" fill="none" strokeOpacity="0.65" strokeLinecap="round"/>
+      <path d="M26,6 C30,14 22,22 28,32" stroke={color.swirl} strokeWidth="1.5" fill="none" strokeOpacity="0.38" strokeLinecap="round"/>
+      <circle cx="24" cy="24" r="22" fill={`url(#gl-${uid})`}/>
+      <circle cx="24" cy="24" r="22" fill={`url(#sp1-${uid})`}/>
+      <circle cx="24" cy="24" r="22" fill={`url(#sp2-${uid})`}/>
+      <circle cx="24" cy="24" r="21.5" fill="none" stroke={color.swirl} strokeWidth="0.7" strokeOpacity="0.28"/>
       {selected && <circle cx="24" cy="24" r="21.5" fill="none" stroke="#00FF88" strokeWidth="2.8" opacity="0.95"/>}
     </svg>
   );
@@ -55,7 +62,7 @@ export default function MarbleDisplay({
   selected = false,
   onClick
 }: MarbleDisplayProps) {
-  const px = size === "sm" ? 36 : size === "lg" ? 72 : 52;
+  const px = size === "sm" ? 32 : size === "lg" ? 60 : 44;
 
   const marbles = Array.from({ length: Math.min(count, 20) }, (_, i) => (
     <div
@@ -68,7 +75,7 @@ export default function MarbleDisplay({
       }}
       className="hover:scale-110"
     >
-      <GlassMarble color={glassColors[i % glassColors.length]} px={px} selected={selected} />
+      <TransparentMarble color={glassColors[i % glassColors.length]} px={px} selected={selected} />
     </div>
   ));
 
