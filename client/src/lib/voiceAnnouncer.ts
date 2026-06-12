@@ -109,81 +109,118 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// Voices ko app start pe preload karo
-let voicesLoaded = false;
-if (typeof window !== "undefined" && "speechSynthesis" in window) {
-  const preload = () => {
-    window.speechSynthesis.getVoices();
-    voicesLoaded = true;
-  };
-  if (window.speechSynthesis.getVoices().length > 0) {
-    voicesLoaded = true;
-  } else {
-    window.speechSynthesis.onvoiceschanged = preload;
-  }
+// Android WebView detection
+function isAndroidWebView(): boolean {
+  if (typeof window === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return ua.includes("Android") && (ua.includes("wv") || ua.includes("WebView"));
 }
 
-function speak(text: string, lang: string) {
+// Voices preload
+if (typeof window !== "undefined" && "speechSynthesis" in window) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = () => {
+    window.speechSynthesis.getVoices();
+  };
+}
+
+// Android WebView ke liye retry mechanism
+function speakWithRetry(text: string, lang: string, retries = 3) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
-  // Cancel any ongoing speech
   window.speechSynthesis.cancel();
 
-  const doSpeak = () => {
+  let attempted = 0;
+
+  const attempt = () => {
+    attempted++;
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = lang;
     utter.rate = 0.88;
     utter.pitch = 0.95;
     utter.volume = 1.0;
 
-    const voices = window.speechSynthesis.getVoices();
-    const langCode = lang.split("-")[0];
+    // Voice select — Android pe default hi best hoti hai
+    if (!isAndroidWebView()) {
+      const voices = window.speechSynthesis.getVoices();
+      const langCode = lang.split("-")[0];
+      const voice =
+        voices.find(v => v.lang === lang && v.name.toLowerCase().includes("india")) ||
+        voices.find(v => v.lang === lang) ||
+        voices.find(v => v.lang.startsWith(langCode));
+      if (voice) utter.voice = voice;
+    }
 
-    const indianVoice =
-      voices.find(v => v.lang === lang && (v.name.toLowerCase().includes("india") || v.name.toLowerCase().includes("hindi"))) ||
-      voices.find(v => v.lang === lang) ||
-      voices.find(v => v.lang.startsWith(langCode) && v.name.toLowerCase().includes("india")) ||
-      voices.find(v => v.lang.startsWith(langCode));
+    // Android WebView bug — speech silently fails
+    // onstart fire nahi hua matlab speech nahi boli — retry karo
+    let started = false;
 
-    if (indianVoice) utter.voice = indianVoice;
+    utter.onstart = () => { started = true; };
 
-    // Mobile Chrome fix — resume if paused
+    utter.onerror = (e) => {
+      console.warn("Speech error:", e.error);
+      if (attempted < retries) {
+        setTimeout(attempt, 300);
+      }
+    };
+
+    // Android WebView mein onstart kabhi kabhi fire nahi hota
+    // 800ms baad check karo — agar start nahi hua toh retry
+    if (isAndroidWebView()) {
+      setTimeout(() => {
+        if (!started && attempted < retries) {
+          window.speechSynthesis.cancel();
+          setTimeout(attempt, 200);
+        }
+      }, 800);
+    }
+
     if (window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
     }
 
     window.speechSynthesis.speak(utter);
 
-    // Mobile Chrome bug fix — re-trigger if stuck after 500ms
-    setTimeout(() => {
-      if (window.speechSynthesis.paused) {
-        window.speechSynthesis.resume();
-      }
-    }, 500);
+    // Android Chrome WebView periodic resume fix
+    if (isAndroidWebView()) {
+      const resumeTimer = setInterval(() => {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+        if (!window.speechSynthesis.speaking) {
+          clearInterval(resumeTimer);
+        }
+      }, 200);
+      // Max 10 sec ke baad clear
+      setTimeout(() => clearInterval(resumeTimer), 10000);
+    }
   };
 
+  // Voices load hone ka wait
   const voices = window.speechSynthesis.getVoices();
   if (voices.length > 0) {
-    doSpeak();
+    attempt();
   } else {
-    window.speechSynthesis.onvoiceschanged = () => {
+    const handler = () => {
       window.speechSynthesis.onvoiceschanged = null;
-      doSpeak();
+      attempt();
     };
-    // Fallback — agar onvoiceschanged nahi fire hua 300ms mein
+    window.speechSynthesis.onvoiceschanged = handler;
+    // Fallback agar onvoiceschanged fire nahi hua
     setTimeout(() => {
-      if (window.speechSynthesis.getVoices().length > 0) {
-        doSpeak();
-      }
-    }, 300);
+      if (!window.speechSynthesis.speaking) attempt();
+    }, 500);
   }
 }
 
-// Main result announcement — "Kali hai tum jeete!" style
+function speak(text: string, lang: string) {
+  speakWithRetry(text, lang, 3);
+}
+
 export function announceResult(isOdd: boolean, playerWon: boolean, language: GameLanguage) {
   const lines = VOICE_LINES[language];
   let text: string;
-  if (isOdd && playerWon)   text = pick(lines.oddWin);
+  if (isOdd && playerWon)        text = pick(lines.oddWin);
   else if (isOdd && !playerWon)  text = pick(lines.oddLose);
   else if (!isOdd && playerWon)  text = pick(lines.evenWin);
   else                           text = pick(lines.evenLose);
@@ -199,6 +236,5 @@ export function announceGuess(isOdd: boolean, language: GameLanguage) {
   speak(isOdd ? pick(lines.guessOdd) : pick(lines.guessEven), LANG_CODES[language]);
 }
 
-// Keep these for backward compatibility
 export function announceWin(_language: GameLanguage) {}
 export function announceLose(_language: GameLanguage) {}
