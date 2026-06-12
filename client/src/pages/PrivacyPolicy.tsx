@@ -8,7 +8,6 @@ export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-blue-950 to-black pt-24 pb-10">
       <div className="container max-w-4xl mx-auto px-4">
-        {/* Header */}
         <div className="mb-8">
           <Button
             variant="outline"
@@ -18,164 +17,140 @@ export default function PrivacyPolicy() {
           >
             ← Back to Home
           </Button>
-          
           <h1 className="text-4xl font-bold text-primary mb-2">Privacy Policy</h1>
-          <p className="text-muted-foreground">Last updated: November 2025</p>
+          <p className="text-muted-foreground">Last updated: June 2026</p>
         </div>
 
-        {/* Content */}
         <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40 shadow-2xl">
           <CardContent className="p-8 space-y-8 text-justify">
-            {/* Introduction */}
+
             <section>
               <h2 className="text-2xl font-bold text-primary mb-4">Introduction</h2>
               <p className="text-base leading-relaxed">
-                Kanche King ("we," "us," "our," or "Company") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application and website.
+                Kanche King ("we," "us," "our") is a free-to-play traditional Indian marble guessing game. We are committed to protecting your privacy. This Privacy Policy explains what data we collect, how we use it, and your rights regarding your information.
+              </p>
+              <p className="text-base leading-relaxed mt-3">
+                Kanche King does not involve real money, gambling, or purchases of any kind. All marbles and rewards in the game are virtual and have no real-world monetary value.
               </p>
             </section>
 
-            {/* Information We Collect */}
+            <section>
+              <h2 className="text-2xl font-bold text-primary mb-4">Who Can Use This App</h2>
+              <p className="leading-relaxed">
+                Kanche King is suitable for all ages. Anyone who can count marbles can enjoy the game — children, teenagers, and adults. The game contains no adult content, real-money transactions, or gambling. Players under 13 should use the app with parental awareness.
+              </p>
+            </section>
+
             <section>
               <h2 className="text-2xl font-bold text-primary mb-4">Information We Collect</h2>
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-primary mb-2">Personal Information</h3>
-                  <p>
-                    We collect information you provide directly, including:
-                  </p>
+                  <h3 className="text-lg font-semibold text-primary mb-2">Information You Provide</h3>
                   <ul className="list-disc list-inside mt-2 space-y-2 ml-4">
                     <li>Username and display name</li>
-                    <li>Profile picture/avatar</li>
-                    <li>Email address (if provided)</li>
-                    <li>Age verification data (15+ for in-app purchases)</li>
-                    <li>Gender preference for avatar customization</li>
+                    <li>Profile picture (optional, uploaded by you)</li>
+                    <li>Phone number (used only for OTP login via Twilio, not stored permanently)</li>
                   </ul>
                 </div>
-
                 <div>
-                  <h3 className="text-lg font-semibold text-primary mb-2">Game Data</h3>
-                  <p>
-                    We automatically collect:
-                  </p>
+                  <h3 className="text-lg font-semibold text-primary mb-2">Game Data We Collect Automatically</h3>
                   <ul className="list-disc list-inside mt-2 space-y-2 ml-4">
-                    <li>Game statistics (wins, losses, games played)</li>
-                    <li>Marble balances and transactions</li>
-                    <li>Tournament participation and rankings</li>
-                    <li>Chat messages during gameplay</li>
-                    <li>Device information and IP address</li>
+                    <li>Game statistics — wins, losses, games played</li>
+                    <li>Marble balances and in-game transactions</li>
+                    <li>Reward Points earned and redeemed</li>
+                    <li>Tournament participation and leaderboard ranking</li>
+                    <li>Chat messages sent during gameplay</li>
+                    <li>Device type and browser information (for app functionality)</li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-primary mb-2">What We Do NOT Collect</h3>
+                  <ul className="list-disc list-inside mt-2 space-y-2 ml-4">
+                    <li>Email address — not required or collected</li>
+                    <li>Payment information — no real-money transactions exist</li>
+                    <li>Location data — not collected</li>
+                    <li>Advertising interest data — we do not collect user interests for ad targeting</li>
                   </ul>
                 </div>
               </div>
             </section>
 
-            {/* How We Use Your Information */}
             <section>
               <h2 className="text-2xl font-bold text-primary mb-4">How We Use Your Information</h2>
               <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>To provide and maintain our service</li>
-                <li>To process payments for marble purchases</li>
-                <li>To verify age eligibility for in-app purchases</li>
-                <li>To track game statistics and rankings</li>
+                <li>To provide and maintain the game service</li>
+                <li>To verify your identity via OTP login</li>
+                <li>To track game statistics and leaderboard rankings</li>
                 <li>To enable multiplayer gameplay and tournaments</li>
-                <li>To send service updates and promotional offers</li>
                 <li>To improve user experience and fix bugs</li>
-                <li>To comply with legal obligations</li>
+                <li>To manage Reward Points and marble balances</li>
+              </ul>
+              <p className="mt-4 leading-relaxed">
+                We do <strong>not</strong> use your data for advertising profiling, selling to third parties, or any commercial purpose beyond operating the game.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-bold text-primary mb-4">Local Storage</h2>
+              <p className="leading-relaxed">We use local storage on your device to:</p>
+              <ul className="list-disc list-inside mt-2 space-y-2 ml-4">
+                <li>Remember your login session</li>
+                <li>Store game preferences and settings</li>
+                <li>Track your marbles and game statistics locally</li>
+                <li>Provide a personalized gaming experience</li>
               </ul>
             </section>
 
-            {/* Data Security */}
-            <section>
-              <h2 className="text-2xl font-bold text-primary mb-4">Data Security</h2>
-              <p className="leading-relaxed">
-                We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. However, no method of transmission over the Internet is 100% secure. While we strive to use commercially acceptable means to protect your personal information, we cannot guarantee its absolute security.
-              </p>
-            </section>
-
-            {/* Age Restrictions */}
-            <section>
-              <h2 className="text-2xl font-bold text-primary mb-4">Age Restrictions</h2>
-              <p className="leading-relaxed">
-                Kanche King is available to anyone who can count marbles. However, in-app purchases (marble transactions) are restricted to users aged 15+ who provide age verification. We do not knowingly collect personal information from children under 13 without parental consent.
-              </p>
-            </section>
-
-            {/* Sharing of Information */}
             <section>
               <h2 className="text-2xl font-bold text-primary mb-4">Sharing of Information</h2>
               <p className="leading-relaxed mb-4">
                 We do not sell, trade, or rent your personal information to third parties. We may share information only:
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>With service providers who assist in operating our application</li>
-                <li>For payment processing (with PCI-compliant processors)</li>
-                <li>When required by law or government requests</li>
-                <li>To protect our rights and prevent fraud</li>
-                <li>With your explicit consent</li>
+                <li>With service providers who help operate our application (e.g., Twilio for OTP)</li>
+                <li>When required by law or valid government requests</li>
+                <li>To protect our rights and prevent fraud or abuse</li>
               </ul>
             </section>
 
-            {/* Cookies and Tracking */}
             <section>
-              <h2 className="text-2xl font-bold text-primary mb-4">Cookies and Local Storage</h2>
+              <h2 className="text-2xl font-bold text-primary mb-4">Data Security</h2>
               <p className="leading-relaxed">
-                We use local storage and similar technologies to:
+                We implement appropriate technical measures to protect your information against unauthorized access, alteration, or disclosure. No method of transmission over the Internet is 100% secure, but we make every effort to protect your data.
               </p>
-              <ul className="list-disc list-inside mt-2 space-y-2 ml-4">
-                <li>Remember your login information</li>
-                <li>Store game preferences and settings</li>
-                <li>Track your marbles and game statistics</li>
-                <li>Provide personalized gaming experience</li>
-              </ul>
             </section>
 
-            {/* Your Rights */}
             <section>
               <h2 className="text-2xl font-bold text-primary mb-4">Your Rights</h2>
-              <p className="leading-relaxed mb-4">
-                Depending on your location, you may have the right to:
-              </p>
+              <p className="leading-relaxed mb-4">You have the right to:</p>
               <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>Access your personal data</li>
-                <li>Correct inaccurate information</li>
-                <li>Request deletion of your data</li>
-                <li>Opt-out of promotional communications</li>
-                <li>Data portability</li>
+                <li>Access your personal data held by us</li>
+                <li>Request correction of inaccurate information</li>
+                <li>Request deletion of your account and data</li>
+                <li>Opt out of any non-essential communications</li>
               </ul>
-              <p className="mt-4 leading-relaxed">
-                To exercise these rights, please contact us at support@kancheking.com
-              </p>
             </section>
 
-            {/* Third-Party Links */}
-            <section>
-              <h2 className="text-2xl font-bold text-primary mb-4">Third-Party Links</h2>
-              <p className="leading-relaxed">
-                Our application may contain links to third-party websites and services that are not operated by us. This Privacy Policy applies only to information we collect through our service. We are not responsible for the privacy practices of third-party services.
-              </p>
-            </section>
-
-            {/* Changes to Privacy Policy */}
             <section>
               <h2 className="text-2xl font-bold text-primary mb-4">Changes to This Privacy Policy</h2>
               <p className="leading-relaxed">
-                We may update this Privacy Policy from time to time to reflect changes in our practices, technology, legal requirements, and other factors. We will notify you of any material changes by posting the new Privacy Policy on this page and updating the "Last updated" date above.
+                We may update this Privacy Policy from time to time. We will notify you of material changes by posting the updated policy on this page with a new "Last updated" date.
               </p>
             </section>
 
-            {/* Contact Us */}
             <section className="bg-primary/10 border border-primary/30 rounded-lg p-6">
               <h2 className="text-2xl font-bold text-primary mb-4">Contact Us</h2>
               <p className="leading-relaxed mb-4">
-                If you have questions about this Privacy Policy or our privacy practices, please contact us:
+                If you have questions about this Privacy Policy, please contact us through our website:
               </p>
               <div className="space-y-2">
-                <p><strong>Email:</strong> privacy@kancheking.com</p>
                 <p><strong>Website:</strong> www.kancheking.com</p>
                 <p className="text-sm text-muted-foreground mt-4">
-                  This Privacy Policy was last updated November 2025.
+                  This Privacy Policy was last updated June 2026.
                 </p>
               </div>
             </section>
+
           </CardContent>
         </Card>
       </div>
