@@ -230,11 +230,12 @@ export default function Admin() {
   return (
     <div className="min-h-screen pt-24 pb-10 bg-gradient-to-b from-black via-blue-950 to-black">
       <div className="container max-w-6xl mx-auto px-5">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-5xl font-bold text-primary" style={{ textShadow: '0 0 30px rgba(255,215,0,0.5)' }}>
+        {/* Header - Title upar, buttons neeche row mein */}
+        <div className="mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold text-primary mb-4" style={{ textShadow: '0 0 30px rgba(255,215,0,0.5)' }}>
             Admin Dashboard
           </h1>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               variant="outline"
               onClick={() => setShowPasswordSettings(!showPasswordSettings)}

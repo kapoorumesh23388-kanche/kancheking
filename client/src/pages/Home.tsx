@@ -131,9 +131,11 @@ export default function Home() {
               src="/favicon.png"
               alt="Kanche King Logo"
               style={{
-                width: 100,
-                height: 100,
+                width: 'clamp(72px, 18vw, 120px)',
+                height: 'clamp(72px, 18vw, 120px)',
                 borderRadius: 24,
+                objectFit: 'cover',
+                display: 'block',
                 boxShadow: '0 0 30px rgba(0,217,255,0.5), 0 0 60px rgba(233,30,140,0.3)',
               }}
             />
