@@ -188,19 +188,27 @@ export default function LeaderboardPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
               <div className="bg-black/30 rounded-lg p-2 text-center">
                 <p className="text-[#00D9FF] font-bold">Daily Login</p>
-                <p className="text-[#FFD700]">+100 pts</p>
+                <p className="text-[#FFD700]">+20 pts</p>
               </div>
               <div className="bg-black/30 rounded-lg p-2 text-center">
-                <p className="text-[#00D9FF] font-bold">Every Hour</p>
+                <p className="text-[#00D9FF] font-bold">30 min play</p>
+                <p className="text-[#FFD700]">+30 pts</p>
+              </div>
+              <div className="bg-black/30 rounded-lg p-2 text-center">
+                <p className="text-[#00D9FF] font-bold">1 hr play</p>
                 <p className="text-[#FFD700]">+50 pts</p>
               </div>
               <div className="bg-black/30 rounded-lg p-2 text-center">
-                <p className="text-[#00D9FF] font-bold">Beat AI</p>
+                <p className="text-[#00D9FF] font-bold">Beat AI / PvP</p>
                 <p className="text-[#FFD700]">+25 pts</p>
               </div>
               <div className="bg-black/30 rounded-lg p-2 text-center">
                 <p className="text-[#00D9FF] font-bold">Monthly #1</p>
                 <p className="text-[#FFD700]">+500 pts</p>
+              </div>
+              <div className="bg-black/30 rounded-lg p-2 text-center">
+                <p className="text-[#00D9FF] font-bold">Tournament Win</p>
+                <p className="text-[#FFD700]">+2,50,000 pts</p>
               </div>
             </div>
           </CardContent>
