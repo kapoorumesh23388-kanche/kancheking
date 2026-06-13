@@ -8,65 +8,55 @@ interface FistDisplayProps {
 }
 
 const glassColors = [
-  { c1: "#ff2222", c2: "#990000", swirl: "#ffaa00", t: "0.55" },
-  { c1: "#22bb22", c2: "#005500", swirl: "#aaffaa", t: "0.5" },
-  { c1: "#2288ff", c2: "#0033aa", swirl: "#aaddff", t: "0.5" },
-  { c1: "#ffcc00", c2: "#cc7700", swirl: "#fff8aa", t: "0.5" },
-  { c1: "#cc22ff", c2: "#660099", swirl: "#ffaaff", t: "0.5" },
-  { c1: "#00cccc", c2: "#005566", swirl: "#aaffff", t: "0.5" },
+  { swirl: "#00e8cc", swirl2: "#006655" },
+  { swirl: "#2288ff", swirl2: "#003388" },
+  { swirl: "#ff8822", swirl2: "#883300" },
+  { swirl: "#22cc44", swirl2: "#005522" },
+  { swirl: "#ddcc00", swirl2: "#665500" },
+  { swirl: "#aaddee", swirl2: "#335566" },
+  { swirl: "#ff4488", swirl2: "#880022" },
+  { swirl: "#88cc00", swirl2: "#335500" },
+  { swirl: "#aa66ff", swirl2: "#440088" },
+  { swirl: "#ff6622", swirl2: "#882200" },
 ];
 
 const GlassMarble = ({ color, size = 40 }: { color: typeof glassColors[0], size?: number }) => {
-  const uid = `m${color.c1.replace('#','')}${size}`;
+  const uid = color.swirl.replace('#','') + color.swirl2.replace('#','') + size;
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
       <defs>
-        {/* Base transparent glass color */}
-        <radialGradient id={`base-${uid}`} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor={color.c1} stopOpacity="0.7"/>
-          <stop offset="70%" stopColor={color.c2} stopOpacity="0.85"/>
-          <stop offset="100%" stopColor="#000000" stopOpacity="0.6"/>
+        <radialGradient id={`sw-${uid}`} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor={color.swirl} stopOpacity="0.0"/>
+          <stop offset="35%" stopColor={color.swirl} stopOpacity="0.55"/>
+          <stop offset="100%" stopColor={color.swirl2} stopOpacity="0.78"/>
         </radialGradient>
-        {/* Main top-left shine */}
-        <radialGradient id={`shine1-${uid}`} cx="35%" cy="30%" r="35%">
-          <stop offset="0%" stopColor="white" stopOpacity="0.95"/>
-          <stop offset="40%" stopColor="white" stopOpacity="0.4"/>
+        <radialGradient id={`gl-${uid}`} cx="38%" cy="32%" r="70%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55"/>
+          <stop offset="18%" stopColor="#d8f0f5" stopOpacity="0.32"/>
+          <stop offset="45%" stopColor="#90ccd8" stopOpacity="0.18"/>
+          <stop offset="75%" stopColor="#4a8fa0" stopOpacity="0.14"/>
+          <stop offset="100%" stopColor="#1a4a55" stopOpacity="0.42"/>
+        </radialGradient>
+        <radialGradient id={`sp1-${uid}`} cx="35%" cy="28%" r="28%">
+          <stop offset="0%" stopColor="white" stopOpacity="0.92"/>
+          <stop offset="55%" stopColor="white" stopOpacity="0.25"/>
           <stop offset="100%" stopColor="white" stopOpacity="0"/>
         </radialGradient>
-        {/* Bottom right depth */}
-        <radialGradient id={`depth-${uid}`} cx="65%" cy="68%" r="40%">
-          <stop offset="0%" stopColor={color.c2} stopOpacity="0.6"/>
-          <stop offset="100%" stopColor="transparent" stopOpacity="0"/>
-        </radialGradient>
-        {/* Inner swirl gradient */}
-        <radialGradient id={`swirl-${uid}`} cx="40%" cy="55%" r="30%">
-          <stop offset="0%" stopColor={color.swirl} stopOpacity="0.35"/>
-          <stop offset="100%" stopColor={color.swirl} stopOpacity="0"/>
-        </radialGradient>
-        {/* Small secondary shine */}
-        <radialGradient id={`shine2-${uid}`} cx="68%" cy="72%" r="15%">
-          <stop offset="0%" stopColor="white" stopOpacity="0.4"/>
+        <radialGradient id={`sp2-${uid}`} cx="68%" cy="72%" r="18%">
+          <stop offset="0%" stopColor="white" stopOpacity="0.3"/>
           <stop offset="100%" stopColor="white" stopOpacity="0"/>
         </radialGradient>
-        <filter id={`shadow-${uid}`} x="-20%" y="-20%" width="150%" height="150%">
-          <feDropShadow dx="2" dy="4" stdDeviation="4" floodColor="#000000" floodOpacity="0.5"/>
+        <filter id={`shd-${uid}`}>
+          <feDropShadow dx="1" dy="2" stdDeviation="2" floodColor="#000" floodOpacity="0.5"/>
         </filter>
       </defs>
-      {/* Main glass sphere */}
-      <circle cx="50" cy="50" r="46" fill={`url(#base-${uid})`} filter={`url(#shadow-${uid})`}/>
-      {/* Swirl inside */}
-      <ellipse cx="42" cy="58" rx="22" ry="10" fill={color.swirl} opacity="0.22" transform="rotate(-35 42 58)"/>
-      <ellipse cx="58" cy="38" rx="14" ry="6" fill={color.swirl} opacity="0.15" transform="rotate(20 58 38)"/>
-      {/* Inner swirl glow */}
-      <circle cx="50" cy="50" r="46" fill={`url(#swirl-${uid})`}/>
-      {/* Depth shadow bottom right */}
-      <circle cx="50" cy="50" r="46" fill={`url(#depth-${uid})`}/>
-      {/* Main shine top left */}
-      <ellipse cx="33" cy="28" rx="22" ry="14" fill={`url(#shine1-${uid})`}/>
-      {/* Small secondary shine bottom right */}
-      <circle cx="68" cy="70" r="8" fill={`url(#shine2-${uid})`}/>
-      {/* Tiny specular highlight */}
-      <ellipse cx="28" cy="24" rx="7" ry="4" fill="white" opacity="0.7" transform="rotate(-20 28 24)"/>
+      <circle cx="24" cy="24" r="22" fill={`url(#sw-${uid})`} filter={`url(#shd-${uid})`} opacity="0.88"/>
+      <path d="M16,8 C20,16 12,24 18,34 C22,40 16,42 18,44" stroke={color.swirl} strokeWidth="2.8" fill="none" strokeOpacity="0.65" strokeLinecap="round"/>
+      <path d="M26,6 C30,14 22,22 28,32" stroke={color.swirl} strokeWidth="1.5" fill="none" strokeOpacity="0.38" strokeLinecap="round"/>
+      <circle cx="24" cy="24" r="22" fill={`url(#gl-${uid})`}/>
+      <circle cx="24" cy="24" r="22" fill={`url(#sp1-${uid})`}/>
+      <circle cx="24" cy="24" r="22" fill={`url(#sp2-${uid})`}/>
+      <circle cx="24" cy="24" r="21.5" fill="none" stroke={color.swirl} strokeWidth="0.7" strokeOpacity="0.28"/>
     </svg>
   );
 };
