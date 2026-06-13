@@ -480,7 +480,7 @@ export default function Admin() {
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5" /> User Analytics
             </CardTitle>
-            <CardDescription>User demographics and ad preference insights for targeted advertising</CardDescription>
+            <CardDescription>Game statistics and player insights</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoadingAnalytics ? (

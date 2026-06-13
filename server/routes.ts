@@ -1087,9 +1087,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all users from database
       const allUsers = await storage.getAllUsers();
       
-      // Filter and sort users for leaderboard
+      // Show ALL users on leaderboard - online or offline
       const leaderboard = allUsers
-        .filter(u => u.gamesPlayed > 0 || u.earnedMarbles > 0)
+        .filter(u => (u.displayName || u.username || "").trim() !== "")
         .map(u => ({
           id: u.id,
           name: u.displayName || u.username || "Player",
@@ -1101,7 +1101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           points: u.points || 0,
         }))
         .sort((a, b) => b.marbles - a.marbles)
-        .slice(0, 100)
+        .slice(0, 500)
         .map((entry, index) => ({ ...entry, rank: index + 1 }));
       
       res.json({ success: true, leaderboard, type });

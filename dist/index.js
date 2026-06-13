@@ -2526,7 +2526,7 @@ async function registerRoutes(app2) {
     try {
       const { type = "global" } = req.query;
       const allUsers = await storage.getAllUsers();
-      const leaderboard = allUsers.filter((u) => u.gamesPlayed > 0 || u.earnedMarbles > 0).map((u) => ({
+      const leaderboard = allUsers.filter((u) => (u.displayName || u.username || "").trim() !== "").map((u) => ({
         id: u.id,
         name: u.displayName || u.username || "Player",
         avatar: u.profileImage || "",
@@ -2535,7 +2535,7 @@ async function registerRoutes(app2) {
         gamesPlayed: u.gamesPlayed || 0,
         winRate: u.gamesPlayed > 0 ? Math.round(u.gamesWon / u.gamesPlayed * 100) : 0,
         points: u.points || 0
-      })).sort((a, b) => b.marbles - a.marbles).slice(0, 100).map((entry, index) => ({ ...entry, rank: index + 1 }));
+      })).sort((a, b) => b.marbles - a.marbles).slice(0, 500).map((entry, index) => ({ ...entry, rank: index + 1 }));
       res.json({ success: true, leaderboard, type });
     } catch (error) {
       console.error("Leaderboard fetch error:", error);
