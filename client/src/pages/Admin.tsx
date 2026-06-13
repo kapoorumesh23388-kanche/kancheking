@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Trash2, Loader2, LogOut, Settings, Pencil, Users, TrendingUp, BarChart3, Clock, Eye, DollarSign } from "lucide-react";
+import { Plus, Trash2, Loader2, LogOut, Settings, Pencil, Users, TrendingUp, BarChart3, Clock, Eye, DollarSign, Instagram, Youtube, Save } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -71,6 +71,9 @@ export default function Admin() {
   const [pointsCost, setPointsCost] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [showPasswordSettings, setShowPasswordSettings] = useState(false);
+  const [showSocialSettings, setShowSocialSettings] = useState(false);
+  const [instagramUrl, setInstagramUrl] = useState(() => localStorage.getItem("socialInstagram") || "");
+  const [youtubeUrl, setYoutubeUrl] = useState(() => localStorage.getItem("socialYoutube") || "");
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -245,6 +248,14 @@ export default function Admin() {
               <Settings className="w-4 h-4" /> Settings
             </Button>
             <Button
+              variant="outline"
+              onClick={() => setShowSocialSettings(!showSocialSettings)}
+              className="gap-2 border-pink-500/50 text-pink-400 hover:bg-pink-500/20"
+              data-testid="button-social-settings"
+            >
+              <Instagram className="w-4 h-4" /> Social Media
+            </Button>
+            <Button
               variant="destructive"
               onClick={handleLogout}
               className="gap-2"
@@ -254,6 +265,59 @@ export default function Admin() {
             </Button>
           </div>
         </div>
+
+        {/* Social Media Settings */}
+        {showSocialSettings && (
+          <Card className="mb-8 bg-pink-500/10 border-pink-500/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-pink-400">
+                <Instagram className="w-5 h-5" /> Social Media Links
+              </CardTitle>
+              <CardDescription>
+                Yahan links daalo — footer mein automatically show honge. Agar abhi page nahi banaya toh blank chhod do.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-pink-300 flex items-center gap-2">
+                  <Instagram className="w-4 h-4" /> Instagram URL
+                </label>
+                <Input
+                  placeholder="https://instagram.com/kancheking"
+                  value={instagramUrl}
+                  onChange={(e) => setInstagramUrl(e.target.value)}
+                  className="bg-black/30 border-pink-500/30 text-white"
+                  data-testid="input-instagram-url"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-red-300 flex items-center gap-2">
+                  <Youtube className="w-4 h-4" /> YouTube URL
+                </label>
+                <Input
+                  placeholder="https://youtube.com/@kancheking"
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  className="bg-black/30 border-red-500/30 text-white"
+                  data-testid="input-youtube-url"
+                />
+              </div>
+              <Button
+                onClick={() => {
+                  localStorage.setItem("socialInstagram", instagramUrl);
+                  localStorage.setItem("socialYoutube", youtubeUrl);
+                  window.dispatchEvent(new Event("socialLinksUpdated"));
+                  toast({ title: "Saved!", description: "Social media links updated successfully." });
+                  setShowSocialSettings(false);
+                }}
+                className="bg-pink-600 hover:bg-pink-700 gap-2"
+                data-testid="button-save-social"
+              >
+                <Save className="w-4 h-4" /> Save Links
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Password Settings */}
         {showPasswordSettings && (
