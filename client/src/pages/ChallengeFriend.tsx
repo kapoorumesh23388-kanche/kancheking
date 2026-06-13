@@ -152,14 +152,40 @@ export default function ChallengeFriend() {
   const joinRoom = async () => {
     if (!joinCode.trim()) return;
     setIsJoining(true);
+    const code = joinCode.toUpperCase();
     try {
       const res = await apiRequest("POST", "/api/game-room/join", { 
-        roomCode: joinCode.toUpperCase(), 
+        roomCode: code, 
         userId: playerId 
       });
       const data = await res.json();
       if (data.success) {
-        setLocation(`/multiplayer-game/${joinCode.toUpperCase()}`);
+        // Send join_room via WebSocket so creator gets player_joined event
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        const ws = new WebSocket(wsUrl);
+        ws.onopen = () => {
+          ws.send(JSON.stringify({
+            type: "join_room",
+            roomCode: code,
+            playerId,
+            data: {
+              playerName,
+              marbles: playerMarbles,
+              profileImage,
+              isCreator: false,
+            }
+          }));
+          // Close after sending, MultiplayerGame will reconnect
+          setTimeout(() => {
+            ws.close();
+            setLocation(`/multiplayer-game/${code}`);
+          }, 300);
+        };
+        ws.onerror = () => {
+          // Fallback - navigate anyway
+          setLocation(`/multiplayer-game/${code}`);
+        };
       } else {
         toast({
           title: "Error",
