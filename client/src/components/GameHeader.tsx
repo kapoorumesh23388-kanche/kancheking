@@ -135,7 +135,7 @@ export default function GameHeader() {
               title="Kanche King"
               data-testid="button-home-icon"
             >
-              <img src="/favicon.png" alt="Kanche King" style={{ width: 28, height: 28, borderRadius: 8 }} />
+              <img src="/favicon.png" alt="Kanche King" style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover', display: 'block' }} />
             </Button>
             {showBackButton && (
               <Button
@@ -514,10 +514,6 @@ export default function GameHeader() {
                 <li className="flex gap-3">
                   <span className="text-primary font-bold">💎</span>
                   <span>Start with <strong>150 marbles</strong> free</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-primary font-bold">🛒</span>
-                  <span>Buy marbles from Shop: 10/- = 100 marbles (scaling available)</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="text-primary font-bold">🎯</span>

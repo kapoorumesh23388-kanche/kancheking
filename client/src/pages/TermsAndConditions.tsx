@@ -71,9 +71,10 @@ export default function TermsAndConditions() {
           <section>
             <h2 className="text-2xl font-bold text-primary mb-4">6. Reward Points System</h2>
             <ul className="space-y-3 text-gray-200">
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Daily Login Bonus:</strong> +100 points just for logging in each day.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>10-Minute Active Play:</strong> +50 points after staying active for 10 minutes.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Hourly Playtime Bonus:</strong> +50 points for every full hour of active gameplay.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Daily Login Bonus:</strong> +20 points just for logging in each day.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>30-Minute Play Bonus:</strong> +30 points after playing actively for 30 minutes.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>1-Hour Play Bonus:</strong> +50 points for completing 1 full hour of active gameplay (total +80 points for 1 hour including the 30-min bonus).</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Repeating Bonus:</strong> This pattern repeats every hour — e.g. 1.5 hours of play earns +80 (1hr) + +30 (extra 30 min) = +110 points for that session.</span></li>
               <li className="flex gap-3"><span className="text-primary">•</span><span><strong>AI Defeat Bonus:</strong> +25 points per AI opponent defeated.</span></li>
               <li className="flex gap-3"><span className="text-primary">•</span><span><strong>PvP Win Bonus:</strong> +25 points per PvP match won.</span></li>
               <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Monthly #1 Leaderboard Bonus:</strong> +500 points.</span></li>

@@ -241,6 +241,9 @@ export default function Home() {
                   </svg>
                 </a>
               )}
+              <Link href="/about" className="text-[#00D9FF] hover:text-[#E91E8C] transition-colors" data-testid="link-about">
+                About Us
+              </Link>
               <Link href="/terms" className="text-[#00D9FF] hover:text-[#E91E8C] transition-colors" data-testid="link-terms">
                 Terms & Conditions
               </Link>

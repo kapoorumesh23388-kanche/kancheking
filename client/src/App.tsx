@@ -27,6 +27,7 @@ import Tournament from "@/pages/Tournament";
 import Profile from "@/pages/Profile";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsAndConditions from "@/pages/TermsAndConditions";
+import About from "@/pages/About";
 import NotFound from "@/pages/not-found";
 
 function Router({ needsOnboarding }: { needsOnboarding: boolean }) {
@@ -59,6 +60,7 @@ function Router({ needsOnboarding }: { needsOnboarding: boolean }) {
       <Route path="/profile" component={Profile} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/terms" component={TermsAndConditions} />
+      <Route path="/about" component={About} />
       <Route component={NotFound} />
     </Switch>
   );
