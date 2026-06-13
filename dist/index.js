@@ -453,12 +453,26 @@ var MemStorage = class {
     this.tournamentWindows.set(window.id, window);
   }
   async getUser(id) {
-    return this.users.get(id);
+    const cached = this.users.get(id);
+    if (cached) return cached;
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      if (user) this.users.set(id, user);
+      return user;
+    } catch {
+      return void 0;
+    }
   }
   async getUserByUsername(username) {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username
-    );
+    const cached = Array.from(this.users.values()).find((u) => u.username === username);
+    if (cached) return cached;
+    try {
+      const [user] = await db.select().from(users).where(eq(users.username, username));
+      if (user) this.users.set(user.id, user);
+      return user;
+    } catch {
+      return void 0;
+    }
   }
   async getUserByReferralCode(code) {
     return Array.from(this.users.values()).find(
@@ -466,12 +480,18 @@ var MemStorage = class {
     );
   }
   async getAllUsers() {
-    return Array.from(this.users.values());
+    try {
+      const dbUsers = await db.select().from(users);
+      dbUsers.forEach((u) => this.users.set(u.id, u));
+      return dbUsers;
+    } catch {
+      return Array.from(this.users.values());
+    }
   }
   async createUser(insertUser, referralCode, customId) {
     const id = customId || randomUUID();
     const code = referralCode || `REF${Math.random().toString(36).substring(7).toUpperCase()}`;
-    const user = {
+    const userData = {
       ...insertUser,
       id,
       displayName: null,
@@ -497,88 +517,160 @@ var MemStorage = class {
       createdAt: /* @__PURE__ */ new Date(),
       lastActiveAt: null
     };
-    this.users.set(id, user);
-    return user;
+    try {
+      const [dbUser] = await db.insert(users).values(userData).returning();
+      this.users.set(id, dbUser);
+      return dbUser;
+    } catch (err) {
+      if (err.code === "23505") {
+        const existing = await this.getUserByUsername(insertUser.username);
+        if (existing) return existing;
+      }
+      this.users.set(id, userData);
+      return userData;
+    }
   }
   async updateUserMarbles(userId, marbles) {
-    const user = this.users.get(userId);
-    if (user) {
-      user.marbles = marbles;
-      this.users.set(userId, user);
-      return user;
+    try {
+      const [updated] = await db.update(users).set({ marbles }).where(eq(users.id, userId)).returning();
+      if (updated) this.users.set(userId, updated);
+      return updated;
+    } catch {
+      const user = this.users.get(userId);
+      if (user) {
+        user.marbles = marbles;
+        this.users.set(userId, user);
+        return user;
+      }
+      return void 0;
     }
-    return void 0;
   }
   async updateUserPoints(userId, points) {
-    const user = this.users.get(userId);
-    if (user) {
-      user.points = points;
-      this.users.set(userId, user);
-      return user;
+    try {
+      const [updated] = await db.update(users).set({ points }).where(eq(users.id, userId)).returning();
+      if (updated) this.users.set(userId, updated);
+      return updated;
+    } catch {
+      const user = this.users.get(userId);
+      if (user) {
+        user.points = points;
+        this.users.set(userId, user);
+        return user;
+      }
+      return void 0;
     }
-    return void 0;
   }
   async updateUserStats(userId, stats) {
-    const user = this.users.get(userId);
-    if (user) {
-      if (stats.gamesWon !== void 0) user.gamesWon = stats.gamesWon;
-      if (stats.gamesPlayed !== void 0) user.gamesPlayed = stats.gamesPlayed;
-      this.users.set(userId, user);
-      return user;
+    try {
+      const updateData = {};
+      if (stats.gamesWon !== void 0) updateData.gamesWon = stats.gamesWon;
+      if (stats.gamesPlayed !== void 0) updateData.gamesPlayed = stats.gamesPlayed;
+      const [updated] = await db.update(users).set(updateData).where(eq(users.id, userId)).returning();
+      if (updated) this.users.set(userId, updated);
+      return updated;
+    } catch {
+      const user = this.users.get(userId);
+      if (user) {
+        if (stats.gamesWon !== void 0) user.gamesWon = stats.gamesWon;
+        if (stats.gamesPlayed !== void 0) user.gamesPlayed = stats.gamesPlayed;
+        this.users.set(userId, user);
+        return user;
+      }
+      return void 0;
     }
-    return void 0;
   }
   async updateUserProfile(userId, profile) {
-    const user = this.users.get(userId);
-    if (user) {
-      if (profile.displayName !== void 0) user.displayName = profile.displayName;
-      if (profile.profileImage !== void 0) user.profileImage = profile.profileImage;
-      if (profile.gender !== void 0) user.gender = profile.gender;
-      this.users.set(userId, user);
-      return user;
+    try {
+      const updateData = {};
+      if (profile.displayName !== void 0) updateData.displayName = profile.displayName;
+      if (profile.profileImage !== void 0) updateData.profileImage = profile.profileImage;
+      if (profile.gender !== void 0) updateData.gender = profile.gender;
+      const [updated] = await db.update(users).set(updateData).where(eq(users.id, userId)).returning();
+      if (updated) this.users.set(userId, updated);
+      return updated;
+    } catch {
+      const user = this.users.get(userId);
+      if (user) {
+        if (profile.displayName !== void 0) user.displayName = profile.displayName;
+        if (profile.profileImage !== void 0) user.profileImage = profile.profileImage;
+        if (profile.gender !== void 0) user.gender = profile.gender;
+        this.users.set(userId, user);
+        return user;
+      }
+      return void 0;
     }
-    return void 0;
   }
   async updateUserOnboarding(userId, data) {
-    const user = this.users.get(userId);
-    if (user) {
-      if (data.displayName !== void 0) user.displayName = data.displayName;
-      if (data.dateOfBirth !== void 0) user.dateOfBirth = data.dateOfBirth;
-      if (data.adPreferences !== void 0) user.adPreferences = data.adPreferences;
-      if (data.isAgeVerified !== void 0) user.isAgeVerified = data.isAgeVerified;
-      user.lastActiveAt = /* @__PURE__ */ new Date();
-      this.users.set(userId, user);
-      return user;
+    try {
+      const updateData = { lastActiveAt: /* @__PURE__ */ new Date() };
+      if (data.displayName !== void 0) updateData.displayName = data.displayName;
+      if (data.dateOfBirth !== void 0) updateData.dateOfBirth = data.dateOfBirth;
+      if (data.isAgeVerified !== void 0) updateData.isAgeVerified = data.isAgeVerified;
+      const [updated] = await db.update(users).set(updateData).where(eq(users.id, userId)).returning();
+      if (updated) this.users.set(userId, updated);
+      return updated;
+    } catch {
+      const user = this.users.get(userId);
+      if (user) {
+        if (data.displayName !== void 0) user.displayName = data.displayName;
+        user.lastActiveAt = /* @__PURE__ */ new Date();
+        this.users.set(userId, user);
+        return user;
+      }
+      return void 0;
     }
-    return void 0;
   }
   async incrementAiWins(userId) {
-    const user = this.users.get(userId);
-    if (user) {
-      user.aiWins = (user.aiWins || 0) + 1;
-      this.users.set(userId, user);
-      return user;
+    try {
+      const current = await this.getUser(userId);
+      if (!current) return void 0;
+      const [updated] = await db.update(users).set({ aiWins: (current.aiWins || 0) + 1 }).where(eq(users.id, userId)).returning();
+      if (updated) this.users.set(userId, updated);
+      return updated;
+    } catch {
+      const user = this.users.get(userId);
+      if (user) {
+        user.aiWins = (user.aiWins || 0) + 1;
+        this.users.set(userId, user);
+        return user;
+      }
+      return void 0;
     }
-    return void 0;
   }
   async addEarnedMarbles(userId, amount) {
-    const user = this.users.get(userId);
-    if (user) {
-      user.marbles = (user.marbles || 0) + amount;
-      user.earnedMarbles = (user.earnedMarbles || 0) + amount;
-      this.users.set(userId, user);
-      return user;
+    try {
+      const current = await this.getUser(userId);
+      if (!current) return void 0;
+      const newMarbles = (current.marbles || 0) + amount;
+      const newEarned = (current.earnedMarbles || 0) + amount;
+      const [updated] = await db.update(users).set({ marbles: newMarbles, earnedMarbles: newEarned }).where(eq(users.id, userId)).returning();
+      if (updated) this.users.set(userId, updated);
+      return updated;
+    } catch {
+      const user = this.users.get(userId);
+      if (user) {
+        user.marbles = (user.marbles || 0) + amount;
+        user.earnedMarbles = (user.earnedMarbles || 0) + amount;
+        this.users.set(userId, user);
+        return user;
+      }
+      return void 0;
     }
-    return void 0;
   }
   async updateEarnedMarbles(userId, earnedMarbles) {
-    const user = this.users.get(userId);
-    if (user) {
-      user.earnedMarbles = earnedMarbles;
-      this.users.set(userId, user);
-      return user;
+    try {
+      const [updated] = await db.update(users).set({ earnedMarbles }).where(eq(users.id, userId)).returning();
+      if (updated) this.users.set(userId, updated);
+      return updated;
+    } catch {
+      const user = this.users.get(userId);
+      if (user) {
+        user.earnedMarbles = earnedMarbles;
+        this.users.set(userId, user);
+        return user;
+      }
+      return void 0;
     }
-    return void 0;
   }
   async getCatalogItems() {
     try {
