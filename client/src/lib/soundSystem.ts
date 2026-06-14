@@ -11,17 +11,73 @@ const BGM_THEMES: Record<BGMTheme, { name: string; emoji: string; desc: string }
 export function getBGMThemes() { return BGM_THEMES; }
 
 let ctx: AudioContext | null = null;
-let masterGain: GainNode | null = null;
+let masterGain: GainNode | null = null;       // BGM gain (feeds into masterVolumeGain)
+let masterVolumeGain: GainNode | null = null; // Global volume control (feeds destination)
+let sfxGain: GainNode | null = null;          // SFX gain (feeds into masterVolumeGain)
 let bgmIntervalId: ReturnType<typeof setInterval> | null = null;
 let isBGMPlaying = false;
 let currentTheme: BGMTheme = "street";
 let beatCount = 0;
+let bgmBaseVolume = 0.35;
+
+// Global audio settings - loaded from localStorage
+let globalVolume = 0.7;     // 0-1
+let sfxEnabled = true;
+let musicEnabledFlag = true;
+
+// Call this once on app start (e.g. in GameHeader) to sync settings from localStorage
+export function initAudioSettings() {
+  if (typeof window === "undefined") return;
+  const vol = localStorage.getItem("volume");
+  if (vol !== null) globalVolume = Math.max(0, Math.min(100, parseInt(vol))) / 100;
+  const sound = localStorage.getItem("soundEnabled");
+  if (sound !== null) sfxEnabled = sound !== "false";
+  const music = localStorage.getItem("musicEnabled");
+  if (music !== null) musicEnabledFlag = music !== "false";
+
+  // Apply immediately if audio graph already exists
+  if (masterVolumeGain) masterVolumeGain.gain.value = globalVolume;
+  if (sfxGain) sfxGain.gain.value = sfxEnabled ? 1 : 0;
+  if (masterGain) masterGain.gain.value = musicEnabledFlag ? bgmBaseVolume : 0;
+}
+
+export function setMasterVolume(vol: number) {
+  globalVolume = Math.max(0, Math.min(1, vol));
+  if (masterVolumeGain) masterVolumeGain.gain.value = globalVolume;
+}
+
+export function setSfxEnabled(enabled: boolean) {
+  sfxEnabled = enabled;
+  if (sfxGain) sfxGain.gain.value = enabled ? 1 : 0;
+}
+
+export function isSfxEnabled() { return sfxEnabled; }
+
+export function setMusicEnabledFlag(enabled: boolean) {
+  musicEnabledFlag = enabled;
+  if (masterGain) masterGain.gain.value = enabled ? bgmBaseVolume : 0;
+}
+
+function ensureAudioGraph() {
+  if (!ctx) return;
+  if (!masterVolumeGain) {
+    masterVolumeGain = ctx.createGain();
+    masterVolumeGain.gain.value = globalVolume;
+    masterVolumeGain.connect(ctx.destination);
+  }
+  if (!sfxGain) {
+    sfxGain = ctx.createGain();
+    sfxGain.gain.value = sfxEnabled ? 1 : 0;
+    sfxGain.connect(masterVolumeGain);
+  }
+}
 
 function getCtx(): AudioContext {
   if (!ctx || ctx.state === "closed") {
     ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
   }
   if (ctx.state === "suspended") ctx.resume();
+  ensureAudioGraph();
   return ctx;
 }
 
@@ -173,11 +229,12 @@ export function startBGM(theme: BGMTheme = "street", volume = 0.35) {
   currentTheme = theme;
   isBGMPlaying = true;
   beatCount = 0;
+  bgmBaseVolume = volume;
 
   const c = getCtx();
   masterGain = c.createGain();
-  masterGain.gain.value = volume;
-  masterGain.connect(c.destination);
+  masterGain.gain.value = musicEnabledFlag ? volume : 0;
+  masterGain.connect(masterVolumeGain!);
 
   playBeat(theme, beatCount++);
   bgmIntervalId = setInterval(() => {
@@ -198,14 +255,15 @@ export function switchBGM(theme: BGMTheme) {
 }
 
 export function setBGMVolume(vol: number) {
-  if (masterGain) masterGain.gain.value = Math.max(0, Math.min(1, vol));
+  bgmBaseVolume = Math.max(0, Math.min(1, vol));
+  if (masterGain) masterGain.gain.value = musicEnabledFlag ? bgmBaseVolume : 0;
 }
 
 export function isBGMEnabled() { return isBGMPlaying; }
 
 // ─── SFX ─────────────────────────────────────────────────────────────────────
 export function playSfxMarbleHide() {
-  if (!ctx && !masterGain) return;
+  if (!sfxEnabled) return;
   const c = getCtx();
   for (let i = 0; i < 5; i++) {
     const o = c.createOscillator();
@@ -214,13 +272,14 @@ export function playSfxMarbleHide() {
     o.frequency.value = 600 + Math.random() * 600;
     g.gain.setValueAtTime(0.3, c.currentTime + i * 0.04);
     g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + i * 0.04 + 0.08);
-    o.connect(g); g.connect(masterGain || c.destination);
+    o.connect(g); g.connect(sfxGain || c.destination);
     o.start(c.currentTime + i * 0.04);
     o.stop(c.currentTime + i * 0.04 + 0.1);
   }
 }
 
 export function playSfxReveal() {
+  if (!sfxEnabled) return;
   const c = getCtx();
   [300, 400, 550, 750, 1000, 1300].forEach((f, i) => {
     const o = c.createOscillator();
@@ -229,13 +288,14 @@ export function playSfxReveal() {
     o.frequency.value = f;
     g.gain.setValueAtTime(0.25, c.currentTime + i * 0.05);
     g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + i * 0.05 + 0.2);
-    o.connect(g); g.connect(masterGain || c.destination);
+    o.connect(g); g.connect(sfxGain || c.destination);
     o.start(c.currentTime + i * 0.05);
     o.stop(c.currentTime + i * 0.05 + 0.25);
   });
 }
 
 export function playSfxWin() {
+  if (!sfxEnabled) return;
   const c = getCtx();
   // Subway surfers style win — fast ascending + chime
   [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => {
@@ -245,13 +305,14 @@ export function playSfxWin() {
     o.frequency.value = f;
     g.gain.setValueAtTime(0.4, c.currentTime + i * 0.1);
     g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + i * 0.1 + 0.3);
-    o.connect(g); g.connect(masterGain || c.destination);
+    o.connect(g); g.connect(sfxGain || c.destination);
     o.start(c.currentTime + i * 0.1);
     o.stop(c.currentTime + i * 0.1 + 0.35);
   });
 }
 
 export function playSfxLose() {
+  if (!sfxEnabled) return;
   const c = getCtx();
   [400, 350, 300, 250, 200].forEach((f, i) => {
     const o = c.createOscillator();
@@ -260,13 +321,14 @@ export function playSfxLose() {
     o.frequency.value = f;
     g.gain.setValueAtTime(0.3, c.currentTime + i * 0.15);
     g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + i * 0.15 + 0.25);
-    o.connect(g); g.connect(masterGain || c.destination);
+    o.connect(g); g.connect(sfxGain || c.destination);
     o.start(c.currentTime + i * 0.15);
     o.stop(c.currentTime + i * 0.15 + 0.3);
   });
 }
 
 export function playSfxGuess() {
+  if (!sfxEnabled) return;
   const c = getCtx();
   const o = c.createOscillator();
   const g = c.createGain();
@@ -275,12 +337,13 @@ export function playSfxGuess() {
   o.frequency.linearRampToValueAtTime(900, c.currentTime + 0.15);
   g.gain.setValueAtTime(0.3, c.currentTime);
   g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.25);
-  o.connect(g); g.connect(masterGain || c.destination);
+  o.connect(g); g.connect(sfxGain || c.destination);
   o.start(c.currentTime);
   o.stop(c.currentTime + 0.3);
 }
 
 export function playSfxMarbleClick() {
+  if (!sfxEnabled) return;
   const c = getCtx();
   const o = c.createOscillator();
   const g = c.createGain();
@@ -288,7 +351,7 @@ export function playSfxMarbleClick() {
   o.frequency.value = 1200 + Math.random() * 400;
   g.gain.setValueAtTime(0.15, c.currentTime);
   g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.06);
-  o.connect(g); g.connect(masterGain || c.destination);
+  o.connect(g); g.connect(sfxGain || c.destination);
   o.start(c.currentTime);
   o.stop(c.currentTime + 0.08);
 }

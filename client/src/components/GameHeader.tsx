@@ -1,7 +1,6 @@
 import { Settings, User, ArrowLeft, Upload, Globe, HelpCircle, MessageCircle, Volume2, Volume1, VolumeX } from "lucide-react";
 import SoundThemeSelector from "@/components/SoundThemeSelector";
-import { switchBGM, startBGM, stopBGM, isBGMEnabled, type BGMTheme } from "@/lib/soundSystem";
-import type { GameLanguage } from "@/lib/voiceAnnouncer";
+import { switchBGM, startBGM, stopBGM, isBGMEnabled, initAudioSettings, setMasterVolume, setSfxEnabled, setMusicEnabledFlag, playSfxMarbleClick, type BGMTheme } from "@/lib/soundSystem";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useState, useRef, useEffect } from "react";
@@ -31,10 +30,13 @@ export default function GameHeader() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [volume, setVolume] = useState(70);
   const [bgmTheme, setBgmTheme] = useState<BGMTheme>(() => (localStorage.getItem("bgmTheme") as BGMTheme) || "street");
-  const [gameLanguage, setGameLanguage] = useState<GameLanguage>(() => (localStorage.getItem("gameLanguage") as GameLanguage) || "hi");
-  const [isMusicOn, setIsMusicOn] = useState(() => localStorage.getItem("musicEnabled") !== "false");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [lastUpdate, setLastUpdate] = useState(() => localStorage.getItem("lastProfileUpdate") || "0");
+
+  // Sync audio settings (volume, sfx, music) to soundSystem on mount
+  useEffect(() => {
+    initAudioSettings();
+  }, []);
 
   useEffect(() => {
     const syncFromStorage = () => {
@@ -105,11 +107,19 @@ export default function GameHeader() {
   const handleSoundToggle = (enabled: boolean) => {
     setSoundEnabled(enabled);
     localStorage.setItem("soundEnabled", String(enabled));
+    setSfxEnabled(enabled);
+    if (enabled) playSfxMarbleClick();
   };
 
   const handleMusicToggle = (enabled: boolean) => {
     setMusicEnabled(enabled);
     localStorage.setItem("musicEnabled", String(enabled));
+    setMusicEnabledFlag(enabled);
+    if (enabled) {
+      if (!isBGMEnabled()) startBGM(bgmTheme);
+    } else {
+      stopBGM();
+    }
   };
 
   const handleNotificationsToggle = (enabled: boolean) => {
@@ -120,6 +130,7 @@ export default function GameHeader() {
   const handleVolumeChange = (value: number[]) => {
     setVolume(value[0]);
     localStorage.setItem("volume", String(value[0]));
+    setMasterVolume(value[0] / 100);
   };
 
   return (
@@ -389,16 +400,9 @@ export default function GameHeader() {
               </div>
               <SoundThemeSelector
                 currentTheme={bgmTheme}
-                currentLanguage={gameLanguage}
-                isMusicOn={isMusicOn}
+                isMusicOn={musicEnabled}
                 onThemeChange={(t) => { setBgmTheme(t); localStorage.setItem("bgmTheme", t); switchBGM(t); }}
-                onLanguageChange={(l) => { setGameLanguage(l); localStorage.setItem("gameLanguage", l); }}
-                onMusicToggle={() => {
-                  const next = !isMusicOn;
-                  setIsMusicOn(next);
-                  localStorage.setItem("musicEnabled", String(next));
-                  if (next) startBGM(bgmTheme); else stopBGM();
-                }}
+                onMusicToggle={() => handleMusicToggle(!musicEnabled)}
               />
             </div>
           </div>
