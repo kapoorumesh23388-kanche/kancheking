@@ -27,7 +27,8 @@ import {
   initializeDailyRewards,
   updatePlaytime,
   recordAiDefeat,
-  checkAndClaimPlaytimeRewards,
+  checkAndClaimLoginReward,
+  checkAndClaimHourlyRewards,
   checkAndClaimDefeatBonuses,
 } from "@/lib/rewardsStorage";
 import {
@@ -200,22 +201,28 @@ export default function GamePlay() {
     }
   }, [player2Marbles, toast]);
 
-  // Track active playtime every minute and award milestone rewards.
-  // updatePlaytime() only counts time when the user is actively
-  // interacting with the page (anti-AFK) - see rewardsStorage.ts
+  // Track playtime every minute and check for rewards
   useEffect(() => {
     const interval = setInterval(() => {
       updatePlaytime();
-
-      const playtimeReward = checkAndClaimPlaytimeRewards();
-      if (playtimeReward.claimed) {
+      
+      const loginReward = checkAndClaimLoginReward();
+      if (loginReward.claimed) {
         toast({
-          title: "Playtime Reward!",
-          description: `+${playtimeReward.points} points for active gameplay!`,
+          title: "Daily Login Reward!",
+          description: `+${loginReward.points} points for playing 10+ minutes!`,
+        });
+      }
+      
+      const hourlyReward = checkAndClaimHourlyRewards();
+      if (hourlyReward.claimed) {
+        toast({
+          title: "Hourly Reward!",
+          description: `+${hourlyReward.points} points for ${hourlyReward.hours} hour(s) of gameplay!`,
         });
       }
     }, 60000);
-
+    
     return () => clearInterval(interval);
   }, [toast]);
 
