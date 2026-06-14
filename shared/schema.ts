@@ -229,6 +229,11 @@ export const dailyUserStats = pgTable("daily_user_stats", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const appSettings = pgTable("app_settings", {
+  key: varchar("key").primaryKey(),
+  value: text("value").notNull().default(""),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -252,3 +257,5 @@ export type TournamentMatch = typeof tournamentMatches.$inferSelect;
 export type GameSession = typeof gameSessions.$inferSelect;
 export type AdImpression = typeof adImpressions.$inferSelect;
 export type DailyUserStats = typeof dailyUserStats.$inferSelect;
+
+export type AppSetting = typeof appSettings.$inferSelect;

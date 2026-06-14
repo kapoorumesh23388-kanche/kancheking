@@ -111,6 +111,22 @@ export default function Home() {
       setYoutubeUrl(localStorage.getItem("socialYoutube") || "");
     };
     window.addEventListener("socialLinksUpdated", updateSocial);
+
+    // Fetch from server - works for both web and APK
+    fetch("/api/settings/social")
+      .then(res => res.json())
+      .then(data => {
+        if (data.instagram) {
+          setInstagramUrl(data.instagram);
+          localStorage.setItem("socialInstagram", data.instagram);
+        }
+        if (data.youtube) {
+          setYoutubeUrl(data.youtube);
+          localStorage.setItem("socialYoutube", data.youtube);
+        }
+      })
+      .catch(() => {});
+
     return () => window.removeEventListener("socialLinksUpdated", updateSocial);
   }, []);
 

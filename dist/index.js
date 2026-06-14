@@ -159,6 +159,7 @@ var schema_exports = {};
 __export(schema_exports, {
   adImpressions: () => adImpressions,
   adminUsers: () => adminUsers,
+  appSettings: () => appSettings,
   catalogItems: () => catalogItems,
   chatMessages: () => chatMessages,
   dailyUserStats: () => dailyUserStats,
@@ -388,6 +389,10 @@ var dailyUserStats = pgTable("daily_user_stats", {
   marblesSpent: integer("marbles_spent").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow()
 });
+var appSettings = pgTable("app_settings", {
+  key: varchar("key").primaryKey(),
+  value: text("value").notNull().default("")
+});
 var insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true
@@ -451,6 +456,34 @@ var MemStorage = class {
       endedAt: null
     };
     this.tournamentWindows.set(window.id, window);
+    this.ensureSettingsTable();
+  }
+  async ensureSettingsTable() {
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS app_settings (
+          key VARCHAR PRIMARY KEY,
+          value TEXT NOT NULL DEFAULT ''
+        )
+      `);
+    } catch (err) {
+      console.error("Failed to ensure app_settings table:", err);
+    }
+  }
+  async getSetting(key) {
+    try {
+      const [row] = await db.select().from(appSettings).where(eq(appSettings.key, key));
+      return row?.value || "";
+    } catch {
+      return "";
+    }
+  }
+  async setSetting(key, value) {
+    try {
+      await db.insert(appSettings).values({ key, value }).onConflictDoUpdate({ target: appSettings.key, set: { value } });
+    } catch (err) {
+      console.error("Failed to set setting:", err);
+    }
   }
   async getUser(id) {
     const cached = this.users.get(id);
@@ -2612,6 +2645,25 @@ async function registerRoutes(app2) {
     } catch (error) {
       console.error("Daily stats fetch error:", error);
       res.status(500).json({ error: "Failed to fetch daily stats" });
+    }
+  });
+  app2.get("/api/settings/social", async (req, res) => {
+    try {
+      const instagram = await storage.getSetting("socialInstagram");
+      const youtube = await storage.getSetting("socialYoutube");
+      res.json({ instagram, youtube });
+    } catch (error) {
+      res.json({ instagram: "", youtube: "" });
+    }
+  });
+  app2.post("/api/admin/settings/social", async (req, res) => {
+    try {
+      const { instagram, youtube } = req.body;
+      if (instagram !== void 0) await storage.setSetting("socialInstagram", instagram);
+      if (youtube !== void 0) await storage.setSetting("socialYoutube", youtube);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to save social links" });
     }
   });
   app2.get("/api/leaderboard", async (req, res) => {

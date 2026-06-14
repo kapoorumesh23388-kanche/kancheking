@@ -1,6 +1,6 @@
-import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type GameRoom, type FeedbackSubmission, type AdminUser, catalogItems, users as usersTable } from "@shared/schema";
+import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type GameRoom, type FeedbackSubmission, type AdminUser, catalogItems, users as usersTable, appSettings } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
@@ -123,6 +123,40 @@ export class MemStorage implements IStorage {
       endedAt: null,
     };
     this.tournamentWindows.set(window.id, window);
+
+    // Ensure app_settings table exists (for social media links etc.)
+    this.ensureSettingsTable();
+  }
+
+  private async ensureSettingsTable() {
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS app_settings (
+          key VARCHAR PRIMARY KEY,
+          value TEXT NOT NULL DEFAULT ''
+        )
+      `);
+    } catch (err) {
+      console.error("Failed to ensure app_settings table:", err);
+    }
+  }
+
+  async getSetting(key: string): Promise<string> {
+    try {
+      const [row] = await db.select().from(appSettings).where(eq(appSettings.key, key));
+      return row?.value || "";
+    } catch {
+      return "";
+    }
+  }
+
+  async setSetting(key: string, value: string): Promise<void> {
+    try {
+      await db.insert(appSettings).values({ key, value })
+        .onConflictDoUpdate({ target: appSettings.key, set: { value } });
+    } catch (err) {
+      console.error("Failed to set setting:", err);
+    }
   }
 
   async getUser(id: string): Promise<User | undefined> {

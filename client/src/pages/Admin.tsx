@@ -299,11 +299,20 @@ export default function Admin() {
                 />
               </div>
               <Button
-                onClick={() => {
+                onClick={async () => {
                   localStorage.setItem("socialInstagram", instagramUrl);
                   localStorage.setItem("socialYoutube", youtubeUrl);
+                  try {
+                    await fetch("/api/admin/settings/social", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ instagram: instagramUrl, youtube: youtubeUrl }),
+                    });
+                  } catch (err) {
+                    console.error("Failed to save social links to server:", err);
+                  }
                   window.dispatchEvent(new Event("socialLinksUpdated"));
-                  toast({ title: "Saved!", description: "Social media links updated successfully." });
+                  toast({ title: "Saved!", description: "Social media links updated for web and app." });
                   setShowSocialSettings(false);
                 }}
                 className="bg-pink-600 hover:bg-pink-700 gap-2"

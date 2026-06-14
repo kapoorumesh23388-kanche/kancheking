@@ -1080,6 +1080,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get Leaderboard - Real player data sorted by wins and earnings
+  // Social media links - public read endpoint
+  app.get("/api/settings/social", async (req, res) => {
+    try {
+      const instagram = await storage.getSetting("socialInstagram");
+      const youtube = await storage.getSetting("socialYoutube");
+      res.json({ instagram, youtube });
+    } catch (error) {
+      res.json({ instagram: "", youtube: "" });
+    }
+  });
+
+  // Social media links - admin save endpoint
+  app.post("/api/admin/settings/social", async (req, res) => {
+    try {
+      const { instagram, youtube } = req.body;
+      if (instagram !== undefined) await storage.setSetting("socialInstagram", instagram);
+      if (youtube !== undefined) await storage.setSetting("socialYoutube", youtube);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to save social links" });
+    }
+  });
+
   app.get("/api/leaderboard", async (req, res) => {
     try {
       const { type = "global" } = req.query;
