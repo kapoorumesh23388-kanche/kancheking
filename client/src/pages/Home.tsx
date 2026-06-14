@@ -266,9 +266,6 @@ export default function Home() {
               <Link href="/privacy" className="text-[#00D9FF] hover:text-[#E91E8C] transition-colors" data-testid="link-privacy-policy">
                 {t('privacyPolicy', language)}
               </Link>
-              <Link href="/admin-login" className="text-[#E91E8C]/70 hover:text-[#E91E8C] transition-colors" data-testid="link-admin-login">
-                Admin Login
-              </Link>
             </div>
           </div>
         </div>

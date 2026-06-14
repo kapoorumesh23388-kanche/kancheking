@@ -54,7 +54,7 @@ function Router({ needsOnboarding }: { needsOnboarding: boolean }) {
       <Route path="/support" component={Support} />
       <Route path="/leaderboard" component={LeaderboardPage} />
       <Route path="/shop" component={Shop} />
-      <Route path="/admin-login" component={AdminLogin} />
+      <Route path="/adminrights" component={AdminLogin} />
       <Route path="/admin" component={Admin} />
       <Route path="/tournament" component={Tournament} />
       <Route path="/profile" component={Profile} />
