@@ -162,11 +162,15 @@ export default function GamePlay() {
       // Announce result in selected language
       // playerActuallyWon: agar mai hider hoon toh guesser(AI) ka result ulta mera result hai
       const playerActuallyWon = isHiderPlayer1 ? !gameResult.won : gameResult.won;
+      // Voice announcement fires immediately (no delay).
+      // SFX is delayed slightly so Android WebView's TTS engine
+      // gets a head start before Web Audio activity starts -
+      // otherwise the voice gets cut off on some Android devices.
+      announceResult(isOdd, playerActuallyWon, gameLanguage);
       setTimeout(() => {
-        announceResult(isOdd, playerActuallyWon, gameLanguage);
         if (playerActuallyWon) { playSfxWin(); setIsPlayerWinner(true); }
         else { playSfxLose(); setIsPlayerWinner(false); }
-      }, 600);
+      }, 200);
       // Avatar phases
       if (isHiderPlayer1) {
         setPlayerAvatarPhase("revealed");
