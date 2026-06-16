@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Mic, Send, X } from "lucide-react";
+import { setMusicEnabledFlag, setSfxEnabled } from "@/lib/soundSystem";
 import { Input } from "@/components/ui/input";
 
 interface ChatMessage {
@@ -94,6 +95,9 @@ export default function GameChat({
       };
 
       mediaRecorder.onstop = () => {
+        // Restore audio after recording
+        setMusicEnabledFlag(true);
+        setSfxEnabled(true);
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         
         // Convert audio blob to base64 for transmission
@@ -113,9 +117,12 @@ export default function GameChat({
         setRecordingTime(0);
       };
 
-      mediaRecorder.start(100); // Record in 100ms chunks for better data availability
+      mediaRecorder.start(100);
       setIsRecording(true);
       setRecordingTime(0);
+      // Mute background music and SFX while recording voice
+      setMusicEnabledFlag(false);
+      setSfxEnabled(false);
 
       // Timer for recording duration
       recordingIntervalRef.current = setInterval(() => {
@@ -189,6 +196,9 @@ export default function GameChat({
                         className="h-8 w-full max-w-[180px]"
                         data-testid="audio-player"
                         preload="auto"
+                        onPlay={() => { setMusicEnabledFlag(false); setSfxEnabled(false); }}
+                        onEnded={() => { setMusicEnabledFlag(true); setSfxEnabled(true); }}
+                        onPause={() => { setMusicEnabledFlag(true); setSfxEnabled(true); }}
                       />
                     )}
                   </div>
