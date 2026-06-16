@@ -32,11 +32,13 @@ import {
 } from "@/lib/rewardsStorage";
 import {
   startBGM, stopBGM, switchBGM, isBGMEnabled,
+  setSfxEnabled,
   playSfxMarbleHide, playSfxReveal, playSfxWin, playSfxLose, playSfxGuess, playSfxMarbleClick,
   type BGMTheme,
 } from "@/lib/soundSystem";
 import {
   announceResult,
+  setSpeakCallbacks,
   type GameLanguage,
 } from "@/lib/voiceAnnouncer";
 import { useToast } from "@/hooks/use-toast";
@@ -107,6 +109,15 @@ export default function GamePlay() {
   const [showSpinWheel, setShowSpinWheel] = useState(false);
 
   // Start BGM on mount
+  // Mute SFX when TTS is speaking — prevents Android WebView conflict
+  useEffect(() => {
+    setSpeakCallbacks(
+      () => setSfxEnabled(false),
+      () => setSfxEnabled(true),
+    );
+    return () => setSpeakCallbacks(() => {}, () => {});
+  }, []);
+
   useEffect(() => {
     if (isMusicEnabled) startBGM(bgmTheme);
     return () => stopBGM();
@@ -162,15 +173,15 @@ export default function GamePlay() {
       // Announce result in selected language
       // playerActuallyWon: agar mai hider hoon toh guesser(AI) ka result ulta mera result hai
       const playerActuallyWon = isHiderPlayer1 ? !gameResult.won : gameResult.won;
-      // Voice announcement fires immediately (no delay).
-      // SFX is delayed slightly so Android WebView's TTS engine
-      // gets a head start before Web Audio activity starts -
-      // otherwise the voice gets cut off on some Android devices.
+      // Voice fires immediately. SFX is delayed so TTS gets priority.
+      // setSpeakCallbacks above mutes SFX during voice on Android WebView.
+      if (playerActuallyWon) setIsPlayerWinner(true);
+      else setIsPlayerWinner(false);
       announceResult(isOdd, playerActuallyWon, gameLanguage);
       setTimeout(() => {
-        if (playerActuallyWon) { playSfxWin(); setIsPlayerWinner(true); }
-        else { playSfxLose(); setIsPlayerWinner(false); }
-      }, 200);
+        if (playerActuallyWon) playSfxWin();
+        else playSfxLose();
+      }, 800);
       // Avatar phases
       if (isHiderPlayer1) {
         setPlayerAvatarPhase("revealed");

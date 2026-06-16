@@ -109,38 +109,49 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// Android WebView detection
 function isAndroidWebView(): boolean {
   if (typeof window === "undefined") return false;
   const ua = navigator.userAgent || "";
   return ua.includes("Android") && (ua.includes("wv") || ua.includes("WebView"));
 }
 
-// Voices preload
+// Voices preload on module load
 if (typeof window !== "undefined" && "speechSynthesis" in window) {
   window.speechSynthesis.getVoices();
-  window.speechSynthesis.onvoiceschanged = () => {
-    window.speechSynthesis.getVoices();
-  };
+  window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
 }
 
-// Android WebView ke liye retry mechanism
-function speakWithRetry(text: string, lang: string, retries = 3) {
+// Callback registry so GamePlay can mute/unmute SFX around voice
+type VoidFn = () => void;
+let onSpeakStart: VoidFn | null = null;
+let onSpeakEnd: VoidFn | null = null;
+
+export function setSpeakCallbacks(onStart: VoidFn, onEnd: VoidFn) {
+  onSpeakStart = onStart;
+  onSpeakEnd = onEnd;
+}
+
+function speakWithRetry(text: string, lang: string, retries = 4) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
-  window.speechSynthesis.cancel();
+  // Stop any ongoing speech first
+  try { window.speechSynthesis.cancel(); } catch {}
+
+  // Notify GamePlay to mute SFX so Web Audio doesn't fight TTS
+  if (onSpeakStart) onSpeakStart();
 
   let attempted = 0;
 
   const attempt = () => {
     attempted++;
+
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = lang;
-    utter.rate = 0.88;
-    utter.pitch = 0.95;
+    utter.rate = 0.85;
+    utter.pitch = 1.0;
     utter.volume = 1.0;
 
-    // Voice select — Android pe default hi best hoti hai
+    // On non-Android, try to find a matching voice
     if (!isAndroidWebView()) {
       const voices = window.speechSynthesis.getVoices();
       const langCode = lang.split("-")[0];
@@ -151,70 +162,78 @@ function speakWithRetry(text: string, lang: string, retries = 3) {
       if (voice) utter.voice = voice;
     }
 
-    // Android WebView bug — speech silently fails
-    // onstart fire nahi hua matlab speech nahi boli — retry karo
     let started = false;
 
-    utter.onstart = () => { started = true; };
+    utter.onstart = () => {
+      started = true;
+    };
+
+    utter.onend = () => {
+      // Re-enable SFX after voice finishes
+      if (onSpeakEnd) onSpeakEnd();
+    };
 
     utter.onerror = (e) => {
-      console.warn("Speech error:", e.error);
+      console.warn("TTS error:", e.error, "attempt:", attempted);
       if (attempted < retries) {
-        setTimeout(attempt, 300);
+        setTimeout(attempt, 400);
+      } else {
+        if (onSpeakEnd) onSpeakEnd();
       }
     };
 
-    // Android WebView mein onstart kabhi kabhi fire nahi hota
-    // 800ms baad check karo — agar start nahi hua toh retry
+    // Android WebView: if onstart doesn't fire within 1s, retry
     if (isAndroidWebView()) {
       setTimeout(() => {
-        if (!started && attempted < retries) {
-          window.speechSynthesis.cancel();
-          setTimeout(attempt, 200);
+        if (!started) {
+          console.warn("TTS silent on Android, retrying...");
+          try { window.speechSynthesis.cancel(); } catch {}
+          if (attempted < retries) {
+            setTimeout(attempt, 300);
+          } else {
+            if (onSpeakEnd) onSpeakEnd();
+          }
         }
-      }, 800);
+      }, 1000);
+
+      // Periodic resume to prevent Android WebView from pausing TTS
+      const resumeId = setInterval(() => {
+        try {
+          if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+          if (!window.speechSynthesis.speaking) clearInterval(resumeId);
+        } catch { clearInterval(resumeId); }
+      }, 250);
+      setTimeout(() => clearInterval(resumeId), 12000);
     }
 
-    if (window.speechSynthesis.paused) {
-      window.speechSynthesis.resume();
-    }
-
-    window.speechSynthesis.speak(utter);
-
-    // Android Chrome WebView periodic resume fix
-    if (isAndroidWebView()) {
-      const resumeTimer = setInterval(() => {
-        if (window.speechSynthesis.paused) {
-          window.speechSynthesis.resume();
-        }
-        if (!window.speechSynthesis.speaking) {
-          clearInterval(resumeTimer);
-        }
-      }, 200);
-      // Max 10 sec ke baad clear
-      setTimeout(() => clearInterval(resumeTimer), 10000);
+    try {
+      if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+      window.speechSynthesis.speak(utter);
+    } catch (e) {
+      console.warn("TTS speak() threw:", e);
+      if (attempted < retries) setTimeout(attempt, 400);
+      else if (onSpeakEnd) onSpeakEnd();
     }
   };
 
-  // Voices load hone ka wait
+  // Wait for voices to be available
   const voices = window.speechSynthesis.getVoices();
   if (voices.length > 0) {
     attempt();
   } else {
-    const handler = () => {
+    window.speechSynthesis.onvoiceschanged = () => {
       window.speechSynthesis.onvoiceschanged = null;
       attempt();
     };
-    window.speechSynthesis.onvoiceschanged = handler;
-    // Fallback agar onvoiceschanged fire nahi hua
+    // Fallback if onvoiceschanged never fires
     setTimeout(() => {
       if (!window.speechSynthesis.speaking) attempt();
-    }, 500);
+    }, 600);
   }
 }
 
 function speak(text: string, lang: string) {
-  speakWithRetry(text, lang, 3);
+  speakWithRetry(text, lang, 4);
 }
 
 export function announceResult(isOdd: boolean, playerWon: boolean, language: GameLanguage) {
