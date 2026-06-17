@@ -134,13 +134,29 @@ export function setSpeakCallbacks(onStart: VoidFn, onEnd: VoidFn) {
 function speakWithRetry(text: string, lang: string, retries = 4) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
-  // Stop any ongoing speech first
   try { window.speechSynthesis.cancel(); } catch {}
 
-  // Notify GamePlay to mute SFX so Web Audio doesn't fight TTS
+  // Notify GamePlay to mute SFX so Web Audio doesn't fight TTS.
+  // SAFETY NET: no matter what happens with TTS below (success, error,
+  // or total silence with no events at all - which happens on some
+  // Android WebView builds), guarantee SFX gets restored after a max
+  // wait so the game is never left muted.
   if (onSpeakStart) onSpeakStart();
+  let endCalled = false;
+  const callEndOnce = () => {
+    if (endCalled) return;
+    endCalled = true;
+    if (onSpeakEnd) onSpeakEnd();
+  };
+  const safetyNetMs = isAndroidWebView() ? 1800 : 6000;
+  const safetyTimer = setTimeout(callEndOnce, safetyNetMs);
 
   let attempted = 0;
+  // Android WebView speechSynthesis is unreliable on many builds (silently
+  // does nothing, no onstart/onerror at all). Don't burn multiple retries
+  // and multi-second timeouts here - try once quickly, and let the safety
+  // net above unmute SFX fast if it's truly broken on this device.
+  const maxAttempts = isAndroidWebView() ? 1 : retries;
 
   const attempt = () => {
     attempted++;
@@ -151,7 +167,6 @@ function speakWithRetry(text: string, lang: string, retries = 4) {
     utter.pitch = 1.0;
     utter.volume = 1.0;
 
-    // On non-Android, try to find a matching voice
     if (!isAndroidWebView()) {
       const voices = window.speechSynthesis.getVoices();
       const langCode = lang.split("-")[0];
@@ -162,57 +177,28 @@ function speakWithRetry(text: string, lang: string, retries = 4) {
       if (voice) utter.voice = voice;
     }
 
-    let started = false;
-
-    utter.onstart = () => {
-      started = true;
-    };
-
     utter.onend = () => {
-      // Re-enable SFX after voice finishes
-      if (onSpeakEnd) onSpeakEnd();
+      clearTimeout(safetyTimer);
+      callEndOnce();
     };
 
     utter.onerror = (e) => {
       console.warn("TTS error:", e.error, "attempt:", attempted);
-      if (attempted < retries) {
-        setTimeout(attempt, 400);
+      if (attempted < maxAttempts) {
+        setTimeout(attempt, 300);
       } else {
-        if (onSpeakEnd) onSpeakEnd();
+        clearTimeout(safetyTimer);
+        callEndOnce();
       }
     };
-
-    // Android WebView: if onstart doesn't fire within 1s, retry
-    if (isAndroidWebView()) {
-      setTimeout(() => {
-        if (!started) {
-          console.warn("TTS silent on Android, retrying...");
-          try { window.speechSynthesis.cancel(); } catch {}
-          if (attempted < retries) {
-            setTimeout(attempt, 300);
-          } else {
-            if (onSpeakEnd) onSpeakEnd();
-          }
-        }
-      }, 1000);
-
-      // Periodic resume to prevent Android WebView from pausing TTS
-      const resumeId = setInterval(() => {
-        try {
-          if (window.speechSynthesis.paused) window.speechSynthesis.resume();
-          if (!window.speechSynthesis.speaking) clearInterval(resumeId);
-        } catch { clearInterval(resumeId); }
-      }, 250);
-      setTimeout(() => clearInterval(resumeId), 12000);
-    }
 
     try {
       if (window.speechSynthesis.paused) window.speechSynthesis.resume();
       window.speechSynthesis.speak(utter);
     } catch (e) {
       console.warn("TTS speak() threw:", e);
-      if (attempted < retries) setTimeout(attempt, 400);
-      else if (onSpeakEnd) onSpeakEnd();
+      if (attempted < maxAttempts) setTimeout(attempt, 300);
+      else { clearTimeout(safetyTimer); callEndOnce(); }
     }
   };
 
