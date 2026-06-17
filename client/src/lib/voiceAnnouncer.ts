@@ -115,10 +115,23 @@ function isAndroidWebView(): boolean {
   return ua.includes("Android") && (ua.includes("wv") || ua.includes("WebView"));
 }
 
-// Voices preload on module load
-if (typeof window !== "undefined" && "speechSynthesis" in window) {
-  window.speechSynthesis.getVoices();
-  window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
+// Voices preload on module load.
+// Wrapped in try/catch: on some Capacitor/Android WebView builds,
+// touching speechSynthesis at module-load time can throw synchronously,
+// which would otherwise crash this entire module's import and break
+// every caller (including result SFX) - not just the voice feature.
+let speechSynthesisSupported = false;
+try {
+  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => {
+      try { window.speechSynthesis.getVoices(); } catch {}
+    };
+    speechSynthesisSupported = true;
+  }
+} catch (e) {
+  console.warn("speechSynthesis unavailable on this device:", e);
+  speechSynthesisSupported = false;
 }
 
 // Callback registry so GamePlay can mute/unmute SFX around voice
@@ -132,15 +145,10 @@ export function setSpeakCallbacks(onStart: VoidFn, onEnd: VoidFn) {
 }
 
 function speakWithRetry(text: string, lang: string, retries = 4) {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-
-  try { window.speechSynthesis.cancel(); } catch {}
-
-  // Notify GamePlay to mute SFX so Web Audio doesn't fight TTS.
-  // SAFETY NET: no matter what happens with TTS below (success, error,
-  // or total silence with no events at all - which happens on some
-  // Android WebView builds), guarantee SFX gets restored after a max
-  // wait so the game is never left muted.
+  // Always notify GamePlay first, with its own safety net, BEFORE
+  // touching speechSynthesis at all. This guarantees SFX gets unmuted
+  // even if speechSynthesis access itself throws synchronously below
+  // (seen on some Capacitor/Android WebView builds).
   if (onSpeakStart) onSpeakStart();
   let endCalled = false;
   const callEndOnce = () => {
@@ -150,6 +158,21 @@ function speakWithRetry(text: string, lang: string, retries = 4) {
   };
   const safetyNetMs = isAndroidWebView() ? 1800 : 6000;
   const safetyTimer = setTimeout(callEndOnce, safetyNetMs);
+
+  if (!speechSynthesisSupported || typeof window === "undefined" || !("speechSynthesis" in window)) {
+    clearTimeout(safetyTimer);
+    callEndOnce();
+    return;
+  }
+
+  try {
+    window.speechSynthesis.cancel();
+  } catch (e) {
+    console.warn("speechSynthesis.cancel() threw:", e);
+    clearTimeout(safetyTimer);
+    callEndOnce();
+    return;
+  }
 
   let attempted = 0;
   // Android WebView speechSynthesis is unreliable on many builds (silently
@@ -161,7 +184,15 @@ function speakWithRetry(text: string, lang: string, retries = 4) {
   const attempt = () => {
     attempted++;
 
-    const utter = new SpeechSynthesisUtterance(text);
+    let utter: SpeechSynthesisUtterance;
+    try {
+      utter = new SpeechSynthesisUtterance(text);
+    } catch (e) {
+      console.warn("Failed to create SpeechSynthesisUtterance:", e);
+      clearTimeout(safetyTimer);
+      callEndOnce();
+      return;
+    }
     utter.lang = lang;
     utter.rate = 0.85;
     utter.pitch = 1.0;
@@ -203,18 +234,30 @@ function speakWithRetry(text: string, lang: string, retries = 4) {
   };
 
   // Wait for voices to be available
-  const voices = window.speechSynthesis.getVoices();
-  if (voices.length > 0) {
-    attempt();
-  } else {
-    window.speechSynthesis.onvoiceschanged = () => {
-      window.speechSynthesis.onvoiceschanged = null;
+  try {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
       attempt();
-    };
-    // Fallback if onvoiceschanged never fires
-    setTimeout(() => {
-      if (!window.speechSynthesis.speaking) attempt();
-    }, 600);
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.onvoiceschanged = null;
+        attempt();
+      };
+      // Fallback if onvoiceschanged never fires
+      setTimeout(() => {
+        try {
+          if (!window.speechSynthesis.speaking) attempt();
+        } catch (e) {
+          console.warn("speechSynthesis.speaking check threw:", e);
+          clearTimeout(safetyTimer);
+          callEndOnce();
+        }
+      }, 600);
+    }
+  } catch (e) {
+    console.warn("getVoices() threw:", e);
+    clearTimeout(safetyTimer);
+    callEndOnce();
   }
 }
 

@@ -109,13 +109,22 @@ export default function GamePlay() {
   const [showSpinWheel, setShowSpinWheel] = useState(false);
 
   // Start BGM on mount
-  // Mute SFX when TTS is speaking — prevents Android WebView conflict
+  // Mute SFX when TTS is speaking — prevents Android WebView conflict.
+  // Guarded with try/catch since module-level crashes in voiceAnnouncer
+  // on some Capacitor builds could otherwise leave this whole effect
+  // (and the component below it) un-mounted.
   useEffect(() => {
-    setSpeakCallbacks(
-      () => setSfxEnabled(false),
-      () => setSfxEnabled(true),
-    );
-    return () => setSpeakCallbacks(() => {}, () => {});
+    try {
+      setSpeakCallbacks(
+        () => setSfxEnabled(false),
+        () => setSfxEnabled(true),
+      );
+    } catch (e) {
+      console.warn("setSpeakCallbacks failed:", e);
+    }
+    return () => {
+      try { setSpeakCallbacks(() => {}, () => {}); } catch {}
+    };
   }, []);
 
   useEffect(() => {
@@ -175,12 +184,24 @@ export default function GamePlay() {
       const playerActuallyWon = isHiderPlayer1 ? !gameResult.won : gameResult.won;
       // Voice fires immediately. SFX is delayed so TTS gets priority.
       // setSpeakCallbacks above mutes SFX during voice on Android WebView.
+      // announceResult() is wrapped in try/catch: on some Capacitor/Android
+      // builds touching speechSynthesis can throw synchronously, which
+      // would otherwise abort this whole effect (including the SFX below
+      // and the avatar phase updates further down).
       if (playerActuallyWon) setIsPlayerWinner(true);
       else setIsPlayerWinner(false);
-      announceResult(isOdd, playerActuallyWon, gameLanguage);
+      try {
+        announceResult(isOdd, playerActuallyWon, gameLanguage);
+      } catch (e) {
+        console.warn("announceResult threw, continuing without voice:", e);
+      }
       setTimeout(() => {
-        if (playerActuallyWon) playSfxWin();
-        else playSfxLose();
+        try {
+          if (playerActuallyWon) playSfxWin();
+          else playSfxLose();
+        } catch (e) {
+          console.warn("Result SFX threw:", e);
+        }
       }, 800);
       // Avatar phases
       if (isHiderPlayer1) {
