@@ -447,8 +447,8 @@ var MemStorage = class {
       windowNumber: 1,
       playerCount: 0,
       status: "waiting",
-      maxPlayers: 100,
-      entryFee: 2500,
+      maxPlayers: 10,
+      entryFee: 250,
       prizePool: 0,
       winnerId: null,
       winnerMarblesAwarded: 0,
@@ -795,14 +795,14 @@ var MemStorage = class {
     const window = this.tournamentWindows.get(windowId);
     if (window) {
       window.playerCount = count;
-      if (count >= 100) {
+      if (count >= window.maxPlayers) {
         window.status = "active";
         await this.addTournamentWindow({
           windowNumber: window.windowNumber + 1,
           playerCount: 0,
           status: "waiting",
-          maxPlayers: 100,
-          entryFee: 2500,
+          maxPlayers: 10,
+          entryFee: 250,
           prizePool: 0,
           winnerId: null,
           winnerMarblesAwarded: 0,
@@ -1976,30 +1976,29 @@ async function registerRoutes(app2) {
   app2.post("/api/tournament/join", async (req, res) => {
     try {
       const { userId, windowId } = req.body;
+      const TOURNAMENT_ENTRY_FEE = 250;
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      const earnedFromPlayers = user.earnedMarbles || 0;
-      const purchasedMarbles = user.purchasedMarbles || 0;
-      const validMarblesForTournament = earnedFromPlayers + purchasedMarbles;
-      if (validMarblesForTournament < 2500) {
+      const pvpWinMarbles = user.earnedMarbles || 0;
+      if (pvpWinMarbles < TOURNAMENT_ENTRY_FEE) {
         return res.status(400).json({
-          error: "Insufficient marbles for tournament entry. You need 2500 marbles from earned (player wins) or purchased marbles (AI wins and ad rewards don't count).",
-          earnedMarblesAvailable: earnedFromPlayers,
-          purchasedMarblesAvailable: purchasedMarbles,
-          totalValidMarbles: validMarblesForTournament,
-          requiredMarbles: 2500,
-          message: `You need ${2500 - validMarblesForTournament} more marbles from player wins or purchases`
+          error: `Insufficient PvP Win Marbles for tournament entry. You need ${TOURNAMENT_ENTRY_FEE} PvP Win Marbles (purchased marbles, AI wins, and ad rewards don't count).`,
+          pvpWinMarblesAvailable: pvpWinMarbles,
+          requiredMarbles: TOURNAMENT_ENTRY_FEE,
+          message: `You need ${TOURNAMENT_ENTRY_FEE - pvpWinMarbles} more PvP Win Marbles`
         });
       }
-      const newMarbles = user.marbles - 2500;
+      const newMarbles = user.marbles - TOURNAMENT_ENTRY_FEE;
+      const newEarnedMarbles = pvpWinMarbles - TOURNAMENT_ENTRY_FEE;
       await storage.updateUserMarbles(userId, newMarbles);
+      await storage.updateEarnedMarbles(userId, newEarnedMarbles);
       await storage.recordTransaction({
         userId,
-        amount: -2500,
+        amount: -TOURNAMENT_ENTRY_FEE,
         type: "tournament_entry",
-        description: "Tournament entry fee (2500 marbles from earned/purchased)",
+        description: `Tournament entry fee (${TOURNAMENT_ENTRY_FEE} PvP Win Marbles)`,
         transactionId: null
       });
       const windows = await storage.getTournamentWindows();
@@ -2014,7 +2013,7 @@ async function registerRoutes(app2) {
         marbles: newMarbles,
         tournamentId,
         windowId: window?.id || windowId,
-        message: "Tournament entry confirmed. 2500 marbles deducted (from earned/purchased)."
+        message: `Tournament entry confirmed. ${TOURNAMENT_ENTRY_FEE} PvP Win Marbles deducted.`
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to join tournament" });
@@ -2023,80 +2022,35 @@ async function registerRoutes(app2) {
   app2.post("/api/tournament/winner", async (req, res) => {
     try {
       const { userId, windowId } = req.body;
-      const WINNING_MARBLES = 25e4;
+      const TOURNAMENT_WINNER_POINTS = 2500;
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      const newTournamentWinnings = user.tournamentWinnings + WINNING_MARBLES;
-      const newMarbles = user.marbles + WINNING_MARBLES;
-      await storage.updateUserMarbles(userId, newMarbles);
-      await storage.recordTransaction({
-        userId,
-        amount: WINNING_MARBLES,
-        type: "tournament_winning_marbles",
-        description: `Tournament Win - 250,000 winning marbles (TEMPORARY - shown until tournament converts to points)`,
-        transactionId: null
-      });
-      res.json({
-        success: true,
-        marbles: newMarbles,
-        tournamentWinnings: newTournamentWinnings,
-        message: "\u{1F3C6} Tournament Win! 250,000 marbles awarded. Will convert to 1 lakh (100,000) redeemable points when tournament ends.",
-        conversionRate: "250,000 winning marbles = 1 lakh (100,000) points",
-        note: "These marbles will disappear after tournament conversion - you'll receive 1 lakh points instead"
-      });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to record tournament win" });
-    }
-  });
-  app2.post("/api/tournament/convert-winnings", async (req, res) => {
-    try {
-      const { userId, windowId } = req.body;
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-      if (!user.tournamentWinnings || user.tournamentWinnings <= 0) {
-        return res.status(400).json({
-          error: "No tournament winnings to convert",
-          tournamentWinnings: user.tournamentWinnings || 0
-        });
-      }
-      const marblesWonAmount = user.tournamentWinnings;
-      const pointsToAward = 1e5;
-      const newMarbles = user.marbles - marblesWonAmount;
-      const newTournamentWinnings = 0;
-      const newPoints = user.points + pointsToAward;
-      await storage.updateUserMarbles(userId, newMarbles);
+      const newPoints = (user.points || 0) + TOURNAMENT_WINNER_POINTS;
       await storage.updateUserPoints(userId, newPoints);
       await storage.addGamePoints({
         userId,
-        points: pointsToAward,
-        gameType: "tournament_conversion",
+        points: TOURNAMENT_WINNER_POINTS,
+        gameType: "tournament_win",
         opponent: null,
         won: true
       });
       await storage.recordTransaction({
         userId,
-        amount: pointsToAward,
-        type: "tournament_conversion",
-        description: `Tournament Winnings Converted: ${marblesWonAmount} marbles \u2192 ${pointsToAward} redeemable points`,
+        amount: TOURNAMENT_WINNER_POINTS,
+        type: "tournament_win_bonus",
+        description: `Tournament Win Bonus - ${TOURNAMENT_WINNER_POINTS} points awarded`,
         transactionId: null
       });
       res.json({
         success: true,
-        message: "\u2705 Tournament winnings converted to redeemable points!",
-        marblesConverted: marblesWonAmount,
-        conversionRate: "250,000 marbles = 1 lakh (100,000) points",
-        pointsAwarded: pointsToAward,
-        marbles: newMarbles,
-        tournamentWinnings: newTournamentWinnings,
         points: newPoints,
-        details: "You can now redeem 1 lakh points in the Shop for exclusive items"
+        pointsAwarded: TOURNAMENT_WINNER_POINTS,
+        message: `\u{1F3C6} Tournament Win! +${TOURNAMENT_WINNER_POINTS} points awarded. All marbles you won from opponents during the tournament are already in your account.`
       });
     } catch (error) {
-      res.status(500).json({ error: "Failed to convert tournament winnings" });
+      res.status(500).json({ error: "Failed to record tournament win" });
     }
   });
   app2.get("/api/tournament/:tournamentId/bracket", async (req, res) => {

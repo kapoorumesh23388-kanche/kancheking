@@ -114,8 +114,8 @@ export class MemStorage implements IStorage {
       windowNumber: 1,
       playerCount: 0,
       status: "waiting",
-      maxPlayers: 100,
-      entryFee: 2500,
+      maxPlayers: 10,
+      entryFee: 250,
       prizePool: 0,
       winnerId: null,
       winnerMarblesAwarded: 0,
@@ -478,14 +478,14 @@ export class MemStorage implements IStorage {
     const window = this.tournamentWindows.get(windowId);
     if (window) {
       window.playerCount = count;
-      if (count >= 100) {
+      if (count >= window.maxPlayers) {
         window.status = "active";
         await this.addTournamentWindow({
           windowNumber: window.windowNumber + 1,
           playerCount: 0,
           status: "waiting",
-          maxPlayers: 100,
-          entryFee: 2500,
+          maxPlayers: 10,
+          entryFee: 250,
           prizePool: 0,
           winnerId: null,
           winnerMarblesAwarded: 0,

@@ -206,10 +206,12 @@ export function recordGameResult(won: boolean): void {
 }
 
 // Tournament: only PvP wins count for eligibility
+const TOURNAMENT_ENTRY_FEE = 250;
+
 export function isTournamentEligible(): boolean {
-  return getEligibleMarbles() >= 2500;
+  return getEligibleMarbles() >= TOURNAMENT_ENTRY_FEE;
 }
 
 export function getMarblesNeededForTournament(): number {
-  return Math.max(0, 2500 - getEligibleMarbles());
+  return Math.max(0, TOURNAMENT_ENTRY_FEE - getEligibleMarbles());
 }

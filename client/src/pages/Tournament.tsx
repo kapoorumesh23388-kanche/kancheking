@@ -71,7 +71,7 @@ export default function Tournament() {
     refetchInterval: 5000,
   });
   
-  // Eligible marbles (purchased + pvp wins only) for tournament
+  // Eligible marbles for tournament: PvP Win Marbles ONLY (purchased excluded)
   const [eligibleMarbles, setEligibleMarbles] = useState(0);
   const [totalMarbles, setTotalMarbles] = useState(0);
   const [userPoints, setUserPoints] = useState(0);
@@ -209,7 +209,7 @@ export default function Tournament() {
           <h2 className="text-5xl font-bold text-primary mb-3" style={{ textShadow: '0 0 20px rgba(255,215,0,0.5)' }}>
             🏆 Kali Jotta Tournament
           </h2>
-          <p className="text-xl text-muted-foreground">100-Player Battles | 2500 Marble Entry | 250,000 Points for Winner</p>
+          <p className="text-xl text-muted-foreground">10-Player Battles | 250 Marble Entry | 2,500 Points for Winner</p>
         </div>
 
         {/* Real-time Player Stats */}
@@ -278,7 +278,7 @@ export default function Tournament() {
                   </Badge>
                 ) : (
                   <Badge variant="destructive">
-                    Need {(entryFee - eligibleMarbles).toLocaleString()} more eligible marbles
+                    Need {(entryFee - eligibleMarbles).toLocaleString()} more PvP Win Marbles
                   </Badge>
                 )}
               </div>
@@ -341,7 +341,7 @@ export default function Tournament() {
                       <p className="text-muted-foreground mb-2">Players Enrolled</p>
                       <div className="flex items-end gap-2">
                         <p className="text-4xl font-bold text-primary">{window.players}</p>
-                        <p className="text-muted-foreground mb-1">/ 100</p>
+                        <p className="text-muted-foreground mb-1">/ 10</p>
                       </div>
                       <div className="w-full bg-secondary rounded-full h-2 mt-2">
                         <div
