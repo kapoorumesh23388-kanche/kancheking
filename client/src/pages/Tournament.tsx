@@ -78,8 +78,8 @@ export default function Tournament() {
   const [gamesWon, setGamesWon] = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
   
-  const entryFee = 2500;
-  const winnerPoints = 250000;
+  const entryFee = 250;
+  const winnerPoints = 2500;
   
   
   // Initialize marbles on first load
@@ -505,7 +505,7 @@ export default function Tournament() {
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">2.</span>
-                <span>Entry fee: 2500 PvP Win Marbles (only PvP wins count)</span>
+                <span>Entry fee: 250 PvP Win Marbles (only PvP wins count)</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">3.</span>
