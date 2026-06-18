@@ -501,7 +501,7 @@ export default function Tournament() {
             <ul className="space-y-3">
               <li className="flex gap-3">
                 <span className="text-primary font-bold">1.</span>
-                <span>100 players compete in each tournament window</span>
+                <span>10 players compete in each tournament window</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">2.</span>
@@ -509,11 +509,11 @@ export default function Tournament() {
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">3.</span>
-                <span>Winner (beats all 99 players) receives bonus points</span>
+                <span>Winner (beats all 9 players) receives 2,500 bonus points</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">4.</span>
-                <span>When Window 1 reaches 100 players, Window 2 automatically opens</span>
+                <span>When Window 1 reaches 10 players, Window 2 automatically opens</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">5.</span>
