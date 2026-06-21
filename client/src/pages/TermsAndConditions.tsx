@@ -54,17 +54,17 @@ export default function TermsAndConditions() {
             <ul className="space-y-3 text-gray-200">
               <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Play with AI:</strong> Earn AI Win Marbles and +25 Reward Points per win.</span></li>
               <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Challenge Friend / Random:</strong> Play PvP matches and earn PvP Win Marbles (+25 Reward Points per win).</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Tournament:</strong> Compete for 250,000 Reward Points. Requires 2,500 PvP Win Marbles to enter.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Tournament:</strong> Compete for 2,500 Reward Points. Requires 250 PvP Win Marbles to enter.</span></li>
             </ul>
           </section>
 
           <section>
             <h2 className="text-2xl font-bold text-primary mb-4">5. Tournament Entry Requirements</h2>
             <ul className="space-y-3 text-gray-200">
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Entry Fee:</strong> 2,500 Marbles (deducted from your balance).</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Eligibility:</strong> You must have at least 2,500 PvP Win Marbles.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Entry Fee:</strong> 250 PvP Win Marbles (deducted from your balance).</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Eligibility:</strong> You must have at least 250 PvP Win Marbles.</span></li>
               <li className="flex gap-3"><span className="text-primary">•</span><span><strong>NOT Counted:</strong> Free marbles, AI Win Marbles, and Points-redeemed marbles do not count toward eligibility.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Winner Prize:</strong> 250,000 Reward Points.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Winner Prize:</strong> 2,500 Reward Points. Marbles won from opponents during the tournament are kept in your account.</span></li>
             </ul>
           </section>
 
@@ -78,7 +78,7 @@ export default function TermsAndConditions() {
               <li className="flex gap-3"><span className="text-primary">•</span><span><strong>AI Defeat Bonus:</strong> +25 points per AI opponent defeated.</span></li>
               <li className="flex gap-3"><span className="text-primary">•</span><span><strong>PvP Win Bonus:</strong> +25 points per PvP match won.</span></li>
               <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Monthly #1 Leaderboard Bonus:</strong> +500 points.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Tournament Winner:</strong> +250,000 points.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Tournament Winner:</strong> +2,500 points.</span></li>
             </ul>
           </section>
 

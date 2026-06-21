@@ -88,19 +88,6 @@ export default function About() {
             </div>
           </section>
 
-          {/* Links */}
-          <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">Legal</h2>
-            <div className="flex gap-4 flex-wrap">
-              <Link href="/terms" className="text-[#00D9FF] hover:text-[#E91E8C] transition-colors underline">
-                Terms & Conditions
-              </Link>
-              <Link href="/privacy" className="text-[#00D9FF] hover:text-[#E91E8C] transition-colors underline">
-                Privacy Policy
-              </Link>
-            </div>
-          </section>
-
         </div>
       </div>
     </div>
