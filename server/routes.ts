@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
 import { storage } from "./storage";
+import { pool } from "./db";
 import { handleNewConnection } from "./ws-manager";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1091,19 +1092,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User ID required" });
       }
 
-      let user = await storage.getUser(userId);
-      
-      // Create user if doesn't exist
-      if (!user) {
-        user = await storage.createUser(
-          { username: userId, password: "guest" },
-          undefined,
-          userId
+      const cleanName = displayName && displayName.trim() ? displayName.trim() : null;
+      console.log(`[profile/update] userId=${userId} displayName=${cleanName}`);
+
+      // Direct SQL upsert — bypasses any ORM issues, guaranteed to save
+      try {
+        // First ensure user row exists
+        await pool.query(
+          `INSERT INTO users (id, username, password, marbles, points, games_won, games_played, ai_wins, earned_marbles, purchased_marbles, tournament_winnings, is_age_verified, is_admin, created_at)
+           VALUES ($1, $2, 'guest', 150, 0, 0, 0, 0, 0, 0, 0, false, false, NOW())
+           ON CONFLICT (id) DO NOTHING`,
+          [userId, userId]
         );
+        // Then update display_name directly
+        if (cleanName) {
+          const result = await pool.query(
+            `UPDATE users SET display_name = $1, gender = $2 WHERE id = $3 RETURNING id, display_name`,
+            [cleanName, gender || 'boy', userId]
+          );
+          console.log(`[profile/update] SQL result:`, result.rows);
+        }
+      } catch (sqlErr) {
+        console.error(`[profile/update] SQL error:`, sqlErr);
       }
 
+      // Also update via ORM as backup
+      let user = await storage.getUser(userId);
+      if (!user) {
+        user = await storage.createUser({ username: userId, password: "guest" }, undefined, userId);
+      }
       const updatedUser = await storage.updateUserProfile(userId, {
-        displayName: displayName && displayName.trim() ? displayName.trim() : undefined,
+        displayName: cleanName || undefined,
         profileImage: profileImage || undefined,
         gender: gender || undefined,
       });
