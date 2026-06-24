@@ -771,14 +771,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let user = await storage.getUser(userId);
       
-      // Create user if doesn't exist
+      // Create user if doesn't exist - pass customId so DB stores correct userId
       if (!user) {
         user = await storage.createUser(
           { username: username || userId, password: "guest" },
-          undefined
+          undefined,
+          userId  // FIX: pass userId as customId so DB saves correct ID
         );
-        // Update ID to match the provided userId
-        user.id = userId;
       }
 
       res.json(user);
@@ -1056,11 +1055,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allUsers = await storage.getAllUsers();
       
       // Show ALL users on leaderboard - online or offline
+      // Only show users who have set a real displayName (not auto-generated player IDs)
       const leaderboard = allUsers
-        .filter(u => (u.displayName || u.username || "").trim() !== "")
+        .filter(u => u.displayName && u.displayName.trim() !== "")
         .map(u => ({
           id: u.id,
-          name: u.displayName || u.username || "Player",
+          name: u.displayName!,
           avatar: u.profileImage || "",
           marbles: u.earnedMarbles || 0,
           gamesWon: u.gamesWon || 0,
@@ -1100,7 +1100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedUser = await storage.updateUserProfile(userId, {
-        displayName: displayName || undefined,
+        displayName: displayName && displayName.trim() ? displayName.trim() : undefined,
         profileImage: profileImage || undefined,
         gender: gender || undefined,
       });

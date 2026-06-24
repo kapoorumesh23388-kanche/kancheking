@@ -292,10 +292,17 @@ export class MemStorage implements IStorage {
       if (profile.displayName !== undefined) updateData.displayName = profile.displayName;
       if (profile.profileImage !== undefined) updateData.profileImage = profile.profileImage;
       if (profile.gender !== undefined) updateData.gender = profile.gender;
+      console.log(`[updateUserProfile] userId=${userId} updateData=`, updateData);
       const [updated] = await db.update(usersTable).set(updateData).where(eq(usersTable.id, userId)).returning();
-      if (updated) this.users.set(userId, updated);
+      if (updated) {
+        this.users.set(userId, updated);
+        console.log(`[updateUserProfile] SUCCESS displayName=${updated.displayName}`);
+      } else {
+        console.warn(`[updateUserProfile] No row updated for userId=${userId} — user may not exist in DB`);
+      }
       return updated;
-    } catch {
+    } catch (err) {
+      console.error(`[updateUserProfile] DB error for userId=${userId}:`, err);
       const user = this.users.get(userId);
       if (user) {
         if (profile.displayName !== undefined) user.displayName = profile.displayName;
