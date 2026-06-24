@@ -126,6 +126,19 @@ export class MemStorage implements IStorage {
 
     // Ensure app_settings table exists (for social media links etc.)
     this.ensureSettingsTable();
+    this.ensureColumns();
+  }
+
+  private async ensureColumns() {
+    try {
+      // Add missing columns if they don't exist (migration fix)
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name TEXT`);
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_image VARCHAR`);
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS gender VARCHAR DEFAULT 'boy'`);
+      console.log("[ensureColumns] DB columns verified OK");
+    } catch (err) {
+      console.error("[ensureColumns] Failed:", err);
+    }
   }
 
   private async ensureSettingsTable() {
