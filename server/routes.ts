@@ -1055,12 +1055,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allUsers = await storage.getAllUsers();
       
       // Show ALL users on leaderboard - online or offline
-      // Only show users who have set a real displayName (not auto-generated player IDs)
+      // Only show users who have set a REAL displayName (not auto-generated player-xxx IDs)
       const leaderboard = allUsers
-        .filter(u => u.displayName && u.displayName.trim() !== "")
+        .filter(u => {
+          const name = u.displayName || u.username || "";
+          return name.trim() !== "" && !name.startsWith("player-");
+        })
         .map(u => ({
           id: u.id,
-          name: u.displayName!,
+          name: u.displayName || u.username || "Player",
           avatar: u.profileImage || "",
           marbles: u.earnedMarbles || 0,
           gamesWon: u.gamesWon || 0,
