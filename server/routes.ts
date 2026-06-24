@@ -770,18 +770,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User ID required" });
       }
 
-      let user = await storage.getUser(userId);
-      
-      // Create user if doesn't exist - pass customId so DB stores correct userId
-      if (!user) {
-        user = await storage.createUser(
-          { username: username || userId, password: "guest" },
-          undefined,
-          userId  // FIX: pass userId as customId so DB saves correct ID
-        );
-      }
+      // Direct SQL upsert - guaranteed correct ID in DB
+      await pool.query(
+        `INSERT INTO users (id, username, password, marbles, points, games_won, games_played, ai_wins, earned_marbles, purchased_marbles, tournament_winnings, is_age_verified, is_admin, created_at)
+         VALUES ($1, $2, 'guest', 150, 0, 0, 0, 0, 0, 0, 0, false, false, NOW())
+         ON CONFLICT (id) DO NOTHING`,
+        [userId, username || userId]
+      );
 
-      res.json(user);
+      const result = await pool.query(`SELECT * FROM users WHERE id = $1`, [userId]);
+      const user = result.rows[0];
+
+      res.json(user || { id: userId, username: userId, marbles: 150 });
     } catch (error) {
       console.error("User init error:", error);
       res.status(500).json({ error: "Failed to initialize user" });
@@ -1093,39 +1093,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const cleanName = displayName && displayName.trim() ? displayName.trim() : null;
-      console.log(`[profile/update] userId=${userId} displayName=${cleanName}`);
 
-      // Direct SQL upsert — bypasses any ORM issues, guaranteed to save
-      try {
-        // First ensure user row exists
+      // Ensure user exists first
+      await pool.query(
+        `INSERT INTO users (id, username, password, marbles, points, games_won, games_played, ai_wins, earned_marbles, purchased_marbles, tournament_winnings, is_age_verified, is_admin, created_at)
+         VALUES ($1, $2, 'guest', 150, 0, 0, 0, 0, 0, 0, 0, false, false, NOW())
+         ON CONFLICT (id) DO NOTHING`,
+        [userId, userId]
+      );
+
+      // Save displayName directly via SQL - 100% reliable
+      if (cleanName) {
         await pool.query(
-          `INSERT INTO users (id, username, password, marbles, points, games_won, games_played, ai_wins, earned_marbles, purchased_marbles, tournament_winnings, is_age_verified, is_admin, created_at)
-           VALUES ($1, $2, 'guest', 150, 0, 0, 0, 0, 0, 0, 0, false, false, NOW())
-           ON CONFLICT (id) DO NOTHING`,
-          [userId, userId]
+          `UPDATE users SET display_name = $1, gender = COALESCE($2, gender) WHERE id = $3`,
+          [cleanName, gender || 'boy', userId]
         );
-        // Then update display_name directly
-        if (cleanName) {
-          const result = await pool.query(
-            `UPDATE users SET display_name = $1, gender = $2 WHERE id = $3 RETURNING id, display_name`,
-            [cleanName, gender || 'boy', userId]
-          );
-          console.log(`[profile/update] SQL result:`, result.rows);
-        }
-      } catch (sqlErr) {
-        console.error(`[profile/update] SQL error:`, sqlErr);
       }
 
-      // Also update via ORM as backup
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.createUser({ username: userId, password: "guest" }, undefined, userId);
-      }
-      const updatedUser = await storage.updateUserProfile(userId, {
-        displayName: cleanName || undefined,
-        profileImage: profileImage || undefined,
-        gender: gender || undefined,
-      });
+      const result = await pool.query(`SELECT * FROM users WHERE id = $1`, [userId]);
+      const updatedUser = result.rows[0];
 
       res.json({
         success: true,
