@@ -2,7 +2,6 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
 import { storage } from "./storage";
-import { pool } from "./db";
 import { handleNewConnection } from "./ws-manager";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -238,37 +237,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tournament/join", async (req, res) => {
     try {
       const { userId, windowId } = req.body;
-      const TOURNAMENT_ENTRY_FEE = 250;
       
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Tournament entry: Requires 250 marbles from PvP Win Marbles ONLY.
-      // Purchased marbles, AI wins, and ad rewards do NOT count.
-      const pvpWinMarbles = user.earnedMarbles || 0;
+      // Tournament entry: Requires 2500 marbles from EARNED (player wins) + PURCHASED combined
+      // Does NOT count: AI wins or ad rewards
+      const earnedFromPlayers = user.earnedMarbles || 0;
+      const purchasedMarbles = user.purchasedMarbles || 0;
+      const validMarblesForTournament = earnedFromPlayers + purchasedMarbles;
       
-      if (pvpWinMarbles < TOURNAMENT_ENTRY_FEE) {
+      if (validMarblesForTournament < 2500) {
         return res.status(400).json({ 
-          error: `Insufficient PvP Win Marbles for tournament entry. You need ${TOURNAMENT_ENTRY_FEE} PvP Win Marbles (purchased marbles, AI wins, and ad rewards don't count).`,
-          pvpWinMarblesAvailable: pvpWinMarbles,
-          requiredMarbles: TOURNAMENT_ENTRY_FEE,
-          message: `You need ${TOURNAMENT_ENTRY_FEE - pvpWinMarbles} more PvP Win Marbles`
+          error: "Insufficient marbles for tournament entry. You need 2500 marbles from earned (player wins) or purchased marbles (AI wins and ad rewards don't count).",
+          earnedMarblesAvailable: earnedFromPlayers,
+          purchasedMarblesAvailable: purchasedMarbles,
+          totalValidMarbles: validMarblesForTournament,
+          requiredMarbles: 2500,
+          message: `You need ${2500 - validMarblesForTournament} more marbles from player wins or purchases`
         });
       }
 
-      // Deduct entry fee from both total marbles and PvP win marbles
-      const newMarbles = user.marbles - TOURNAMENT_ENTRY_FEE;
-      const newEarnedMarbles = pvpWinMarbles - TOURNAMENT_ENTRY_FEE;
+      // Deduct 2500 from total marbles
+      const newMarbles = user.marbles - 2500;
       await storage.updateUserMarbles(userId, newMarbles);
-      await storage.updateEarnedMarbles(userId, newEarnedMarbles);
 
       await storage.recordTransaction({
         userId,
-        amount: -TOURNAMENT_ENTRY_FEE,
+        amount: -2500,
         type: "tournament_entry",
-        description: `Tournament entry fee (${TOURNAMENT_ENTRY_FEE} PvP Win Marbles)`,
+        description: "Tournament entry fee (2500 marbles from earned/purchased)",
         transactionId: null,
       });
 
@@ -287,53 +287,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
         marbles: newMarbles,
         tournamentId,
         windowId: window?.id || windowId,
-        message: `Tournament entry confirmed. ${TOURNAMENT_ENTRY_FEE} PvP Win Marbles deducted.`
+        message: "Tournament entry confirmed. 2500 marbles deducted (from earned/purchased)."
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to join tournament" });
     }
   });
 
-  // Tournament Winner: marbles already accumulated from beating opponents
-  // during the tournament's PvP matches (normal match-win logic adds those).
-  // This endpoint only awards the fixed bonus points for finishing #1.
   app.post("/api/tournament/winner", async (req, res) => {
     try {
       const { userId, windowId } = req.body;
-      const TOURNAMENT_WINNER_POINTS = 2500;
+      const WINNING_MARBLES = 250000; // Temporary marbles shown during tournament
       
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const newPoints = (user.points || 0) + TOURNAMENT_WINNER_POINTS;
+      // AWARD TEMPORARY WINNING MARBLES (visible only during tournament)
+      const newTournamentWinnings = user.tournamentWinnings + WINNING_MARBLES;
+      const newMarbles = user.marbles + WINNING_MARBLES;
+      
+      await storage.updateUserMarbles(userId, newMarbles);
+
+      await storage.recordTransaction({
+        userId,
+        amount: WINNING_MARBLES,
+        type: "tournament_winning_marbles",
+        description: `Tournament Win - 250,000 winning marbles (TEMPORARY - shown until tournament converts to points)`,
+        transactionId: null,
+      });
+
+      res.json({ 
+        success: true, 
+        marbles: newMarbles,
+        tournamentWinnings: newTournamentWinnings,
+        message: "🏆 Tournament Win! 250,000 marbles awarded. Will convert to 1 lakh (100,000) redeemable points when tournament ends.",
+        conversionRate: "250,000 winning marbles = 1 lakh (100,000) points",
+        note: "These marbles will disappear after tournament conversion - you'll receive 1 lakh points instead"
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to record tournament win" });
+    }
+  });
+
+  // Convert Tournament Winnings to Points (Run after tournament ends)
+  app.post("/api/tournament/convert-winnings", async (req, res) => {
+    try {
+      const { userId, windowId } = req.body;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (!user.tournamentWinnings || user.tournamentWinnings <= 0) {
+        return res.status(400).json({ 
+          error: "No tournament winnings to convert",
+          tournamentWinnings: user.tournamentWinnings || 0
+        });
+      }
+
+      const marblesWonAmount = user.tournamentWinnings;
+      const pointsToAward = 100000; // 250,000 marbles = 1 lakh (100,000) points
+      
+      // Remove temporary marbles from account
+      const newMarbles = user.marbles - marblesWonAmount;
+      const newTournamentWinnings = 0;
+      const newPoints = user.points + pointsToAward;
+      
+      await storage.updateUserMarbles(userId, newMarbles);
       await storage.updateUserPoints(userId, newPoints);
 
       await storage.addGamePoints({
         userId,
-        points: TOURNAMENT_WINNER_POINTS,
-        gameType: "tournament_win",
+        points: pointsToAward,
+        gameType: "tournament_conversion",
         opponent: null,
         won: true,
       });
 
       await storage.recordTransaction({
         userId,
-        amount: TOURNAMENT_WINNER_POINTS,
-        type: "tournament_win_bonus",
-        description: `Tournament Win Bonus - ${TOURNAMENT_WINNER_POINTS} points awarded`,
+        amount: pointsToAward,
+        type: "tournament_conversion",
+        description: `Tournament Winnings Converted: ${marblesWonAmount} marbles → ${pointsToAward} redeemable points`,
         transactionId: null,
       });
 
       res.json({ 
         success: true, 
+        message: "✅ Tournament winnings converted to redeemable points!",
+        marblesConverted: marblesWonAmount,
+        conversionRate: "250,000 marbles = 1 lakh (100,000) points",
+        pointsAwarded: pointsToAward,
+        marbles: newMarbles,
+        tournamentWinnings: newTournamentWinnings,
         points: newPoints,
-        pointsAwarded: TOURNAMENT_WINNER_POINTS,
-        message: `🏆 Tournament Win! +${TOURNAMENT_WINNER_POINTS} points awarded. All marbles you won from opponents during the tournament are already in your account.`,
+        details: "You can now redeem 1 lakh points in the Shop for exclusive items"
       });
     } catch (error) {
-      res.status(500).json({ error: "Failed to record tournament win" });
+      res.status(500).json({ error: "Failed to convert tournament winnings" });
     }
   });
 
@@ -770,18 +824,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User ID required" });
       }
 
-      // Direct SQL upsert - guaranteed correct ID in DB
-      await pool.query(
-        `INSERT INTO users (id, username, password, marbles, points, games_won, games_played, ai_wins, earned_marbles, purchased_marbles, tournament_winnings, is_age_verified, is_admin, created_at)
-         VALUES ($1, $2, 'guest', 150, 0, 0, 0, 0, 0, 0, 0, false, false, NOW())
-         ON CONFLICT (id) DO NOTHING`,
-        [userId, username || userId]
-      );
+      let user = await storage.getUser(userId);
+      
+      // Create user if doesn't exist
+      if (!user) {
+        user = await storage.createUser(
+          { username: username || userId, password: "guest" },
+          undefined
+        );
+        // Update ID to match the provided userId
+        user.id = userId;
+      }
 
-      const result = await pool.query(`SELECT * FROM users WHERE id = $1`, [userId]);
-      const user = result.rows[0];
-
-      res.json(user || { id: userId, username: userId, marbles: 150 });
+      res.json(user);
     } catch (error) {
       console.error("User init error:", error);
       res.status(500).json({ error: "Failed to initialize user" });
@@ -1025,29 +1080,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get Leaderboard - Real player data sorted by wins and earnings
-  // Social media links - public read endpoint
-  app.get("/api/settings/social", async (req, res) => {
-    try {
-      const instagram = await storage.getSetting("socialInstagram");
-      const youtube = await storage.getSetting("socialYoutube");
-      res.json({ instagram, youtube });
-    } catch (error) {
-      res.json({ instagram: "", youtube: "" });
-    }
-  });
-
-  // Social media links - admin save endpoint
-  app.post("/api/admin/settings/social", async (req, res) => {
-    try {
-      const { instagram, youtube } = req.body;
-      if (instagram !== undefined) await storage.setSetting("socialInstagram", instagram);
-      if (youtube !== undefined) await storage.setSetting("socialYoutube", youtube);
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to save social links" });
-    }
-  });
-
   app.get("/api/leaderboard", async (req, res) => {
     try {
       const { type = "global" } = req.query;
@@ -1055,13 +1087,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all users from database
       const allUsers = await storage.getAllUsers();
       
-      // Show ALL users on leaderboard - online or offline
-      // Only show users who have set a REAL displayName (not auto-generated player-xxx IDs)
+      // Filter and sort users for leaderboard
       const leaderboard = allUsers
-        .filter(u => {
-          const name = u.displayName || u.username || "";
-          return name.trim() !== "" && !name.startsWith("player-");
-        })
+        .filter(u => u.gamesPlayed > 0 || u.earnedMarbles > 0)
         .map(u => ({
           id: u.id,
           name: u.displayName || u.username || "Player",
@@ -1073,7 +1101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           points: u.points || 0,
         }))
         .sort((a, b) => b.marbles - a.marbles)
-        .slice(0, 500)
+        .slice(0, 100)
         .map((entry, index) => ({ ...entry, rank: index + 1 }));
       
       res.json({ success: true, leaderboard, type });
@@ -1092,26 +1120,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User ID required" });
       }
 
-      const cleanName = displayName && displayName.trim() ? displayName.trim() : null;
-
-      // Ensure user exists first
-      await pool.query(
-        `INSERT INTO users (id, username, password, marbles, points, games_won, games_played, ai_wins, earned_marbles, purchased_marbles, tournament_winnings, is_age_verified, is_admin, created_at)
-         VALUES ($1, $2, 'guest', 150, 0, 0, 0, 0, 0, 0, 0, false, false, NOW())
-         ON CONFLICT (id) DO NOTHING`,
-        [userId, userId]
-      );
-
-      // Save displayName directly via SQL - 100% reliable
-      if (cleanName) {
-        await pool.query(
-          `UPDATE users SET display_name = $1, gender = COALESCE($2, gender) WHERE id = $3`,
-          [cleanName, gender || 'boy', userId]
+      let user = await storage.getUser(userId);
+      
+      // Create user if doesn't exist
+      if (!user) {
+        user = await storage.createUser(
+          { username: userId, password: "guest" },
+          undefined,
+          userId
         );
       }
 
-      const result = await pool.query(`SELECT * FROM users WHERE id = $1`, [userId]);
-      const updatedUser = result.rows[0];
+      const updatedUser = await storage.updateUserProfile(userId, {
+        displayName: displayName || undefined,
+        profileImage: profileImage || undefined,
+        gender: gender || undefined,
+      });
 
       res.json({
         success: true,
@@ -1271,12 +1295,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let phoneNumber = await storage.getAdminPhone(adminId);
       if (!phoneNumber) {
+        // Default to admin phone
         phoneNumber = "9211979518";
         await storage.updateAdminPhone(adminId, phoneNumber);
       }
 
-      const { sendOTPViaTwilio } = await import('./twilioClient');
-      const sent = await sendOTPViaTwilio(phoneNumber);
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      await storage.saveOTP(adminId, otp);
+
+      const { sendOTPSMS } = await import('./twilioClient');
+      const sent = await sendOTPSMS(phoneNumber, otp);
 
       if (!sent) {
         return res.status(500).json({ error: "Failed to send OTP" });
@@ -1301,14 +1329,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Admin ID and OTP required" });
       }
 
-      let phoneNumber = await storage.getAdminPhone(adminId);
-      if (!phoneNumber) phoneNumber = "9211979518";
-
-      const { verifyOTPViaTwilio } = await import('./twilioClient');
-      const isValid = await verifyOTPViaTwilio(phoneNumber, otp);
-
+      const isValid = await storage.verifyOTP(adminId, otp);
       if (!isValid) {
-        return res.status(401).json({ error: "Invalid or expired OTP" });
+        return res.status(401).json({ error: "Invalid OTP" });
       }
 
       const token = `admin-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;

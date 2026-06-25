@@ -1,6 +1,6 @@
-import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type GameRoom, type FeedbackSubmission, type AdminUser, catalogItems, users as usersTable, appSettings } from "@shared/schema";
+import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type GameRoom, type FeedbackSubmission, type AdminUser, catalogItems, users as usersTable } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { db, pool } from "./db";
+import { db } from "./db";
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
@@ -114,8 +114,8 @@ export class MemStorage implements IStorage {
       windowNumber: 1,
       playerCount: 0,
       status: "waiting",
-      maxPlayers: 10,
-      entryFee: 250,
+      maxPlayers: 100,
+      entryFee: 2500,
       prizePool: 0,
       winnerId: null,
       winnerMarblesAwarded: 0,
@@ -123,53 +123,6 @@ export class MemStorage implements IStorage {
       endedAt: null,
     };
     this.tournamentWindows.set(window.id, window);
-
-    // Ensure app_settings table exists (for social media links etc.)
-    this.ensureSettingsTable();
-    this.ensureColumns();
-  }
-
-  private async ensureColumns() {
-    try {
-      // Add missing columns if they don't exist (migration fix)
-      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name TEXT`);
-      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_image VARCHAR`);
-      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS gender VARCHAR DEFAULT 'boy'`);
-      console.log("[ensureColumns] DB columns verified OK");
-    } catch (err) {
-      console.error("[ensureColumns] Failed:", err);
-    }
-  }
-
-  private async ensureSettingsTable() {
-    try {
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS app_settings (
-          key VARCHAR PRIMARY KEY,
-          value TEXT NOT NULL DEFAULT ''
-        )
-      `);
-    } catch (err) {
-      console.error("Failed to ensure app_settings table:", err);
-    }
-  }
-
-  async getSetting(key: string): Promise<string> {
-    try {
-      const [row] = await db.select().from(appSettings).where(eq(appSettings.key, key));
-      return row?.value || "";
-    } catch {
-      return "";
-    }
-  }
-
-  async setSetting(key: string, value: string): Promise<void> {
-    try {
-      await db.insert(appSettings).values({ key, value })
-        .onConflictDoUpdate({ target: appSettings.key, set: { value } });
-    } catch (err) {
-      console.error("Failed to set setting:", err);
-    }
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -305,17 +258,10 @@ export class MemStorage implements IStorage {
       if (profile.displayName !== undefined) updateData.displayName = profile.displayName;
       if (profile.profileImage !== undefined) updateData.profileImage = profile.profileImage;
       if (profile.gender !== undefined) updateData.gender = profile.gender;
-      console.log(`[updateUserProfile] userId=${userId} updateData=`, updateData);
       const [updated] = await db.update(usersTable).set(updateData).where(eq(usersTable.id, userId)).returning();
-      if (updated) {
-        this.users.set(userId, updated);
-        console.log(`[updateUserProfile] SUCCESS displayName=${updated.displayName}`);
-      } else {
-        console.warn(`[updateUserProfile] No row updated for userId=${userId} — user may not exist in DB`);
-      }
+      if (updated) this.users.set(userId, updated);
       return updated;
-    } catch (err) {
-      console.error(`[updateUserProfile] DB error for userId=${userId}:`, err);
+    } catch {
       const user = this.users.get(userId);
       if (user) {
         if (profile.displayName !== undefined) user.displayName = profile.displayName;
@@ -498,14 +444,14 @@ export class MemStorage implements IStorage {
     const window = this.tournamentWindows.get(windowId);
     if (window) {
       window.playerCount = count;
-      if (count >= window.maxPlayers) {
+      if (count >= 100) {
         window.status = "active";
         await this.addTournamentWindow({
           windowNumber: window.windowNumber + 1,
           playerCount: 0,
           status: "waiting",
-          maxPlayers: 10,
-          entryFee: 250,
+          maxPlayers: 100,
+          entryFee: 2500,
           prizePool: 0,
           winnerId: null,
           winnerMarblesAwarded: 0,
