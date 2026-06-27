@@ -208,7 +208,7 @@ export default function LeaderboardPage() {
               </div>
               <div className="bg-black/30 rounded-lg p-2 text-center">
                 <p className="text-[#00D9FF] font-bold">Tournament Win</p>
-                <p className="text-[#FFD700]">+2,50,000 pts</p>
+                <p className="text-[#FFD700]">+2,500 pts</p>
               </div>
             </div>
           </CardContent>
