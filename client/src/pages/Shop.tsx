@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Copy, Check, Share2, Link, MessageCircle, Users, Tv, Gift, ShoppingBag, History, Clock } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import type { CatalogItem } from "@shared/schema";
@@ -74,6 +75,12 @@ export default function Shop() {
     countdown: number;
   }>({ packId: null, adsWatched: 0, adsTotal: 0, marblesReward: 0, watching: false, countdown: 30 });
   const [pointsHistory, setPointsHistory] = useState<PointsHistoryEntry[]>([]);
+  // OTP Modal state
+  const [otpModal, setOtpModal] = useState<{ open: boolean; item: any | null }>({ open: false, item: null });
+  const [otpEmail, setOtpEmail] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
   const [redemptionHistory, setRedemptionHistory] = useState<RedemptionHistoryEntry[]>([]);
 
   const [referralCode] = useState(() => {
@@ -159,6 +166,60 @@ export default function Shop() {
       }
     }
   }, [adWatchState.watching, adWatchState.countdown]);
+
+  // --- OTP Redeem handlers ---
+  const handleSendOTP = async () => {
+    if (!otpEmail || !otpEmail.includes("@")) {
+      toast({ title: "Invalid Email", description: "Please enter a valid email address.", variant: "destructive" });
+      return;
+    }
+    setOtpLoading(true);
+    try {
+      const userId = localStorage.getItem("userId");
+      const res = await fetch("/api/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: otpEmail, userId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setOtpSent(true);
+        toast({ title: "OTP Sent!", description: `Check your email: ${otpEmail}` });
+      } else {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to send OTP", variant: "destructive" });
+    }
+    setOtpLoading(false);
+  };
+
+  const handleVerifyAndRedeem = async () => {
+    if (!otpCode || otpCode.length !== 6) {
+      toast({ title: "Invalid OTP", description: "Please enter the 6-digit OTP.", variant: "destructive" });
+      return;
+    }
+    setOtpLoading(true);
+    try {
+      const userId = localStorage.getItem("userId");
+      const res = await fetch("/api/otp/verify-redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: otpEmail, otp: otpCode, userId, itemId: otpModal.item?.id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ title: "Redeemed! 🎉", description: `${otpModal.item?.name} redeemed successfully!` });
+        setOtpModal({ open: false, item: null });
+        setOtpEmail(""); setOtpCode(""); setOtpSent(false);
+      } else {
+        toast({ title: "Failed", description: data.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to redeem", variant: "destructive" });
+    }
+    setOtpLoading(false);
+  };
 
   // --- Buy marbles with points ---
   const handleBuyWithPoints = (pack: typeof MARBLE_PACKS_POINTS[0]) => {
@@ -391,6 +452,7 @@ export default function Shop() {
                         className="w-full bg-gradient-to-r from-purple-600 to-pink-600 font-bold"
                         disabled={pointCount < (item.pointsCost || 0)}
                         data-testid={`button-redeem-${item.id}`}
+                        onClick={() => { if (pointCount >= (item.pointsCost || 0)) { setOtpModal({ open: true, item }); setOtpSent(false); setOtpCode(""); setOtpEmail(""); } }}
                       >
                         {pointCount >= (item.pointsCost || 0) ? "Redeem" : "Not Enough Points"}
                       </Button>
@@ -402,7 +464,50 @@ export default function Shop() {
           </div>
         )}
 
-        {/* Referral Tab */}
+        {/* OTP Redemption Modal */}
+        {otpModal.open && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-900 border border-purple-500/50 rounded-xl p-6 w-full max-w-md space-y-4">
+              <h2 className="text-xl font-bold text-purple-400 text-center">🔐 Verify to Redeem</h2>
+              <p className="text-center text-sm text-gray-300">Redeeming: <strong>{otpModal.item?.name}</strong></p>
+              <p className="text-center text-purple-400 font-bold">{otpModal.item?.pointsCost?.toLocaleString()} Points</p>
+              {!otpSent ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-400">Enter your email to receive OTP:</p>
+                  <Input
+                    type="email"
+                    placeholder="your@email.com"
+                    value={otpEmail}
+                    onChange={e => setOtpEmail(e.target.value)}
+                    className="bg-gray-800 border-purple-500/30"
+                  />
+                  <Button onClick={handleSendOTP} disabled={otpLoading} className="w-full bg-purple-600 hover:bg-purple-700">
+                    {otpLoading ? "Sending..." : "Send OTP"}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-400">Enter the 6-digit OTP sent to <strong>{otpEmail}</strong>:</p>
+                  <Input
+                    type="text"
+                    placeholder="123456"
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={e => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                    className="bg-gray-800 border-purple-500/30 text-center text-2xl tracking-widest"
+                  />
+                  <Button onClick={handleVerifyAndRedeem} disabled={otpLoading} className="w-full bg-green-600 hover:bg-green-700">
+                    {otpLoading ? "Verifying..." : "Verify & Redeem"}
+                  </Button>
+                  <button onClick={handleSendOTP} className="text-xs text-purple-400 underline w-full text-center">Resend OTP</button>
+                </div>
+              )}
+              <Button variant="outline" onClick={() => setOtpModal({ open: false, item: null })} className="w-full">Cancel</Button>
+            </div>
+          </div>
+        )}
+
+        {/* Referral Tab */}}
         {activeTab === "referral" && (
           <Card className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30">
             <CardHeader>

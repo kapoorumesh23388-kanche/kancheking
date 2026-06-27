@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
 import { storage } from "./storage";
 import { pool } from "./db";
+import { generateOTP, sendOTPEmail, verifyOTP } from "./emailService";
 import { handleNewConnection } from "./ws-manager";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -520,6 +521,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Failed to record match result:", error);
       res.status(500).json({ error: "Failed to record match result" });
+    }
+  });
+
+  // OTP - Send for redemption
+  app.post("/api/otp/send", async (req, res) => {
+    try {
+      const { email, userId } = req.body;
+      if (!email || !userId) return res.status(400).json({ error: "Email and userId required" });
+
+      const user = await storage.getUser(userId);
+      const playerName = user?.displayName || user?.username || "Player";
+      const otp = generateOTP();
+      const sent = await sendOTPEmail(email, otp, playerName);
+
+      if (!sent) return res.status(500).json({ error: "Failed to send OTP email" });
+      res.json({ success: true, message: "OTP sent to " + email });
+    } catch (err) {
+      console.error("[otp/send]", err);
+      res.status(500).json({ error: "Failed to send OTP" });
+    }
+  });
+
+  // OTP - Verify and then redeem
+  app.post("/api/otp/verify-redeem", async (req, res) => {
+    try {
+      const { email, otp, userId, itemId } = req.body;
+      if (!email || !otp || !userId || !itemId) return res.status(400).json({ error: "All fields required" });
+
+      const valid = verifyOTP(email, otp);
+      if (!valid) return res.status(400).json({ error: "Invalid or expired OTP" });
+
+      // Now do the redeem
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      const items = await storage.getCatalogItems();
+      const item = items.find(i => i.id === itemId);
+      if (!item) return res.status(404).json({ error: "Item not found" });
+
+      if (user.points < item.pointsCost) return res.status(400).json({ error: "Insufficient points" });
+
+      const newPoints = user.points - item.pointsCost;
+      await storage.updateUserPoints(userId, newPoints);
+      await storage.recordTransaction({
+        userId,
+        amount: -item.pointsCost,
+        type: "catalog_redemption",
+        description: `Redeemed: ${item.name}`,
+        transactionId: null,
+      });
+
+      res.json({ success: true, points: newPoints, item: item.name });
+    } catch (err) {
+      console.error("[otp/verify-redeem]", err);
+      res.status(500).json({ error: "Failed to verify and redeem" });
     }
   });
 
