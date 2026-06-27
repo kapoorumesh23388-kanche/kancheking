@@ -73,7 +73,8 @@ export default function Shop() {
     marblesReward: number;
     watching: boolean;
     countdown: number;
-  }>({ packId: null, adsWatched: 0, adsTotal: 0, marblesReward: 0, watching: false, countdown: 30 });
+    breakCountdown: number;
+  }>({ packId: null, adsWatched: 0, adsTotal: 0, marblesReward: 0, watching: false, countdown: 30, breakCountdown: 0 });
   const [pointsHistory, setPointsHistory] = useState<PointsHistoryEntry[]>([]);
   // OTP Modal state
   const [otpModal, setOtpModal] = useState<{ open: boolean; item: any | null }>({ open: false, item: null });
@@ -161,11 +162,25 @@ export default function Shop() {
         });
         setAdWatchState({ packId: null, adsWatched: 0, adsTotal: 0, marblesReward: 0, watching: false, countdown: 30 });
       } else {
-        // Next ad
-        setAdWatchState((prev) => ({ ...prev, adsWatched: nextWatched, countdown: 30 }));
+        // Next ad — add 7 sec break between ads (AdMob policy)
+        setAdWatchState((prev) => ({ ...prev, adsWatched: nextWatched, countdown: 0, breakCountdown: 7 }));
       }
     }
   }, [adWatchState.watching, adWatchState.countdown]);
+
+  // Break timer between ads
+  useEffect(() => {
+    if (!adWatchState.watching || adWatchState.breakCountdown <= 0) return;
+    const timer = setTimeout(() => {
+      if (adWatchState.breakCountdown === 1) {
+        // Break over — start next ad
+        setAdWatchState((prev) => ({ ...prev, breakCountdown: 0, countdown: 30 }));
+      } else {
+        setAdWatchState((prev) => ({ ...prev, breakCountdown: prev.breakCountdown - 1 }));
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [adWatchState.watching, adWatchState.breakCountdown]);
 
   // --- OTP Redeem handlers ---
   const handleSendOTP = async () => {
@@ -327,7 +342,11 @@ export default function Shop() {
                     />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-3xl font-bold text-white">{adWatchState.countdown}</span>
+                    {adWatchState.breakCountdown > 0 ? (
+                      <span className="text-2xl font-bold text-yellow-400">⏳{adWatchState.breakCountdown}</span>
+                    ) : (
+                      <span className="text-3xl font-bold text-white">{adWatchState.countdown}</span>
+                    )}
                   </div>
                 </div>
                 <div className="bg-black/40 rounded-xl p-4 flex items-center justify-center" style={{ minHeight: 120 }}>
