@@ -1,4 +1,4 @@
-const REWARDS_KEY_PREFIX = "rewards_";
+﻿const REWARDS_KEY_PREFIX = "rewards_";
 const POINTS_HISTORY_KEY = "pointsHistory";
 const POINTS_REDEMPTION_KEY = "pointsRedemptionHistory";
 
@@ -283,7 +283,7 @@ export function awardLeaderboardBonus(): void {
 }
 
 export function awardTournamentWin(tournamentName?: string): void {
-  const points = 250000;
+  const points = 2500;
   const currentPoints = parseInt(localStorage.getItem("playerRewardPoints") || "0");
   localStorage.setItem("playerRewardPoints", (currentPoints + points).toString());
 
