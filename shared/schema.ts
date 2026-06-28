@@ -44,6 +44,7 @@ export const catalogItems = pgTable("catalog_items", {
   description: text("description"),
   pointsCost: integer("points_cost").notNull(),
   imageUrl: varchar("image_url"),
+  category: varchar("category").default("gift"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

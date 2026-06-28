@@ -459,8 +459,8 @@ export default function Shop() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {catalogItems.map((item) => (
-                  <Card key={item.id} className="border-primary/20">
+                {catalogItems.filter(i => (i as any).category === "voucher").map((item) => (
+                  <Card key={item.id} className="border-yellow-500/30">
                     <CardHeader>
                       <CardTitle className="text-lg">{item.name}</CardTitle>
                     </CardHeader>
@@ -477,7 +477,38 @@ export default function Shop() {
                       </Button>
                     </CardContent>
                   </Card>
-                ))}
+                    ))}
+                    </div>
+                  </div>
+                )}
+                {/* Return Gifts */}
+                {catalogItems.filter(i => !((i as any).category === "voucher") ).length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold text-purple-400 mb-3">🎁 Return Gifts</h3>
+                    <div className="space-y-3">
+                      {catalogItems.filter(i => !((i as any).category === "voucher")).map((item) => (
+                        <Card key={item.id} className="border-primary/20">
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <p className="font-semibold">{item.name}</p>
+                                <p className="text-sm text-muted-foreground">{item.description}</p>
+                                <p className="text-2xl font-bold text-purple-400">{item.pointsCost?.toLocaleString()} Points</p>
+                              </div>
+                              <Button
+                                size="sm"
+                                disabled={pointCount < (item.pointsCost || 0)}
+                                onClick={() => { if (pointCount >= (item.pointsCost || 0)) { setOtpModal({ open: true, item }); setOtpSent(false); setOtpCode(""); setOtpEmail(""); } }}
+                              >
+                                {pointCount >= (item.pointsCost || 0) ? "Redeem" : "Not Enough Points"}
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

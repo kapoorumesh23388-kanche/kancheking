@@ -66,6 +66,7 @@ export default function Admin() {
   const [description, setDescription] = useState("");
   const [pointsCost, setPointsCost] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [category, setCategory] = useState("gift");
   const [showPasswordSettings, setShowPasswordSettings] = useState(false);
   const [showSocialSettings, setShowSocialSettings] = useState(false);
   const [instagramUrl, setInstagramUrl] = useState(() => localStorage.getItem("socialInstagram") || "");
@@ -108,6 +109,7 @@ export default function Admin() {
         description,
         pointsCost: parseInt(pointsCost),
         imageUrl,
+        category,
       });
       return res.json();
     },
