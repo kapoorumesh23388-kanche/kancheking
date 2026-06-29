@@ -283,7 +283,7 @@ export function awardLeaderboardBonus(): void {
 }
 
 export function awardTournamentWin(tournamentName?: string): void {
-  const points = 250000;
+  const points = 2500;
   const currentPoints = parseInt(localStorage.getItem("playerRewardPoints") || "0");
   localStorage.setItem("playerRewardPoints", (currentPoints + points).toString());
 
@@ -357,3 +357,4 @@ export function cleanupOldRewardsData(): void {
     }
   });
 }
+
