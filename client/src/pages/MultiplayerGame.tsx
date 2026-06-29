@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -689,7 +689,7 @@ export default function MultiplayerGame() {
             
             {/* VS */}
             <div className="text-center">
-              <div className="text-4xl font-black text-primary animate-pulse">âš”ï¸</div>
+              <div className="text-4xl font-black text-primary animate-pulse">⚔️</div>
               <p className="text-sm text-muted-foreground mt-2 uppercase tracking-widest font-bold">Battle</p>
             </div>
             
@@ -791,13 +791,13 @@ export default function MultiplayerGame() {
                     : "bg-gradient-to-br from-red-500/20 via-primary/5 to-transparent border-red-500/60"
                 }`}>
                   <div className="text-7xl mb-4 animate-bounce">
-                    {gameResult.won ? "ðŸŽ‰" : "ðŸ˜¢"}
+                    {gameResult.won ? "🎉" : "😢"}
                   </div>
                   <h2 className={`text-3xl font-bold mb-4 ${gameResult.won ? "text-[#00FF88]" : "text-red-400"}`}>
                     {gameResult.won ? "YOU WON!" : "YOU LOST!"}
                   </h2>
                   <div className={`text-5xl font-bold mb-4 ${gameResult.won ? "text-[#00FF88]" : "text-red-400"}`}>
-                    {gameResult.won ? "+" : "-"}{Math.abs(gameResult.change)} ðŸ’Ž
+                    {gameResult.won ? "+" : "-"}{Math.abs(gameResult.change)} 💎
                   </div>
                   <p className="text-lg text-muted-foreground mb-4">{gameResult.details}</p>
                   <div className={`inline-block px-6 py-3 rounded-full ${
@@ -847,7 +847,7 @@ export default function MultiplayerGame() {
           <DialogHeader>
             <DialogTitle className="text-center">
               <div className="space-y-4">
-                <div className="text-7xl animate-bounce">ðŸŽ‰</div>
+                <div className="text-7xl animate-bounce">🎉</div>
                 <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] to-[#FFA500]">
                   VICTORY!
                 </h2>
@@ -855,7 +855,7 @@ export default function MultiplayerGame() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4 text-center">
-            <div className="text-6xl animate-pulse">ðŸ‘‘</div>
+            <div className="text-6xl animate-pulse">👑</div>
             <p className="text-2xl font-bold text-[#00FF88]">
               {opponentName} DEFEATED!
             </p>
@@ -870,7 +870,7 @@ export default function MultiplayerGame() {
               }}
               data-testid="button-spin-prize"
             >
-              ðŸŽ° Spin to Win Bonus Prize!
+              🎰 Spin to Win Bonus Prize!
             </Button>
             <div className="grid grid-cols-2 gap-4">
               <Button
@@ -937,5 +937,3 @@ export default function MultiplayerGame() {
     </div>
   );
 }
-
-

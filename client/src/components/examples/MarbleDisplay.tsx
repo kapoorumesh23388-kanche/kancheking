@@ -1,4 +1,4 @@
-﻿import MarbleDisplay from '../MarbleDisplay'
+import MarbleDisplay from '../MarbleDisplay'
 
 export default function MarbleDisplayExample() {
   return (
@@ -14,5 +14,3 @@ export default function MarbleDisplayExample() {
     </div>
   )
 }
-
-

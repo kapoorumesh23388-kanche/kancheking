@@ -1,4 +1,4 @@
-﻿export type MarbleSource = 'free' | 'purchase' | 'pvp' | 'ai' | 'ads';
+export type MarbleSource = 'free' | 'purchase' | 'pvp' | 'ai' | 'ads';
 
 export interface MarbleBalances {
   freeMarbles: number;
@@ -215,5 +215,3 @@ export function isTournamentEligible(): boolean {
 export function getMarblesNeededForTournament(): number {
   return Math.max(0, TOURNAMENT_ENTRY_FEE - getEligibleMarbles());
 }
-
-

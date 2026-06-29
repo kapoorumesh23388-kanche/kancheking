@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 
 type Phase = "idle" | "hiding" | "hidden" | "revealing" | "revealed";
 type Gender = "boy" | "girl";
@@ -93,7 +93,7 @@ function AnimatedHand({ phase, marbleCount = 0 }: { phase: Phase; marbleCount: n
       {/* Marble count glow badge */}
       {fistClosed && (
         <div className="mt-1 bg-gradient-to-r from-[#E91E8C] to-[#9C27B0] text-white text-xs font-bold px-3 py-0.5 rounded-full animate-pulse shadow-lg">
-          ðŸ”’ Hidden
+          🔒 Hidden
         </div>
       )}
       {isRevealing && marbleCount > 0 && (
@@ -106,7 +106,7 @@ function AnimatedHand({ phase, marbleCount = 0 }: { phase: Phase; marbleCount: n
             boxShadow: isOdd ? "0 0 20px rgba(233,30,140,0.6)" : "0 0 20px rgba(0,217,255,0.6)",
           }}
         >
-          {marbleCount} â€” {isOdd ? "KALI âœŠ" : "JOTTA âœŒï¸"}
+          {marbleCount} — {isOdd ? "KALI ✊" : "JOTTA ✌️"}
         </div>
       )}
     </div>
@@ -264,7 +264,7 @@ export default function LiveGameAvatar({
           border: `1px solid ${isAI ? "#9C27B0" : "#00D9FF"}40`,
         }}
       >
-        {isAI ? "ðŸ¤– " : ""}{name}
+        {isAI ? "🤖 " : ""}{name}
       </div>
 
       {/* Character + Hand stacked */}
@@ -285,13 +285,11 @@ export default function LiveGameAvatar({
       {/* Phase label */}
       <div className="text-[10px] text-center mt-1 text-muted-foreground">
         {phase === "idle" && "Ready..."}
-        {phase === "hiding" && "ðŸ™ˆ Hiding marbles..."}
-        {phase === "hidden" && "âœŠ Marbles hidden!"}
-        {phase === "revealing" && "ðŸ‘ï¸ Revealing..."}
-        {phase === "revealed" && "ðŸ–ï¸ Revealed!"}
+        {phase === "hiding" && "🙈 Hiding marbles..."}
+        {phase === "hidden" && "✊ Marbles hidden!"}
+        {phase === "revealing" && "👁️ Revealing..."}
+        {phase === "revealed" && "🖐️ Revealed!"}
       </div>
     </div>
   );
 }
-
-

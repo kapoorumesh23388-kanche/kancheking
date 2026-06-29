@@ -1,4 +1,4 @@
-﻿import { useState, useRef } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
@@ -19,14 +19,14 @@ interface Prize {
 }
 
 const prizes: Prize[] = [
-  { id: "1", name: "10 Marbles", value: 10, type: "marbles", color: "#FF6B6B", icon: "ðŸ”´" },
-  { id: "2", name: "25 Marbles", value: 25, type: "marbles", color: "#4ECDC4", icon: "ðŸŸ¢" },
-  { id: "3", name: "50 Points", value: 50, type: "points", color: "#45B7D1", icon: "â­" },
-  { id: "4", name: "2x Multiplier", value: 2, type: "multiplier", color: "#96CEB4", icon: "ðŸŽ¯" },
-  { id: "5", name: "100 Points", value: 100, type: "points", color: "#FFEAA7", icon: "ðŸ’«" },
-  { id: "6", name: "â‚¹20 Voucher", value: 20, type: "voucher", color: "#DDA0DD", icon: "ðŸŽŸï¸" },
-  { id: "7", name: "5 Marbles", value: 5, type: "marbles", color: "#98D8C8", icon: "ðŸ”µ" },
-  { id: "8", name: "â‚¹50 Voucher", value: 50, type: "voucher", color: "#F7DC6F", icon: "ðŸŽ«" },
+  { id: "1", name: "10 Marbles", value: 10, type: "marbles", color: "#FF6B6B", icon: "🔴" },
+  { id: "2", name: "25 Marbles", value: 25, type: "marbles", color: "#4ECDC4", icon: "🟢" },
+  { id: "3", name: "50 Points", value: 50, type: "points", color: "#45B7D1", icon: "⭐" },
+  { id: "4", name: "2x Multiplier", value: 2, type: "multiplier", color: "#96CEB4", icon: "🎯" },
+  { id: "5", name: "100 Points", value: 100, type: "points", color: "#FFEAA7", icon: "💫" },
+  { id: "6", name: "₹20 Voucher", value: 20, type: "voucher", color: "#DDA0DD", icon: "🎟️" },
+  { id: "7", name: "5 Marbles", value: 5, type: "marbles", color: "#98D8C8", icon: "🔵" },
+  { id: "8", name: "₹50 Voucher", value: 50, type: "voucher", color: "#F7DC6F", icon: "🎫" },
 ];
 
 export function SpinWheel({ isOpen, onClose, onPrizeWon }: SpinWheelProps) {
@@ -71,7 +71,7 @@ export function SpinWheel({ isOpen, onClose, onPrizeWon }: SpinWheelProps) {
       <DialogContent className="bg-gradient-to-b from-primary/20 to-black border-4 border-primary max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-center text-3xl font-black text-primary" style={{ textShadow: '0 0 20px rgba(255,215,0,0.5)' }}>
-            ðŸŽ° Victory Spin Wheel ðŸŽ°
+            🎰 Victory Spin Wheel 🎰
           </DialogTitle>
         </DialogHeader>
         
@@ -123,7 +123,7 @@ export function SpinWheel({ isOpen, onClose, onPrizeWon }: SpinWheelProps) {
               className="w-full max-w-xs bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-black font-bold py-6 text-xl"
               data-testid="button-spin-wheel"
             >
-              {isSpinning ? "ðŸŽ° Spinning..." : "ðŸŽ¯ SPIN TO WIN!"}
+              {isSpinning ? "🎰 Spinning..." : "🎯 SPIN TO WIN!"}
             </Button>
           ) : (
             <div className="text-center space-y-4 animate-bounce">
@@ -152,5 +152,3 @@ export function SpinWheel({ isOpen, onClose, onPrizeWon }: SpinWheelProps) {
     </Dialog>
   );
 }
-
-

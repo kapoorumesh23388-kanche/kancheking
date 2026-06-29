@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Mic, Send, X } from "lucide-react";
@@ -24,7 +24,7 @@ interface GameChatProps {
   messages?: ChatMessage[];
 }
 
-const EMOJI_LIST = ["ðŸ˜‚", "ðŸŽ‰", "ðŸ˜¢", "ðŸ˜¡", "ðŸ‘", "ðŸ‘Ž", "ðŸ”¥", "ðŸ’ª", "ðŸ¤”", "ðŸ˜Ž", "ðŸ¤—", "â¤ï¸", "ðŸ˜˜", "ðŸ™", "ðŸ’¯"];
+const EMOJI_LIST = ["😂", "🎉", "😢", "😡", "👍", "👎", "🔥", "💪", "🤔", "😎", "🤗", "❤️", "😘", "🙏", "💯"];
 
 const QUICK_MESSAGES = [
   "Nice move!",
@@ -150,7 +150,7 @@ export default function GameChat({
     <div className="fixed bottom-16 right-2 w-64 sm:w-72 h-72 sm:h-80 bg-card border-2 border-primary/50 rounded-lg shadow-2xl z-40 flex flex-col">
       {/* Header */}
       <div className="flex justify-between items-center p-2 border-b border-primary/30 bg-gradient-to-r from-primary/20 to-transparent">
-        <h3 className="text-sm font-bold text-primary">ðŸ’¬ Game Chat</h3>
+        <h3 className="text-sm font-bold text-primary">💬 Game Chat</h3>
         <Button
           size="icon"
           variant="ghost"
@@ -188,7 +188,7 @@ export default function GameChat({
                   <p className="text-sm break-words">{msg.content}</p>
                 ) : (
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs flex items-center gap-1">ðŸŽ¤ Voice Message</span>
+                    <span className="text-xs flex items-center gap-1">🎤 Voice Message</span>
                     {msg.audioUrl && (
                       <audio
                         src={msg.audioUrl}
@@ -274,7 +274,7 @@ export default function GameChat({
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
             data-testid="button-emoji-picker"
           >
-            ðŸ˜Š
+            😊
           </Button>
           <Button
             size="icon"
@@ -299,5 +299,3 @@ export default function GameChat({
     </div>
   );
 }
-
-

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -338,7 +338,7 @@ export default function ChallengeFriend() {
           <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-blue-500/30 hover-elevate" data-testid="card-join-room">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-2xl">
-                <span>ðŸ”—</span> Join Room
+                <span>🔗</span> Join Room
               </CardTitle>
               <CardDescription>Enter your friend's code</CardDescription>
             </CardHeader>
@@ -383,5 +383,3 @@ export default function ChallengeFriend() {
     </div>
   );
 }
-
-

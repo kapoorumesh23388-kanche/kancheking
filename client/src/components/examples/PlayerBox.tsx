@@ -1,4 +1,4 @@
-﻿import PlayerBox from '../PlayerBox'
+import PlayerBox from '../PlayerBox'
 
 export default function PlayerBoxExample() {
   return (
@@ -21,5 +21,3 @@ export default function PlayerBoxExample() {
     </div>
   )
 }
-
-

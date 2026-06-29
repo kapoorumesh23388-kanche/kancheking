@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 interface AnimatedPlayerAvatarProps {
   gender: "boy" | "girl";
@@ -57,7 +57,7 @@ export default function AnimatedPlayerAvatar({
       if (isWinner) {
         ctx.font = `${18 * scale}px serif`;
         ctx.textAlign = "center";
-        // Winner crown â€” drawn with canvas shapes
+        // Winner crown — drawn with canvas shapes
       if (isWinner) {
         ctx.save();
         ctx.fillStyle = "#FFD700";
@@ -114,7 +114,7 @@ export default function AnimatedPlayerAvatar({
   );
 }
 
-// â”€â”€â”€ BOY CHARACTER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── BOY CHARACTER ──────────────────────────────────────────────────────────
 function drawBoy(
   ctx: CanvasRenderingContext2D,
   cx: number, baseY: number, s: number,
@@ -160,7 +160,7 @@ function drawBoy(
   ctx.fill();
   ctx.restore();
 
-  // Body â€” colorful jersey
+  // Body — colorful jersey
   ctx.save();
   const grad = ctx.createLinearGradient(cx - 16 * s, baseY - 15 * s, cx + 16 * s, baseY + 20 * s);
   grad.addColorStop(0, "#1565c0");
@@ -259,13 +259,13 @@ function drawBoy(
   // Mouth
   drawMouth(ctx, cx, baseY - 29 * s, s, phase, isWinner);
 
-  // Phase: revealed â€” marbles on palm
+  // Phase: revealed — marbles on palm
   if (phase === "revealed" || phase === "revealing") {
     drawMarblesOnPalm(ctx, cx + 26 * s, baseY + 5 * s - armSwing, s);
   }
 }
 
-// â”€â”€â”€ GIRL CHARACTER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── GIRL CHARACTER ─────────────────────────────────────────────────────────
 function drawGirl(
   ctx: CanvasRenderingContext2D,
   cx: number, baseY: number, s: number,
@@ -326,7 +326,7 @@ function drawGirl(
   ctx.fill();
   ctx.restore();
 
-  // Body â€” top
+  // Body — top
   ctx.save();
   const grad = ctx.createLinearGradient(cx, baseY - 15 * s, cx, baseY + 12 * s);
   grad.addColorStop(0, "#9c27b0");
@@ -403,7 +403,7 @@ function drawGirl(
   ctx.fill();
   ctx.restore();
 
-  // Hair â€” long flowing
+  // Hair — long flowing
   ctx.save();
   ctx.fillStyle = "#c2185b";
   ctx.beginPath();
@@ -444,7 +444,7 @@ function drawGirl(
   }
 }
 
-// â”€â”€â”€ AI ROBOT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── AI ROBOT ───────────────────────────────────────────────────────────────
 function drawAIRobot(
   ctx: CanvasRenderingContext2D,
   cx: number, baseY: number, s: number,
@@ -579,7 +579,7 @@ function drawAIRobot(
   ctx.fill();
   ctx.restore();
 
-  // Robot eyes â€” glowing
+  // Robot eyes — glowing
   ctx.save();
   ctx.fillStyle = `rgba(0,217,255,${pulse})`;
   ctx.shadowColor = "#00D9FF";
@@ -610,7 +610,7 @@ function drawAIRobot(
   }
 }
 
-// â”€â”€â”€ HELPER FUNCTIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── HELPER FUNCTIONS ────────────────────────────────────────────────────────
 function drawFist(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, color: string) {
   ctx.save();
   ctx.fillStyle = color;
@@ -710,5 +710,3 @@ function drawMarblesOnPalm(ctx: CanvasRenderingContext2D, x: number, y: number, 
   });
   ctx.restore();
 }
-
-

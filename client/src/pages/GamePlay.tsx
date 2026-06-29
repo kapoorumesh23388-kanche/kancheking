@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import PlayerBox from "@/components/PlayerBox";
 import FistDisplay from "@/components/FistDisplay";
@@ -109,7 +109,7 @@ export default function GamePlay() {
   const [showSpinWheel, setShowSpinWheel] = useState(false);
 
   // Start BGM on mount
-  // Mute SFX when TTS is speaking â€” prevents Android WebView conflict.
+  // Mute SFX when TTS is speaking — prevents Android WebView conflict.
   // Guarded with try/catch since module-level crashes in voiceAnnouncer
   // on some Capacitor builds could otherwise leave this whole effect
   // (and the component below it) un-mounted.
@@ -323,10 +323,10 @@ export default function GamePlay() {
       // Logic: Odd marbles = Kali, Even marbles (0,2,4...) = Jotta
       if (lastGuess === "kali") {
         won = isOdd;
-        message = won ? "à¤¬à¤§à¤¾à¤ˆ à¤¹à¥‹! à¤•à¤²à¥€ à¤¹à¥ˆ â€” à¤¤à¥à¤® à¤œà¥€à¤¤ à¤—à¤! ðŸŽ‰" : "à¤œà¥‹à¤Ÿà¥à¤Ÿà¤¾ à¤¹à¥ˆ! à¤…à¤°à¥‡ à¤¨à¤¹à¥€à¤‚ ðŸ˜¢";
+        message = won ? "बधाई हो! कली है — तुम जीत गए! 🎉" : "जोट्टा है! अरे नहीं 😢";
       } else if (lastGuess === "jotta") {
         won = !isOdd;
-        message = won ? "à¤¬à¤§à¤¾à¤ˆ à¤¹à¥‹! à¤œà¥‹à¤Ÿà¥à¤Ÿà¤¾ à¤¹à¥ˆ â€” à¤¤à¥à¤® à¤œà¥€à¤¤ à¤—à¤! ðŸŽ‰" : "à¤•à¤²à¥€ à¤¹à¥ˆ! à¤…à¤°à¥‡ à¤¨à¤¹à¥€à¤‚ ðŸ˜¢";
+        message = won ? "बधाई हो! जोट्टा है — तुम जीत गए! 🎉" : "कली है! अरे नहीं 😢";
       }
       
       // Determine if player won or lost this round
@@ -453,14 +453,14 @@ export default function GamePlay() {
     // AI responds with a message after a delay
     setTimeout(() => {
       const aiResponses = [
-        "Nice move! ðŸŽ®",
-        "Let's go! ðŸ’ª",
-        "Good luck! ðŸ€",
-        "I'm ready! ðŸ”¥",
-        "Bring it on! ðŸ’¯",
-        "Haha, got you! ðŸ˜Ž",
-        "You're good at this! ðŸ‘",
-        "One more round? ðŸŽ²",
+        "Nice move! 🎮",
+        "Let's go! 💪",
+        "Good luck! 🍀",
+        "I'm ready! 🔥",
+        "Bring it on! 💯",
+        "Haha, got you! 😎",
+        "You're good at this! 👏",
+        "One more round? 🎲",
       ];
       const aiMessage = {
         id: (Date.now() + 1).toString(),
@@ -507,7 +507,7 @@ export default function GamePlay() {
             </div>
             <div className="text-center flex flex-col items-center justify-center">
               <div className="text-lg sm:text-xl md:text-3xl font-black text-primary animate-pulse" style={{ textShadow: "0 0 20px rgba(255,215,0,0.8)" }}>
-                âš”ï¸
+                ⚔️
               </div>
               <p className="text-[8px] sm:text-xs text-muted-foreground uppercase tracking-wider font-bold">Battle</p>
             </div>
@@ -536,7 +536,7 @@ export default function GamePlay() {
                   <Card className="bg-white/5 border border-primary/20">
                     <CardContent className="p-2 sm:p-4">
                       <h3 className="text-sm sm:text-lg md:text-xl font-bold text-primary mb-2 text-center">
-                        ðŸŽ¯ Select Marbles to Hide
+                        🎯 Select Marbles to Hide
                       </h3>
                       <MarbleSelector
                         selectedMarbleIds={selectedMarbleIds}
@@ -549,7 +549,7 @@ export default function GamePlay() {
                         onClick={handleConfirmSelection}
                         data-testid="button-confirm-selection"
                       >
-                        âœŠ Hide Marbles ({selectedMarbleIds.length} selected)
+                        ✊ Hide Marbles ({selectedMarbleIds.length} selected)
                       </Button>
                     </CardContent>
                   </Card>
@@ -557,9 +557,9 @@ export default function GamePlay() {
                   <Card className="bg-white/5 border border-primary/20">
                     <CardContent className="p-4 sm:p-6 text-center">
                       <h3 className="text-lg sm:text-2xl font-bold text-primary mb-3">
-                        ðŸ¤– AI is hiding marbles...
+                        🤖 AI is hiding marbles...
                       </h3>
-                      <div className="text-4xl sm:text-5xl animate-bounce mb-3">âœŠ</div>
+                      <div className="text-4xl sm:text-5xl animate-bounce mb-3">✊</div>
                       <Button
                         className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground py-3 sm:py-4 text-sm sm:text-base font-bold"
                         onClick={() => {
@@ -582,7 +582,7 @@ export default function GamePlay() {
                 {isHiderPlayer1 ? (
                   <div className="bg-white/5 border border-primary/20 rounded-lg p-3 sm:p-4 text-center">
                     <p className="text-base sm:text-xl font-bold text-primary mb-2 sm:mb-3">
-                      {showRevealButton ? "ðŸ¤– AI is guessing..." : "Waiting for AI to guess..."}
+                      {showRevealButton ? "🤖 AI is guessing..." : "Waiting for AI to guess..."}
                     </p>
                     {showRevealButton && (
                       <Button
@@ -590,7 +590,7 @@ export default function GamePlay() {
                         onClick={handleReveal}
                         data-testid="button-reveal"
                       >
-                        ðŸ–ï¸ Reveal Hand
+                        🖐️ Reveal Hand
                       </Button>
                     )}
                   </div>
@@ -603,7 +603,7 @@ export default function GamePlay() {
                         onClick={handleReveal}
                         data-testid="button-reveal"
                       >
-                        ðŸ–ï¸ Reveal Hand
+                        🖐️ Reveal Hand
                       </Button>
                     )}
                   </>
@@ -639,7 +639,7 @@ export default function GamePlay() {
           <DialogHeader>
             <DialogTitle className="text-center">
               <div className="space-y-4">
-                <div className="text-7xl animate-bounce">ðŸŽ‰</div>
+                <div className="text-7xl animate-bounce">🎉</div>
                 <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] to-[#FFA500]">
                   YOU WIN!
                 </h2>
@@ -647,7 +647,7 @@ export default function GamePlay() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4 text-center">
-            <div className="text-6xl animate-pulse">ðŸ‘‘</div>
+            <div className="text-6xl animate-pulse">👑</div>
             <p className="text-2xl font-bold text-[#00FF88]">
               AI DEFEATED!
             </p>
@@ -668,7 +668,7 @@ export default function GamePlay() {
               }}
               data-testid="button-spin-prize"
             >
-              ðŸŽ° Spin to Win Bonus Prize!
+              🎰 Spin to Win Bonus Prize!
             </Button>
             <div className="grid grid-cols-2 gap-4">
               <Button
@@ -735,7 +735,7 @@ export default function GamePlay() {
         <DialogContent className="bg-card border-2 border-primary/30 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-3xl font-bold text-primary text-center">
-              ðŸ’” Out of Marbles!
+              💔 Out of Marbles!
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4">
@@ -744,7 +744,7 @@ export default function GamePlay() {
             </p>
             
             <div className="bg-primary/10 border-2 border-primary/30 rounded-lg p-6 text-center">
-              <div className="text-6xl mb-4">ðŸ“º</div>
+              <div className="text-6xl mb-4">📺</div>
               <p className="text-sm text-muted-foreground mb-4">
                 Ad would play here (in production)
               </p>
@@ -793,5 +793,3 @@ export default function GamePlay() {
     </div>
   );
 }
-
-

@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -206,5 +206,3 @@ export default function AgeVerificationDialog({
     </Dialog>
   );
 }
-
-

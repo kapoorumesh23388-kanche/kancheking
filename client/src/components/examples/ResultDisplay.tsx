@@ -1,4 +1,4 @@
-﻿import ResultDisplay from '../ResultDisplay'
+import ResultDisplay from '../ResultDisplay'
 
 export default function ResultDisplayExample() {
   return (
@@ -16,5 +16,3 @@ export default function ResultDisplayExample() {
     </div>
   )
 }
-
-

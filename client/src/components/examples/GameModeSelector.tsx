@@ -1,7 +1,5 @@
-﻿import GameModeSelector from '../GameModeSelector'
+import GameModeSelector from '../GameModeSelector'
 
 export default function GameModeSelectorExample() {
   return <GameModeSelector />
 }
-
-

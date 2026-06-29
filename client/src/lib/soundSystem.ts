@@ -1,11 +1,11 @@
-﻿export type BGMTheme = "street" | "dhol" | "festival" | "electronic" | "chill";
+export type BGMTheme = "street" | "dhol" | "festival" | "electronic" | "chill";
 
 const BGM_THEMES: Record<BGMTheme, { name: string; emoji: string; desc: string }> = {
-  street:     { name: "Street Rush",     emoji: "ðŸƒ", desc: "Energetic street vibe" },
-  dhol:       { name: "Dhol Beats",      emoji: "ðŸ¥", desc: "Powerful dhol rhythm" },
-  festival:   { name: "Festival Hype",   emoji: "ðŸŽŠ", desc: "Celebration energy" },
-  electronic: { name: "Electric Storm",  emoji: "âš¡", desc: "Modern electronic" },
-  chill:      { name: "Chill Groove",    emoji: "ðŸŽ¶", desc: "Relaxed Indian melody" },
+  street:     { name: "Street Rush",     emoji: "🏃", desc: "Energetic street vibe" },
+  dhol:       { name: "Dhol Beats",      emoji: "🥁", desc: "Powerful dhol rhythm" },
+  festival:   { name: "Festival Hype",   emoji: "🎊", desc: "Celebration energy" },
+  electronic: { name: "Electric Storm",  emoji: "⚡", desc: "Modern electronic" },
+  chill:      { name: "Chill Groove",    emoji: "🎶", desc: "Relaxed Indian melody" },
 };
 
 export function getBGMThemes() { return BGM_THEMES; }
@@ -149,8 +149,8 @@ function hihat(start: number, vol = 0.2) {
   src.start(c.currentTime + start);
 }
 
-// â”€â”€â”€ THEME PATTERNS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Street Rush â€” fast, energetic like subway surfers
+// ─── THEME PATTERNS ──────────────────────────────────────────────────────────
+// Street Rush — fast, energetic like subway surfers
 function playStreet(beat: number) {
   const b = beat % 4;
   // Hard kick pattern
@@ -162,12 +162,12 @@ function playStreet(beat: number) {
   // Energetic bass run
   const bassNotes = [110, 130, 155, 110, 98, 110, 130, 155];
   bassNotes.forEach((f, i) => tone(f, i * 0.25, 0.22, 0.25, "sawtooth"));
-  // Lead melody â€” upbeat
+  // Lead melody — upbeat
   const melody = b === 0 ? [523, 659, 784, 659] : b === 1 ? [784, 880, 784, 659] : b === 2 ? [659, 784, 880, 1047] : [1047, 880, 784, 659];
   melody.forEach((f, i) => tone(f, i * 0.5, 0.4, 0.15, "square"));
 }
 
-// Dhol Beats â€” powerful Indian percussion
+// Dhol Beats — powerful Indian percussion
 function playDhol(beat: number) {
   const dhol1 = [0, 0.33, 0.5, 0.83, 1.0, 1.33, 1.5, 1.83];
   dhol1.forEach((t, i) => kick(t, i % 3 === 0 ? 0.6 : 0.35));
@@ -261,7 +261,7 @@ export function setBGMVolume(vol: number) {
 
 export function isBGMEnabled() { return isBGMPlaying; }
 
-// â”€â”€â”€ SFX â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── SFX ─────────────────────────────────────────────────────────────────────
 export function playSfxMarbleHide() {
   if (!sfxEnabled) return;
   const c = getCtx();
@@ -297,7 +297,7 @@ export function playSfxReveal() {
 export function playSfxWin() {
   if (!sfxEnabled) return;
   const c = getCtx();
-  // Subway surfers style win â€” fast ascending + chime
+  // Subway surfers style win — fast ascending + chime
   [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => {
     const o = c.createOscillator();
     const g = c.createGain();
@@ -355,5 +355,3 @@ export function playSfxMarbleClick() {
   o.start(c.currentTime);
   o.stop(c.currentTime + 0.08);
 }
-
-

@@ -1,4 +1,4 @@
-﻿import ModeCard from "@/components/ModeCard";
+import ModeCard from "@/components/ModeCard";
 import { Link } from "wouter";
 
 export default function KancheyKing() {
@@ -35,7 +35,7 @@ export default function KancheyKing() {
         <div className="grid grid-cols-1 gap-6 max-w-2xl mx-auto">
           <Link href="/modes?game=kali-jotta" className="w-full">
             <ModeCard
-              icon="ðŸŽ¯"
+              icon="🎯"
               title="Kali Jotta"
               description="The classic marble guessing game. Hide marbles and let your opponent guess if the count is Odd (Kali) or Even (Jotta)."
             />
@@ -44,7 +44,7 @@ export default function KancheyKing() {
           {/* Placeholder for future games */}
           <div className="p-6 backdrop-blur-lg bg-primary/5 rounded-2xl border-2 border-primary/20 opacity-50 cursor-not-allowed">
             <div className="text-center">
-              <p className="text-xl text-muted-foreground mb-2">ðŸ”œ More Games Coming Soon</p>
+              <p className="text-xl text-muted-foreground mb-2">🔜 More Games Coming Soon</p>
               <p className="text-sm text-muted-foreground">New marble games will be added to the Kanche King collection</p>
             </div>
           </div>
@@ -53,5 +53,3 @@ export default function KancheyKing() {
     </div>
   );
 }
-
-

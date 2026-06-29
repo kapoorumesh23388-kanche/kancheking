@@ -1,4 +1,4 @@
-﻿import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { translations, type Language } from "./translations";
 
 type TranslationKey = keyof typeof translations.en;
@@ -42,5 +42,3 @@ export function useLanguage() {
   }
   return context;
 }
-
-

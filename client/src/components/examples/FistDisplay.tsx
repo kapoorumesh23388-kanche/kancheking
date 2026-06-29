@@ -1,4 +1,4 @@
-﻿import FistDisplay from '../FistDisplay'
+import FistDisplay from '../FistDisplay'
 
 export default function FistDisplayExample() {
   return (
@@ -8,5 +8,3 @@ export default function FistDisplayExample() {
     </div>
   )
 }
-
-

@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -195,7 +195,7 @@ export default function AdminLoginOTP() {
               <p><strong>Default Admin Credentials:</strong></p>
               <p>ID: admin</p>
               <p>Password: admin123</p>
-              <p className="text-xs mt-2 text-yellow-500">âš ï¸ Change password immediately after first login!</p>
+              <p className="text-xs mt-2 text-yellow-500">⚠️ Change password immediately after first login!</p>
             </div>
           </CardContent>
         </Card>
@@ -203,5 +203,3 @@ export default function AdminLoginOTP() {
     </div>
   );
 }
-
-

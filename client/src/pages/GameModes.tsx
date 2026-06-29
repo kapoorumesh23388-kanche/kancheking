@@ -1,4 +1,4 @@
-﻿import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
 import { Users, Zap, Trophy } from "lucide-react";
@@ -101,7 +101,7 @@ export default function GameModes() {
         <div className="mt-12 text-center">
           <Link href="/kanchey-king">
             <Button variant="outline" className="px-6 py-3" data-testid="button-back-home">
-              â† {t("backToHome")}
+              ← {t("backToHome")}
             </Button>
           </Link>
         </div>
@@ -109,5 +109,3 @@ export default function GameModes() {
     </div>
   );
 }
-
-

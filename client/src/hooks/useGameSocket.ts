@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
 interface ChatData {
   messageType: "text" | "voice";
@@ -94,5 +94,3 @@ export function useGameSocket(
 
   return { sendMessage, sendChatMessage };
 }
-
-

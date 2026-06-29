@@ -1,4 +1,4 @@
-﻿import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,7 +63,7 @@ export default function GuessingPanel({ onGuess, maxBet = 100 }: GuessingPanelPr
             onClick={() => handleGuess("kali")}
             data-testid="button-guess-kali"
           >
-            <span>â¬†ï¸ {t("odd")}</span>
+            <span>⬆️ {t("odd")}</span>
             <span className="text-[10px] sm:text-xs md:text-sm opacity-80">Kali</span>
           </Button>
           <Button
@@ -71,7 +71,7 @@ export default function GuessingPanel({ onGuess, maxBet = 100 }: GuessingPanelPr
             onClick={() => handleGuess("jotta")}
             data-testid="button-guess-jotta"
           >
-            <span>â¬‡ï¸ {t("even")}</span>
+            <span>⬇️ {t("even")}</span>
             <span className="text-[10px] sm:text-xs md:text-sm opacity-80">Jotta</span>
           </Button>
         </div>
@@ -79,5 +79,3 @@ export default function GuessingPanel({ onGuess, maxBet = 100 }: GuessingPanelPr
     </Card>
   );
 }
-
-

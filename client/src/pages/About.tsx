@@ -1,4 +1,4 @@
-﻿import { Link } from "wouter";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
@@ -30,10 +30,10 @@ export default function About() {
           <section>
             <h2 className="text-2xl font-bold text-primary mb-4">About the Game</h2>
             <p className="text-gray-200 leading-relaxed mb-3">
-              Kanche King is a free-to-play digital version of the beloved traditional Indian marble game â€” <strong>Kali Jotta</strong>. Played across generations in streets and courtyards of India, this game brings the nostalgic joy of marble guessing to your mobile screen.
+              Kanche King is a free-to-play digital version of the beloved traditional Indian marble game — <strong>Kali Jotta</strong>. Played across generations in streets and courtyards of India, this game brings the nostalgic joy of marble guessing to your mobile screen.
             </p>
             <p className="text-gray-200 leading-relaxed">
-              Players take turns hiding marbles in their fist and challenging opponents to guess whether the count is <strong>Odd (Kali)</strong> or <strong>Even (Jotta)</strong>. Simple to learn, exciting to play â€” for all ages!
+              Players take turns hiding marbles in their fist and challenging opponents to guess whether the count is <strong>Odd (Kali)</strong> or <strong>Even (Jotta)</strong>. Simple to learn, exciting to play — for all ages!
             </p>
           </section>
 
@@ -41,7 +41,7 @@ export default function About() {
           <section>
             <h2 className="text-2xl font-bold text-primary mb-4">How to Play</h2>
             <ul className="space-y-3 text-gray-200">
-              <li className="flex gap-3"><span className="text-primary font-bold">1.</span><span>One player hides 1â€“20 marbles in their fist (the Hider).</span></li>
+              <li className="flex gap-3"><span className="text-primary font-bold">1.</span><span>One player hides 1–20 marbles in their fist (the Hider).</span></li>
               <li className="flex gap-3"><span className="text-primary font-bold">2.</span><span>The other player guesses: <strong>Kali (Odd)</strong> or <strong>Jotta (Even)</strong>.</span></li>
               <li className="flex gap-3"><span className="text-primary font-bold">3.</span><span>If the guess is correct, the Guesser wins the marbles. If wrong, the Hider wins.</span></li>
               <li className="flex gap-3"><span className="text-primary font-bold">4.</span><span>Play against AI, challenge friends, or compete with random players worldwide!</span></li>
@@ -52,12 +52,12 @@ export default function About() {
           <section>
             <h2 className="text-2xl font-bold text-primary mb-4">Game Features</h2>
             <ul className="space-y-3 text-gray-200">
-              <li className="flex gap-3"><span className="text-primary">ðŸ¤–</span><span><strong>AI Mode:</strong> Practice against a smart AI opponent anytime.</span></li>
-              <li className="flex gap-3"><span className="text-primary">ðŸ‘¥</span><span><strong>Multiplayer:</strong> Challenge friends with a room code or play with random players.</span></li>
-              <li className="flex gap-3"><span className="text-primary">ðŸ†</span><span><strong>Tournaments:</strong> Compete in tournaments and win massive Reward Points.</span></li>
-              <li className="flex gap-3"><span className="text-primary">ðŸŽµ</span><span><strong>Hindi Voice:</strong> Game announcements in Hindi, English, and 7 more Indian languages.</span></li>
-              <li className="flex gap-3"><span className="text-primary">ðŸ’Ž</span><span><strong>Reward System:</strong> Earn points daily, redeem for marbles and catalog items.</span></li>
-              <li className="flex gap-3"><span className="text-primary">ðŸŒ</span><span><strong>Free to Play:</strong> No real money involved. 100% free game.</span></li>
+              <li className="flex gap-3"><span className="text-primary">🤖</span><span><strong>AI Mode:</strong> Practice against a smart AI opponent anytime.</span></li>
+              <li className="flex gap-3"><span className="text-primary">👥</span><span><strong>Multiplayer:</strong> Challenge friends with a room code or play with random players.</span></li>
+              <li className="flex gap-3"><span className="text-primary">🏆</span><span><strong>Tournaments:</strong> Compete in tournaments and win massive Reward Points.</span></li>
+              <li className="flex gap-3"><span className="text-primary">🎵</span><span><strong>Hindi Voice:</strong> Game announcements in Hindi, English, and 7 more Indian languages.</span></li>
+              <li className="flex gap-3"><span className="text-primary">💎</span><span><strong>Reward System:</strong> Earn points daily, redeem for marbles and catalog items.</span></li>
+              <li className="flex gap-3"><span className="text-primary">🌐</span><span><strong>Free to Play:</strong> No real money involved. 100% free game.</span></li>
             </ul>
           </section>
 
@@ -66,24 +66,24 @@ export default function About() {
             <h2 className="text-2xl font-bold text-primary mb-4">Developer Information</h2>
             <div className="space-y-3 text-gray-200">
               <div className="flex gap-3">
-                <span className="text-primary font-bold">ðŸ‘¤</span>
+                <span className="text-primary font-bold">👤</span>
                 <span><strong>Developer:</strong> Umesh Kapoor</span>
               </div>
               <div className="flex gap-3">
-                <span className="text-primary font-bold">ðŸŒ</span>
+                <span className="text-primary font-bold">🌐</span>
                 <span><strong>Website:</strong> www.kancheking.com</span>
               </div>
               <div className="flex gap-3">
-                <span className="text-primary font-bold">ðŸ“§</span>
+                <span className="text-primary font-bold">📧</span>
                 <span><strong>Contact:</strong> umesh.220388@gmail.com</span>
               </div>
               <div className="flex gap-3">
-                <span className="text-primary font-bold">ðŸ“±</span>
+                <span className="text-primary font-bold">📱</span>
                 <span><strong>Platform:</strong> Android (Web App)</span>
               </div>
               <div className="flex gap-3">
-                <span className="text-primary font-bold">ðŸ—“ï¸</span>
-                <span><strong>Version:</strong> 1.0.0 â€” June 2026</span>
+                <span className="text-primary font-bold">🗓️</span>
+                <span><strong>Version:</strong> 1.0.0 — June 2026</span>
               </div>
             </div>
           </section>
@@ -93,5 +93,3 @@ export default function About() {
     </div>
   );
 }
-
-

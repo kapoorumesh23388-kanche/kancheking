@@ -1,4 +1,4 @@
-﻿import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Swords, X, Check } from "lucide-react";
@@ -87,5 +87,3 @@ export default function ChallengePopup({ challenge, onAccept, onDecline }: Chall
     </Dialog>
   );
 }
-
-
