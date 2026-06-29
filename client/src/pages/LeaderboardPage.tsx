@@ -94,7 +94,7 @@ export default function LeaderboardPage() {
         localStorage.setItem("leaderboardMonthlyBonusMonth", monthKey);
         bonusCheckedRef.current = true;
         toast({
-          title: "👑 Monthly #1 Bonus!",
+          title: "?? Monthly #1 Bonus!",
           description: "+500 points for holding #1 rank at the start of the month!",
         });
       }
@@ -243,4 +243,6 @@ export default function LeaderboardPage() {
     </div>
   );
 }
+
+
 

@@ -1,4 +1,4 @@
-const REWARDS_KEY_PREFIX = "rewards_";
+﻿const REWARDS_KEY_PREFIX = "rewards_";
 const POINTS_HISTORY_KEY = "pointsHistory";
 const POINTS_REDEMPTION_KEY = "pointsRedemptionHistory";
 
@@ -357,4 +357,5 @@ export function cleanupOldRewardsData(): void {
     }
   });
 }
+
 
