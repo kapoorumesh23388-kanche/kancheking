@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+﻿import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import AnimatedPlayerAvatar from "@/components/AnimatedPlayerAvatar";
@@ -57,7 +57,7 @@ export default function PlayerBox({
           style={{ textShadow: "0 0 20px rgba(0,255,136,0.7)" }}
           data-testid={`text-marbles-${name.toLowerCase().replace(/\s+/g, "-")}`}
         >
-          💎 {marbles}
+          ðŸ’Ž {marbles}
         </div>
         <Badge className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide border ${
           isActive ? "bg-[#00FF88]/30 text-[#00FF88] border-[#00FF88]/50" : "bg-primary/20 text-primary border-primary/40"
@@ -68,3 +68,5 @@ export default function PlayerBox({
     </Card>
   );
 }
+
+

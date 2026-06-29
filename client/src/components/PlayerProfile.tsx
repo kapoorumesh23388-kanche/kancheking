@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+﻿import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -43,19 +43,19 @@ export default function PlayerProfile({
                 className="bg-[#00D9FF]/15 text-[#00E5FF] border border-[#00D9FF]/50 px-2 md:px-5 py-1 md:py-2 text-xs md:text-base font-semibold"
                 data-testid="badge-marbles"
               >
-                <span className="mr-1">💎</span> {marbles}
+                <span className="mr-1">ðŸ’Ž</span> {marbles}
               </Badge>
               <Badge
                 className="bg-[#E91E8C]/15 text-[#FF8DC7] border border-[#E91E8C]/50 px-2 md:px-5 py-1 md:py-2 text-xs md:text-base font-semibold"
                 data-testid="badge-games-played"
               >
-                <span className="mr-1">🎮</span> {gamesPlayed}
+                <span className="mr-1">ðŸŽ®</span> {gamesPlayed}
               </Badge>
               <Badge
                 className="bg-[#FFD700]/15 text-[#FFD700] border border-[#FFD700]/50 px-2 md:px-5 py-1 md:py-2 text-xs md:text-base font-semibold"
                 data-testid="badge-win-rate"
               >
-                <span className="mr-1">🏆</span> {winRate}%
+                <span className="mr-1">ðŸ†</span> {winRate}%
               </Badge>
             </div>
           </div>
@@ -64,3 +64,5 @@ export default function PlayerProfile({
     </Card>
   );
 }
+
+

@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+﻿import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
 
 interface FistDisplayProps {
@@ -97,7 +97,7 @@ export default function FistDisplay({
 
         {/* Hand + marbles sitting on palm */}
         <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
-          {/* Marbles sitting ON the palm — shown when hidden */}
+          {/* Marbles sitting ON the palm â€” shown when hidden */}
           {!isOpen && marbleCount > 0 && (
             <div style={{
               display: 'flex',
@@ -129,17 +129,19 @@ export default function FistDisplay({
             onClick={handleClick}
             data-testid="fist-icon"
           >
-            {isOpen ? "🖐️" : "✊"}
+            {isOpen ? "ðŸ–ï¸" : "âœŠ"}
           </div>
         </div>
 
         {marbleCount > 0 && !isOpen && (
           <div className="mt-3 text-base sm:text-xl font-bold text-[#00FF88]"
             style={{ textShadow: '0 0 10px rgba(0,255,136,0.5)' }}>
-            {marbleCount} marble{marbleCount !== 1 ? 's' : ''} hidden 🔒
+            {marbleCount} marble{marbleCount !== 1 ? 's' : ''} hidden ðŸ”’
           </div>
         )}
       </CardContent>
     </Card>
   );
 }
+
+

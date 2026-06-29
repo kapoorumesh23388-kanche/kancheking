@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+﻿import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -22,19 +22,19 @@ export default function AdsPreferenceCard({
       id: "kids",
       label: "Kids Only",
       description: "Only kid-friendly, educational ads",
-      icon: "👶",
+      icon: "ðŸ‘¶",
     },
     {
       id: "family",
       label: "Family Friendly",
       description: "General audience, safe for all ages",
-      icon: "👨‍👩‍👧‍👦",
+      icon: "ðŸ‘¨â€ðŸ‘©â€ðŸ‘§â€ðŸ‘¦",
     },
     {
       id: "all",
       label: "All Ads",
       description: "Show all available advertisements",
-      icon: "👤",
+      icon: "ðŸ‘¤",
     },
   ];
 
@@ -114,3 +114,5 @@ export default function AdsPreferenceCard({
     </Card>
   );
 }
+
+

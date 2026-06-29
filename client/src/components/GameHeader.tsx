@@ -1,4 +1,4 @@
-import { Settings, User, ArrowLeft, Upload, Globe, HelpCircle, MessageCircle, Volume2, Volume1, VolumeX } from "lucide-react";
+﻿import { Settings, User, ArrowLeft, Upload, Globe, HelpCircle, MessageCircle, Volume2, Volume1, VolumeX } from "lucide-react";
 import SoundThemeSelector from "@/components/SoundThemeSelector";
 import { switchBGM, startBGM, stopBGM, isBGMEnabled, initAudioSettings, setMasterVolume, setSfxEnabled, setMusicEnabledFlag, playSfxMarbleClick, type BGMTheme } from "@/lib/soundSystem";
 import { Button } from "@/components/ui/button";
@@ -386,7 +386,7 @@ export default function GameHeader() {
                   onClick={() => handleLanguageChange("hi")}
                   data-testid="button-language-hi"
                 >
-                  हिंदी
+                  à¤¹à¤¿à¤‚à¤¦à¥€
                 </Button>
               </div>
             </div>
@@ -395,7 +395,7 @@ export default function GameHeader() {
             <div className="p-4 bg-primary/10 rounded-lg">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-foreground font-medium flex items-center gap-2">
-                  🎵 Music & Voice Language
+                  ðŸŽµ Music & Voice Language
                 </span>
               </div>
               <SoundThemeSelector
@@ -452,11 +452,11 @@ export default function GameHeader() {
               <h3 className="text-xl font-bold text-[#00FF88]">Winning & Marble Exchange</h3>
               <ul className="space-y-2 text-foreground">
                 <li className="flex gap-3">
-                  <span className="text-primary font-bold">✓</span>
+                  <span className="text-primary font-bold">âœ“</span>
                   <span><strong>Guesser Wins:</strong> Gets marbles equal to their bet from the Hider</span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-primary font-bold">✗</span>
+                  <span className="text-primary font-bold">âœ—</span>
                   <span><strong>Guesser Loses:</strong> Gives marbles equal to their bet to the Hider</span>
                 </li>
               </ul>
@@ -466,11 +466,11 @@ export default function GameHeader() {
               <h3 className="text-xl font-bold text-[#00FF88]">Role Switching</h3>
               <ul className="space-y-2 text-foreground">
                 <li className="flex gap-3">
-                  <span className="text-primary font-bold">→</span>
+                  <span className="text-primary font-bold">â†’</span>
                   <span><strong>If Guesser wins:</strong> Guesser becomes Hider for next round</span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-primary font-bold">→</span>
+                  <span className="text-primary font-bold">â†’</span>
                   <span><strong>If Hider wins:</strong> Hider stays as Hider, Guesser remains Guesser</span>
                 </li>
               </ul>
@@ -494,19 +494,19 @@ export default function GameHeader() {
               <h3 className="text-xl font-bold text-[#00FF88]">Game Modes</h3>
               <ul className="space-y-2 text-foreground">
                 <li className="flex gap-3">
-                  <span className="text-primary font-bold">🤖</span>
+                  <span className="text-primary font-bold">ðŸ¤–</span>
                   <span><strong>Play with AI:</strong> Challenge an AI opponent with auto-play features</span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-primary font-bold">👥</span>
+                  <span className="text-primary font-bold">ðŸ‘¥</span>
                   <span><strong>Challenge Random Player:</strong> Play against any online player, no marble limits</span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-primary font-bold">🎁</span>
+                  <span className="text-primary font-bold">ðŸŽ</span>
                   <span><strong>Challenge Friend:</strong> Share room code or link to play with friends</span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-primary font-bold">🏆</span>
+                  <span className="text-primary font-bold">ðŸ†</span>
                   <span><strong>Tournament:</strong> Compete in 100-player windows with entry fees and prizes</span>
                 </li>
               </ul>
@@ -516,15 +516,15 @@ export default function GameHeader() {
               <h3 className="text-xl font-bold text-[#00FF88]">Marble System</h3>
               <ul className="space-y-2 text-foreground">
                 <li className="flex gap-3">
-                  <span className="text-primary font-bold">💎</span>
+                  <span className="text-primary font-bold">ðŸ’Ž</span>
                   <span>Start with <strong>150 marbles</strong> free</span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-primary font-bold">🎯</span>
+                  <span className="text-primary font-bold">ðŸŽ¯</span>
                   <span>Earn game points and redeem for catalog items</span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-primary font-bold">👫</span>
+                  <span className="text-primary font-bold">ðŸ‘«</span>
                   <span>Get 50 marbles bonus per successful referral</span>
                 </li>
               </ul>
@@ -539,3 +539,5 @@ export default function GameHeader() {
     </>
   );
 }
+
+

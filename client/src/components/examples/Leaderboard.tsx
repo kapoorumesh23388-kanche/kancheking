@@ -1,4 +1,4 @@
-import Leaderboard from '../Leaderboard'
+﻿import Leaderboard from '../Leaderboard'
 
 export default function LeaderboardExample() {
   const mockEntries = [
@@ -11,3 +11,5 @@ export default function LeaderboardExample() {
 
   return <Leaderboard entries={mockEntries} />
 }
+
+

@@ -1,4 +1,4 @@
-import ModeCard from "@/components/ModeCard";
+﻿import ModeCard from "@/components/ModeCard";
 import { Link } from "wouter";
 import { useLanguage } from "@/lib/LanguageContext";
 
@@ -22,7 +22,7 @@ export default function ModeSelection() {
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 auto-rows-fr">
           <Link href="/game/ai">
             <ModeCard
-              icon="🤖"
+              icon="ðŸ¤–"
               title={t("playWithAI")}
               description={t("vsAI")}
             />
@@ -30,7 +30,7 @@ export default function ModeSelection() {
 
           <Link href="/game/friend">
             <ModeCard
-              icon="👥"
+              icon="ðŸ‘¥"
               title={t("friendChallenge")}
               description={t("createRoom")}
             />
@@ -38,7 +38,7 @@ export default function ModeSelection() {
 
           <Link href="/game/random">
             <ModeCard
-              icon="🌐"
+              icon="ðŸŒ"
               title={t("randomChallenge")}
               description={t("searchingForOpponent")}
             />
@@ -46,7 +46,7 @@ export default function ModeSelection() {
 
           <Link href="/tournament">
             <ModeCard
-              icon="🏆"
+              icon="ðŸ†"
               title={t("tournament")}
               description={t("tournamentEntryBarrier")}
               requirement={t("entryFee")}
@@ -55,7 +55,7 @@ export default function ModeSelection() {
 
           <Link href="/shop">
             <ModeCard
-              icon="💎"
+              icon="ðŸ’Ž"
               title={t("shop")}
               description={t("purchaseMarbles")}
             />
@@ -63,7 +63,7 @@ export default function ModeSelection() {
 
           <Link href="/leaderboard">
             <ModeCard
-              icon="📊"
+              icon="ðŸ“Š"
               title={t("leaderboard")}
               description={t("stats")}
             />
@@ -73,3 +73,5 @@ export default function ModeSelection() {
     </div>
   );
 }
+
+

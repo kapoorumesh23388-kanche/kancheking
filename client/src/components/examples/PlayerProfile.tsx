@@ -1,4 +1,4 @@
-import PlayerProfile from '../PlayerProfile'
+﻿import PlayerProfile from '../PlayerProfile'
 
 export default function PlayerProfileExample() {
   return (
@@ -10,3 +10,5 @@ export default function PlayerProfileExample() {
     />
   )
 }
+
+

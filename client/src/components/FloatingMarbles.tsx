@@ -1,4 +1,4 @@
-export default function FloatingMarbles() {
+﻿export default function FloatingMarbles() {
   const slowMarbles = Array.from({ length: 4 }, (_, i) => i);
   const fastMarbles = Array.from({ length: 3 }, (_, i) => i);
   
@@ -105,3 +105,5 @@ export default function FloatingMarbles() {
     </div>
   );
 }
+
+

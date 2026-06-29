@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -207,7 +207,7 @@ export default function Tournament() {
       <div className="container max-w-6xl mx-auto px-5">
         <div className="text-center mb-8">
           <h2 className="text-5xl font-bold text-primary mb-3" style={{ textShadow: '0 0 20px rgba(255,215,0,0.5)' }}>
-            🏆 Kali Jotta Tournament
+            ðŸ† Kali Jotta Tournament
           </h2>
           <p className="text-xl text-muted-foreground">10-Player Battles | 250 Marble Entry | 2,500 Points for Winner</p>
         </div>
@@ -289,7 +289,7 @@ export default function Tournament() {
         {/* Points System Info */}
         <Card className="mb-8 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/30">
           <CardHeader>
-            <CardTitle className="text-xl">💎 Points & Rewards System</CardTitle>
+            <CardTitle className="text-xl">ðŸ’Ž Points & Rewards System</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -308,7 +308,7 @@ export default function Tournament() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground bg-black/30 p-3 rounded">
-              ℹ️ Win tournaments to earn massive points! Redeem points in the Shop when catalog updates with premium products. You can participate in unlimited tournaments.
+              â„¹ï¸ Win tournaments to earn massive points! Redeem points in the Shop when catalog updates with premium products. You can participate in unlimited tournaments.
             </p>
           </CardContent>
         </Card>
@@ -523,10 +523,10 @@ export default function Tournament() {
             <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
               <p className="text-sm text-yellow-400 font-semibold mb-2">Marble Types:</p>
               <ul className="text-xs text-muted-foreground space-y-1">
-                <li>• <span className="text-green-400">Purchased Marbles</span> - Gameplay only (not tournament)</li>
-                <li>• <span className="text-green-400">PvP Win Marbles</span> - Count for tournament</li>
-                <li>• <span className="text-yellow-400">AI Win Marbles</span> - Gameplay only</li>
-                <li>• <span className="text-yellow-400">Free Marbles (150)</span> - Gameplay only</li>
+                <li>â€¢ <span className="text-green-400">Purchased Marbles</span> - Gameplay only (not tournament)</li>
+                <li>â€¢ <span className="text-green-400">PvP Win Marbles</span> - Count for tournament</li>
+                <li>â€¢ <span className="text-yellow-400">AI Win Marbles</span> - Gameplay only</li>
+                <li>â€¢ <span className="text-yellow-400">Free Marbles (150)</span> - Gameplay only</li>
               </ul>
             </div>
           </CardContent>
@@ -535,3 +535,5 @@ export default function Tournament() {
     </div>
   );
 }
+
+

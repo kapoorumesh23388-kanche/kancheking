@@ -1,4 +1,4 @@
-interface MarbleDisplayProps {
+﻿interface MarbleDisplayProps {
   count: number;
   size?: "sm" | "md" | "lg";
   selected?: boolean;
@@ -90,3 +90,5 @@ export default function MarbleDisplay({
     </div>
   );
 }
+
+

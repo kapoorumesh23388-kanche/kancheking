@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+﻿import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 
@@ -15,7 +15,7 @@ export default function PrivacyPolicy() {
             className="mb-6"
             data-testid="button-back-home"
           >
-            ← Back to Home
+            â† Back to Home
           </Button>
           <h1 className="text-4xl font-bold text-primary mb-2">Privacy Policy</h1>
           <p className="text-muted-foreground">Last updated: June 2026</p>
@@ -37,7 +37,7 @@ export default function PrivacyPolicy() {
             <section>
               <h2 className="text-2xl font-bold text-primary mb-4">Who Can Use This App</h2>
               <p className="leading-relaxed">
-                Kanche King is suitable for all ages. Anyone who can count marbles can enjoy the game — children, teenagers, and adults. The game contains no adult content, real-money transactions, or gambling. Players under 13 should use the app with parental awareness.
+                Kanche King is suitable for all ages. Anyone who can count marbles can enjoy the game â€” children, teenagers, and adults. The game contains no adult content, real-money transactions, or gambling. Players under 13 should use the app with parental awareness.
               </p>
             </section>
 
@@ -55,7 +55,7 @@ export default function PrivacyPolicy() {
                 <div>
                   <h3 className="text-lg font-semibold text-primary mb-2">Game Data We Collect Automatically</h3>
                   <ul className="list-disc list-inside mt-2 space-y-2 ml-4">
-                    <li>Game statistics — wins, losses, games played</li>
+                    <li>Game statistics â€” wins, losses, games played</li>
                     <li>Marble balances and in-game transactions</li>
                     <li>Reward Points earned and redeemed</li>
                     <li>Tournament participation and leaderboard ranking</li>
@@ -66,10 +66,10 @@ export default function PrivacyPolicy() {
                 <div>
                   <h3 className="text-lg font-semibold text-primary mb-2">What We Do NOT Collect</h3>
                   <ul className="list-disc list-inside mt-2 space-y-2 ml-4">
-                    <li>Email address — not required or collected</li>
-                    <li>Payment information — no real-money transactions exist</li>
-                    <li>Location data — not collected</li>
-                    <li>Advertising interest data — we do not collect user interests for ad targeting</li>
+                    <li>Email address â€” not required or collected</li>
+                    <li>Payment information â€” no real-money transactions exist</li>
+                    <li>Location data â€” not collected</li>
+                    <li>Advertising interest data â€” we do not collect user interests for ad targeting</li>
                   </ul>
                 </div>
               </div>
@@ -157,3 +157,5 @@ export default function PrivacyPolicy() {
     </div>
   );
 }
+
+

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,12 +28,12 @@ function generateReferralCode(name: string): string {
   return `${cleanName || "PLAYER"}${randomNum}`;
 }
 
-// Ad packs — player must watch ALL ads to earn marbles; no cancel button
+// Ad packs â€” player must watch ALL ads to earn marbles; no cancel button
 const AD_PACKS = [
-  { id: "ad1", adsCount: 1, marbles: 15, label: "Watch 1 Ad → 15 Marbles" },
-  { id: "ad2", adsCount: 3, marbles: 40, label: "Watch 3 Ads → 40 Marbles" },
-  { id: "ad3", adsCount: 5, marbles: 75, label: "Watch 5 Ads → 75 Marbles" },
-  { id: "ad4", adsCount: 10, marbles: 170, label: "Watch 10 Ads → 170 Marbles" },
+  { id: "ad1", adsCount: 1, marbles: 15, label: "Watch 1 Ad â†’ 15 Marbles" },
+  { id: "ad2", adsCount: 3, marbles: 40, label: "Watch 3 Ads â†’ 40 Marbles" },
+  { id: "ad3", adsCount: 5, marbles: 75, label: "Watch 5 Ads â†’ 75 Marbles" },
+  { id: "ad4", adsCount: 10, marbles: 170, label: "Watch 10 Ads â†’ 170 Marbles" },
 ];
 
 // Marble packs buyable with reward points
@@ -51,12 +51,12 @@ function formatDate(iso: string) {
 }
 
 const POINT_TYPE_LABELS: Record<PointsHistoryEntry["type"], string> = {
-  daily_login: "🌅 Daily Login Bonus",
-  hourly_play: "⏱️ Play Time Reward",
-  ai_defeat: "🤖 AI Defeat Bonus",
-  tournament_win: "🏆 Tournament Win",
-  leaderboard_bonus: "👑 Monthly #1 Bonus",
-  pvp_win: "⚔️ PvP Win Bonus",
+  daily_login: "ðŸŒ… Daily Login Bonus",
+  hourly_play: "â±ï¸ Play Time Reward",
+  ai_defeat: "ðŸ¤– AI Defeat Bonus",
+  tournament_win: "ðŸ† Tournament Win",
+  leaderboard_bonus: "ðŸ‘‘ Monthly #1 Bonus",
+  pvp_win: "âš”ï¸ PvP Win Bonus",
 };
 
 export default function Shop() {
@@ -154,15 +154,15 @@ export default function Shop() {
       // Ad finished
       const nextWatched = adWatchState.adsWatched + 1;
       if (nextWatched >= adWatchState.adsTotal) {
-        // All ads done — reward marbles
+        // All ads done â€” reward marbles
         addMarbles("ads", adWatchState.marblesReward);
         toast({
-          title: "🎉 Ads Complete!",
+          title: "ðŸŽ‰ Ads Complete!",
           description: `You earned ${adWatchState.marblesReward} marbles!`,
         });
         setAdWatchState({ packId: null, adsWatched: 0, adsTotal: 0, marblesReward: 0, watching: false, countdown: 30 });
       } else {
-        // Next ad — add 7 sec break between ads (AdMob policy)
+        // Next ad â€” add 7 sec break between ads (AdMob policy)
         setAdWatchState((prev) => ({ ...prev, adsWatched: nextWatched, countdown: 0, breakCountdown: 7 }));
       }
     }
@@ -173,7 +173,7 @@ export default function Shop() {
     if (!adWatchState.watching || adWatchState.breakCountdown <= 0) return;
     const timer = setTimeout(() => {
       if (adWatchState.breakCountdown === 1) {
-        // Break over — start next ad
+        // Break over â€” start next ad
         setAdWatchState((prev) => ({ ...prev, breakCountdown: 0, countdown: 30 }));
       } else {
         setAdWatchState((prev) => ({ ...prev, breakCountdown: prev.breakCountdown - 1 }));
@@ -224,7 +224,7 @@ export default function Shop() {
       });
       const data = await res.json();
       if (res.ok) {
-        toast({ title: "Redeemed! 🎉", description: `${otpModal.item?.name} redeemed successfully!` });
+        toast({ title: "Redeemed! ðŸŽ‰", description: `${otpModal.item?.name} redeemed successfully!` });
         setOtpModal({ open: false, item: null });
         setOtpEmail(""); setOtpCode(""); setOtpSent(false);
       } else {
@@ -252,7 +252,7 @@ export default function Shop() {
         description: `Bought ${pack.marbles} marbles for ${pack.points} points`,
       });
       updateStats();
-      toast({ title: "✅ Purchase Successful!", description: `${pack.marbles} marbles added to your account.` });
+      toast({ title: "âœ… Purchase Successful!", description: `${pack.marbles} marbles added to your account.` });
     }
   };
 
@@ -307,13 +307,13 @@ export default function Shop() {
         <div className="grid grid-cols-2 gap-3 mb-6">
           <Card className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/30">
             <CardContent className="pt-4 pb-4 text-center">
-              <p className="text-muted-foreground text-sm">🪨 Marbles</p>
+              <p className="text-muted-foreground text-sm">ðŸª¨ Marbles</p>
               <p className="text-2xl font-bold text-yellow-400">{marbleCount}</p>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-purple-500/30">
             <CardContent className="pt-4 pb-4 text-center">
-              <p className="text-muted-foreground text-sm">⭐ Reward Points</p>
+              <p className="text-muted-foreground text-sm">â­ Reward Points</p>
               <p className="text-2xl font-bold text-purple-400">{pointCount.toLocaleString()}</p>
             </CardContent>
           </Card>
@@ -325,7 +325,7 @@ export default function Shop() {
             <Card className="w-full max-w-sm mx-4 bg-gradient-to-b from-[#1a0a2e] to-[#0d0416] border-2 border-[#00D9FF]/50">
               <CardHeader>
                 <CardTitle className="text-center text-[#00D9FF]">
-                  📺 Watching Ad {adWatchState.adsWatched + 1} of {adWatchState.adsTotal}
+                  ðŸ“º Watching Ad {adWatchState.adsWatched + 1} of {adWatchState.adsTotal}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 text-center">
@@ -343,7 +343,7 @@ export default function Shop() {
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
                     {adWatchState.breakCountdown > 0 ? (
-                      <span className="text-2xl font-bold text-yellow-400">⏳{adWatchState.breakCountdown}</span>
+                      <span className="text-2xl font-bold text-yellow-400">â³{adWatchState.breakCountdown}</span>
                     ) : (
                       <span className="text-3xl font-bold text-white">{adWatchState.countdown}</span>
                     )}
@@ -363,7 +363,7 @@ export default function Shop() {
                     />
                   ))}
                 </div>
-                <p className="text-xs text-muted-foreground">⚠️ You must watch all ads to receive marbles.</p>
+                <p className="text-xs text-muted-foreground">âš ï¸ You must watch all ads to receive marbles.</p>
               </CardContent>
             </Card>
           </div>
@@ -390,15 +390,15 @@ export default function Shop() {
         {activeTab === "ads" && (
           <div className="space-y-4">
             <div className="text-center mb-2">
-              <p className="text-muted-foreground text-sm">Watch ads to earn free marbles. You must watch every ad — no skipping!</p>
+              <p className="text-muted-foreground text-sm">Watch ads to earn free marbles. You must watch every ad â€” no skipping!</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {AD_PACKS.map((pack) => (
                 <Card key={pack.id} className="border-[#00D9FF]/30 bg-gradient-to-br from-[#00D9FF]/10 to-transparent">
                   <CardContent className="pt-5 pb-5 text-center space-y-3">
-                    <div className="text-4xl">📺</div>
+                    <div className="text-4xl">ðŸ“º</div>
                     <p className="font-bold text-lg text-[#00D9FF]">{pack.label}</p>
-                    <p className="text-sm text-muted-foreground">{pack.adsCount} × 30s ads</p>
+                    <p className="text-sm text-muted-foreground">{pack.adsCount} Ã— 30s ads</p>
                     <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/40">
                       +{pack.marbles} Marbles
                     </Badge>
@@ -427,7 +427,7 @@ export default function Shop() {
               {MARBLE_PACKS_POINTS.map((pack) => (
                 <Card key={pack.points} className="border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-transparent">
                   <CardContent className="pt-5 pb-5 text-center space-y-3">
-                    <div className="text-4xl">💎</div>
+                    <div className="text-4xl">ðŸ’Ž</div>
                     <p className="text-2xl font-bold text-yellow-400">{pack.marbles} Marbles</p>
                     <p className="text-purple-400 font-semibold">{pack.points.toLocaleString()} Points</p>
                     <Button
@@ -453,7 +453,7 @@ export default function Shop() {
             {catalogItems.length === 0 ? (
               <Card className="bg-blue-500/10 border-blue-500/30">
                 <CardContent className="pt-6 text-center py-10">
-                  <p className="text-muted-foreground mb-2">📦 No Premium Items Available</p>
+                  <p className="text-muted-foreground mb-2">ðŸ“¦ No Premium Items Available</p>
                   <p className="text-sm text-muted-foreground">Check back when catalog updates quarterly!</p>
                 </CardContent>
               </Card>
@@ -484,7 +484,7 @@ export default function Shop() {
                 {/* Return Gifts */}
                 {catalogItems.filter(i => !((i as any).category === "voucher") ).length > 0 && (
                   <div>
-                    <h3 className="text-lg font-bold text-purple-400 mb-3">🎁 Return Gifts</h3>
+                    <h3 className="text-lg font-bold text-purple-400 mb-3">ðŸŽ Return Gifts</h3>
                     <div className="space-y-3">
                       {catalogItems.filter(i => !((i as any).category === "voucher")).map((item) => (
                         <Card key={item.id} className="border-primary/20">
@@ -518,7 +518,7 @@ export default function Shop() {
         {otpModal.open && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
             <div className="bg-gray-900 border border-purple-500/50 rounded-xl p-6 w-full max-w-md space-y-4">
-              <h2 className="text-xl font-bold text-purple-400 text-center">🔐 Verify to Redeem</h2>
+              <h2 className="text-xl font-bold text-purple-400 text-center">ðŸ” Verify to Redeem</h2>
               <p className="text-center text-sm text-gray-300">Redeeming: <strong>{otpModal.item?.name}</strong></p>
               <p className="text-center text-purple-400 font-bold">{otpModal.item?.pointsCost?.toLocaleString()} Points</p>
               {!otpSent ? (
@@ -563,7 +563,7 @@ export default function Shop() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="w-6 h-6 text-green-400" />
-                Referral Program — Earn 50 Marbles per Friend
+                Referral Program â€” Earn 50 Marbles per Friend
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -652,7 +652,7 @@ export default function Shop() {
                     {redemptionHistory.map((entry) => (
                       <div key={entry.id} className="flex items-center justify-between bg-black/30 rounded-lg px-3 py-2">
                         <div>
-                          <p className="font-semibold text-sm">🪨 {entry.marblesReceived} Marbles</p>
+                          <p className="font-semibold text-sm">ðŸª¨ {entry.marblesReceived} Marbles</p>
                           <p className="text-xs text-muted-foreground">{formatDate(entry.date)}</p>
                           <p className="text-xs text-muted-foreground/70">{entry.description}</p>
                         </div>
@@ -669,3 +669,5 @@ export default function Shop() {
     </div>
   );
 }
+
+

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface AnimatedPlayersProps {
@@ -41,7 +41,7 @@ export default function AnimatedPlayers({ gameMode }: AnimatedPlayersProps) {
     }
   };
 
-  const fistStates = ["✊", "✌️", "👊", "✋"];
+  const fistStates = ["âœŠ", "âœŒï¸", "ðŸ‘Š", "âœ‹"];
   const currentFist = fistStates[animationStep % fistStates.length];
   const isPlayerTurn = animationStep < 2;
   const isOpponentTurn = animationStep >= 2 && animationStep < 4;
@@ -62,7 +62,7 @@ export default function AnimatedPlayers({ gameMode }: AnimatedPlayersProps) {
               transform: isPlayerTurn ? "scale(1.3)" : "scale(1)",
               opacity: isPlayerTurn ? 1 : 0.6
             }}>
-              {isPlayerTurn ? "✊" : "👤"}
+              {isPlayerTurn ? "âœŠ" : "ðŸ‘¤"}
             </p>
             <p className={`text-xs font-semibold transition-all ${isPlayerTurn ? "text-primary" : "text-muted-foreground"}`}>
               {isPlayerTurn ? "Your Turn" : isResult ? "Guessing..." : "Waiting..."}
@@ -77,7 +77,7 @@ export default function AnimatedPlayers({ gameMode }: AnimatedPlayersProps) {
           </div>
           {isResult && (
             <div className="text-2xl animate-pulse" style={{ textShadow: '0 0 10px rgba(0,255,136,0.5)' }}>
-              🎯
+              ðŸŽ¯
             </div>
           )}
         </div>
@@ -94,7 +94,7 @@ export default function AnimatedPlayers({ gameMode }: AnimatedPlayersProps) {
               transform: isOpponentTurn ? "scale(1.3)" : "scale(1)",
               opacity: isOpponentTurn ? 1 : 0.6
             }}>
-              {isOpponentTurn ? "✊" : "👤"}
+              {isOpponentTurn ? "âœŠ" : "ðŸ‘¤"}
             </p>
             <p className={`text-xs font-semibold transition-all ${isOpponentTurn ? "text-primary" : "text-muted-foreground"}`}>
               {isOpponentTurn ? "Guessing..." : isResult ? "Revealed!" : "Waiting..."}
@@ -108,17 +108,17 @@ export default function AnimatedPlayers({ gameMode }: AnimatedPlayersProps) {
         <div className="inline-block px-6 py-3 rounded-full bg-gradient-to-r from-primary/20 to-primary/10 border-2 border-primary/40 backdrop-blur-sm">
           {isPlayerTurn && (
             <p className="text-sm font-semibold text-primary">
-              🎮 Hide marbles in your fist
+              ðŸŽ® Hide marbles in your fist
             </p>
           )}
           {isOpponentTurn && (
             <p className="text-sm font-semibold text-primary">
-              🤔 {gameMode === "ai" ? "AI" : "Opponent"} is guessing...
+              ðŸ¤” {gameMode === "ai" ? "AI" : "Opponent"} is guessing...
             </p>
           )}
           {isResult && (
             <p className="text-sm font-semibold text-[#00FF88]">
-              ✅ Guess revealed! Check if correct
+              âœ… Guess revealed! Check if correct
             </p>
           )}
         </div>
@@ -140,3 +140,5 @@ export default function AnimatedPlayers({ gameMode }: AnimatedPlayersProps) {
     </div>
   );
 }
+
+

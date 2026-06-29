@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,7 +29,7 @@ export default function Feedback() {
       });
 
       if (response.ok) {
-        toast({ title: "Success", description: "Thank you for your feedback! 🙏" });
+        toast({ title: "Success", description: "Thank you for your feedback! ðŸ™" });
         setName("");
         setEmail("");
         setMessage("");
@@ -48,7 +48,7 @@ export default function Feedback() {
       <div className="container max-w-2xl mx-auto px-5">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-primary mb-2" style={{ textShadow: '0 0 30px rgba(255,215,0,0.5)' }}>
-            📝 Send Us Feedback
+            ðŸ“ Send Us Feedback
           </h1>
           <p className="text-muted-foreground">Help us improve the game! Your thoughts matter.</p>
         </div>
@@ -119,14 +119,14 @@ export default function Feedback() {
 
             <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
               <p className="text-sm text-muted-foreground">
-                💡 <strong>Types of feedback we love:</strong>
+                ðŸ’¡ <strong>Types of feedback we love:</strong>
               </p>
               <ul className="text-sm text-muted-foreground mt-2 space-y-1">
-                <li>• Feature requests or game mechanics suggestions</li>
-                <li>• Bugs or crashes you encountered</li>
-                <li>• Design feedback or UI improvements</li>
-                <li>• Performance issues</li>
-                <li>• General thoughts and experiences</li>
+                <li>â€¢ Feature requests or game mechanics suggestions</li>
+                <li>â€¢ Bugs or crashes you encountered</li>
+                <li>â€¢ Design feedback or UI improvements</li>
+                <li>â€¢ Performance issues</li>
+                <li>â€¢ General thoughts and experiences</li>
               </ul>
             </div>
           </CardContent>
@@ -135,3 +135,5 @@ export default function Feedback() {
     </div>
   );
 }
+
+

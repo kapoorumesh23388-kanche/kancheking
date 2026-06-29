@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,8 +49,8 @@ export default function Support() {
         toast({ 
           title: "Success", 
           description: activeTab === "support" 
-            ? "We received your support request! We'll reply on WhatsApp/Email soon. 🙏" 
-            : "Thank you for your feedback! 🙏" 
+            ? "We received your support request! We'll reply on WhatsApp/Email soon. ðŸ™" 
+            : "Thank you for your feedback! ðŸ™" 
         });
         setName("");
         setEmail("");
@@ -85,8 +85,8 @@ export default function Support() {
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2 bg-primary/20 border-2 border-primary/30">
-                <TabsTrigger value="support" className="text-lg">🆘 Support</TabsTrigger>
-                <TabsTrigger value="feedback" className="text-lg">💬 Feedback</TabsTrigger>
+                <TabsTrigger value="support" className="text-lg">ðŸ†˜ Support</TabsTrigger>
+                <TabsTrigger value="feedback" className="text-lg">ðŸ’¬ Feedback</TabsTrigger>
               </TabsList>
 
               <TabsContent value="support" className="mt-8 space-y-6">
@@ -240,14 +240,14 @@ export default function Support() {
 
                 <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
                   <p className="text-sm text-muted-foreground">
-                    <strong>💡 We love hearing about:</strong>
+                    <strong>ðŸ’¡ We love hearing about:</strong>
                   </p>
                   <ul className="text-sm text-muted-foreground mt-2 space-y-1">
-                    <li>• Feature requests or game mechanics suggestions</li>
-                    <li>• Bugs or crashes you encountered</li>
-                    <li>• Design feedback or UI improvements</li>
-                    <li>• Performance issues</li>
-                    <li>• General thoughts and experiences</li>
+                    <li>â€¢ Feature requests or game mechanics suggestions</li>
+                    <li>â€¢ Bugs or crashes you encountered</li>
+                    <li>â€¢ Design feedback or UI improvements</li>
+                    <li>â€¢ Performance issues</li>
+                    <li>â€¢ General thoughts and experiences</li>
                   </ul>
                 </div>
               </TabsContent>
@@ -258,3 +258,5 @@ export default function Support() {
     </div>
   );
 }
+
+

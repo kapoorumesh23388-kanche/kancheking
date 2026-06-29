@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { getBGMThemes, startBGM, stopBGM, switchBGM, isBGMEnabled, type BGMTheme } from "@/lib/soundSystem";
 import { Volume2, VolumeX, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -55,7 +55,7 @@ export default function SoundThemeSelector({
         >
           {/* BGM Themes */}
           <div>
-            <p className="text-xs font-bold text-[#00D9FF] mb-2 uppercase tracking-wider">🎵 Background Music</p>
+            <p className="text-xs font-bold text-[#00D9FF] mb-2 uppercase tracking-wider">ðŸŽµ Background Music</p>
             <div className="grid grid-cols-1 gap-1.5">
               {(Object.entries(themes) as [BGMTheme, { name: string; emoji: string; desc: string }][]).map(([id, t]) => (
                 <button
@@ -73,7 +73,7 @@ export default function SoundThemeSelector({
                     <p className="text-sm font-semibold">{t.name}</p>
                     <p className="text-[10px] opacity-60">{t.desc}</p>
                   </div>
-                  {currentTheme === id && <span className="ml-auto text-[#00D9FF]">▶</span>}
+                  {currentTheme === id && <span className="ml-auto text-[#00D9FF]">â–¶</span>}
                 </button>
               ))}
             </div>
@@ -84,3 +84,5 @@ export default function SoundThemeSelector({
     </div>
   );
 }
+
+

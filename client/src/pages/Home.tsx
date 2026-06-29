@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+﻿import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PlayerProfile from "@/components/PlayerProfile";
@@ -214,7 +214,7 @@ export default function Home() {
               data-testid="button-start-game"
               lang={language}
             >
-              <span className="text-xl md:text-4xl">🎮</span> <span>{t('startGame', language)}</span>
+              <span className="text-xl md:text-4xl">ðŸŽ®</span> <span>{t('startGame', language)}</span>
             </Button>
           </Link>
         </div>
@@ -273,3 +273,5 @@ export default function Home() {
     </div>
   );
 }
+
+

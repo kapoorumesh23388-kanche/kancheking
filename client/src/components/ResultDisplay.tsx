@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+﻿import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/LanguageContext";
 
@@ -24,14 +24,14 @@ export default function ResultDisplay({
     if (isPlayer1Hider) {
       if (won) {
         return {
-          winner: `🤖 ${t("aiGuesser")}`,
+          winner: `ðŸ¤– ${t("aiGuesser")}`,
           loser: t("youHider"),
           winnerLabel: t("aiGuessedCorrectly")
         };
       } else {
         return {
           winner: t("youHider"),
-          loser: `🤖 ${t("aiGuesser")}`,
+          loser: `ðŸ¤– ${t("aiGuesser")}`,
           winnerLabel: t("yourMarblesSafe")
         };
       }
@@ -39,12 +39,12 @@ export default function ResultDisplay({
       if (won) {
         return {
           winner: t("youGuesser"),
-          loser: `🤖 ${t("aiHider")}`,
+          loser: `ðŸ¤– ${t("aiHider")}`,
           winnerLabel: t("perfectGuess")
         };
       } else {
         return {
-          winner: `🤖 ${t("aiHider")}`,
+          winner: `ðŸ¤– ${t("aiHider")}`,
           loser: t("youGuesser"),
           winnerLabel: t("betterLuckNextTime")
         };
@@ -61,7 +61,7 @@ export default function ResultDisplay({
     }`}>
       <CardContent className="p-2 sm:p-4 md:p-8 text-center">
         <div className={`text-3xl sm:text-5xl md:text-7xl mb-1 sm:mb-3 ${won ? "animate-pulse" : ""}`}>
-          {won ? "🎉" : "😢"}
+          {won ? "ðŸŽ‰" : "ðŸ˜¢"}
         </div>
         
         <div className="mb-2 sm:mb-4 space-y-1 sm:space-y-2">
@@ -70,7 +70,7 @@ export default function ResultDisplay({
               ? "bg-[#00FF88]/20 border-[#00FF88]/50"
               : "bg-destructive/20 border-destructive/50"
           }`}>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">{t("winner")} 👑</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">{t("winner")} ðŸ‘‘</p>
             <p className={`text-sm sm:text-xl md:text-2xl font-bold ${
               won ? "text-[#00FF88]" : "text-destructive"
             }`}
@@ -109,7 +109,7 @@ export default function ResultDisplay({
             }`}
             data-testid="text-marble-change"
           >
-            {won ? "+" : "-"}{Math.abs(marbleChange)} 💎
+            {won ? "+" : "-"}{Math.abs(marbleChange)} ðŸ’Ž
           </div>
           <p className="text-xs sm:text-base md:text-lg font-semibold text-muted-foreground">{won ? t("marblesWon") : t("marblesLost")}</p>
         </div>
@@ -121,7 +121,7 @@ export default function ResultDisplay({
         {aiChoice && (
           <div className="mb-2 sm:mb-4 px-3 py-1.5 sm:px-5 sm:py-3 bg-gradient-to-r from-primary/30 to-primary/10 rounded-lg sm:rounded-xl border border-primary/40 inline-block" data-testid="text-ai-choice">
             <p className="text-xs sm:text-base md:text-lg text-primary font-bold">
-              🤖 <span className="text-[#FFA500]">{t("aiLabel")}:</span> {aiChoice}
+              ðŸ¤– <span className="text-[#FFA500]">{t("aiLabel")}:</span> {aiChoice}
             </p>
           </div>
         )}
@@ -132,10 +132,12 @@ export default function ResultDisplay({
             onClick={onPlayAgain}
             data-testid="button-play-again"
           >
-            {t("playAgain")} 🎮
+            {t("playAgain")} ðŸŽ®
           </Button>
         </div>
       </CardContent>
     </Card>
   );
 }
+
+

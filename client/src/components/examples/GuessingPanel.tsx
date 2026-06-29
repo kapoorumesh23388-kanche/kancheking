@@ -1,5 +1,7 @@
-import GuessingPanel from '../GuessingPanel'
+﻿import GuessingPanel from '../GuessingPanel'
 
 export default function GuessingPanelExample() {
   return <GuessingPanel />
 }
+
+

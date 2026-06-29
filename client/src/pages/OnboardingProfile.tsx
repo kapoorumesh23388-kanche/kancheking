@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -102,7 +102,7 @@ export default function OnboardingProfile() {
         console.warn("Backend profile update had issues:", await profileResponse.json());
       }
 
-      console.log("✅ Profile saved:", { displayName, gender, age });
+      console.log("âœ… Profile saved:", { displayName, gender, age });
 
       // Dispatch events to update Header and other components
       window.dispatchEvent(new Event("profileUpdated"));
@@ -206,7 +206,7 @@ export default function OnboardingProfile() {
               data-testid="input-date-of-birth"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Optional — used to personalize your experience.
+              Optional â€” used to personalize your experience.
             </p>
           </div>
 
@@ -231,3 +231,5 @@ export default function OnboardingProfile() {
     </div>
   );
 }
+
+

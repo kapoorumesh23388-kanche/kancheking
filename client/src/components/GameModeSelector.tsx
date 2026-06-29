@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+﻿import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 
@@ -22,11 +22,11 @@ export default function GameModeSelector({ onModeSelect }: GameModeSelectorProps
     label: string;
     icon: string;
   }> = [
-    { id: "solo", label: "Solo Practice", icon: "🎯" },
-    { id: "local", label: "1v1 Local", icon: "👥" },
-    { id: "online", label: "Online", icon: "🌐" },
-    { id: "tournament", label: "Tournament", icon: "🏆" },
-    { id: "challenge", label: "Daily Challenge", icon: "⭐" },
+    { id: "solo", label: "Solo Practice", icon: "ðŸŽ¯" },
+    { id: "local", label: "1v1 Local", icon: "ðŸ‘¥" },
+    { id: "online", label: "Online", icon: "ðŸŒ" },
+    { id: "tournament", label: "Tournament", icon: "ðŸ†" },
+    { id: "challenge", label: "Daily Challenge", icon: "â­" },
   ];
 
   return (
@@ -55,3 +55,5 @@ export default function GameModeSelector({ onModeSelect }: GameModeSelectorProps
     </Card>
   );
 }
+
+
