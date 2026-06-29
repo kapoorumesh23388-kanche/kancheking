@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Trash2, Loader2, LogOut, Settings, Pencil, Users, TrendingUp, BarChart3, Clock, Eye, DollarSign, Instagram, Youtube, Save } from "lucide-react";
+import { Plus, Trash2, Loader2, LogOut, Settings, Pencil, Users, TrendingUp, BarChart3, Clock, Eye, DollarSign } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -44,12 +44,16 @@ interface EngagementAnalytics {
     totalUsers: number;
     totalPlaytimeSeconds: number;
     totalGamesPlayed: number;
+    totalAdsViewed: number;
+    totalAdRevenue: number;
   }>;
   topUsers: Array<{
     userId: string;
     displayName: string;
     totalPlaytimeSeconds: number;
     totalGamesPlayed: number;
+    totalAdsViewed: number;
+    totalAdRevenue: number;
   }>;
   adStats: Array<{
     adType: string;
@@ -66,11 +70,7 @@ export default function Admin() {
   const [description, setDescription] = useState("");
   const [pointsCost, setPointsCost] = useState("");
   const [imageUrl, setImageUrl] = useState("");
-  const [category, setCategory] = useState("gift");
   const [showPasswordSettings, setShowPasswordSettings] = useState(false);
-  const [showSocialSettings, setShowSocialSettings] = useState(false);
-  const [instagramUrl, setInstagramUrl] = useState(() => localStorage.getItem("socialInstagram") || "");
-  const [youtubeUrl, setYoutubeUrl] = useState(() => localStorage.getItem("socialYoutube") || "");
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -109,7 +109,6 @@ export default function Admin() {
         description,
         pointsCost: parseInt(pointsCost),
         imageUrl,
-        category,
       });
       return res.json();
     },
@@ -246,14 +245,6 @@ export default function Admin() {
               <Settings className="w-4 h-4" /> Settings
             </Button>
             <Button
-              variant="outline"
-              onClick={() => setShowSocialSettings(!showSocialSettings)}
-              className="gap-2 border-pink-500/50 text-pink-400 hover:bg-pink-500/20"
-              data-testid="button-social-settings"
-            >
-              <Instagram className="w-4 h-4" /> Social Media
-            </Button>
-            <Button
               variant="destructive"
               onClick={handleLogout}
               className="gap-2"
@@ -263,68 +254,6 @@ export default function Admin() {
             </Button>
           </div>
         </div>
-
-        {/* Social Media Settings */}
-        {showSocialSettings && (
-          <Card className="mb-8 bg-pink-500/10 border-pink-500/30">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-pink-400">
-                <Instagram className="w-5 h-5" /> Social Media Links
-              </CardTitle>
-              <CardDescription>
-                Yahan links daalo — footer mein automatically show honge. Agar abhi page nahi banaya toh blank chhod do.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-pink-300 flex items-center gap-2">
-                  <Instagram className="w-4 h-4" /> Instagram URL
-                </label>
-                <Input
-                  placeholder="https://instagram.com/kancheking"
-                  value={instagramUrl}
-                  onChange={(e) => setInstagramUrl(e.target.value)}
-                  className="bg-black/30 border-pink-500/30 text-white"
-                  data-testid="input-instagram-url"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-red-300 flex items-center gap-2">
-                  <Youtube className="w-4 h-4" /> YouTube URL
-                </label>
-                <Input
-                  placeholder="https://youtube.com/@kancheking"
-                  value={youtubeUrl}
-                  onChange={(e) => setYoutubeUrl(e.target.value)}
-                  className="bg-black/30 border-red-500/30 text-white"
-                  data-testid="input-youtube-url"
-                />
-              </div>
-              <Button
-                onClick={async () => {
-                  localStorage.setItem("socialInstagram", instagramUrl);
-                  localStorage.setItem("socialYoutube", youtubeUrl);
-                  try {
-                    await fetch("/api/admin/settings/social", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ instagram: instagramUrl, youtube: youtubeUrl }),
-                    });
-                  } catch (err) {
-                    console.error("Failed to save social links to server:", err);
-                  }
-                  window.dispatchEvent(new Event("socialLinksUpdated"));
-                  toast({ title: "Saved!", description: "Social media links updated for web and app." });
-                  setShowSocialSettings(false);
-                }}
-                className="bg-pink-600 hover:bg-pink-700 gap-2"
-                data-testid="button-save-social"
-              >
-                <Save className="w-4 h-4" /> Save Links
-              </Button>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Password Settings */}
         {showPasswordSettings && (
@@ -491,7 +420,7 @@ export default function Admin() {
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5" /> User Analytics
             </CardTitle>
-            <CardDescription>Game statistics and player insights</CardDescription>
+            <CardDescription>User demographics and ad preference insights for targeted advertising</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoadingAnalytics ? (
@@ -509,26 +438,78 @@ export default function Admin() {
                     <div className="text-sm text-muted-foreground">Total Users</div>
                   </div>
                   <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 text-center">
-                    <div className="text-3xl font-bold text-green-400" data-testid="stat-active-players">
+                    <div className="text-3xl font-bold text-green-400" data-testid="stat-verified-users">
+                      {userAnalytics.users.filter(u => u.isAgeVerified).length}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Age Verified (15+)</div>
+                  </div>
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-blue-400" data-testid="stat-active-players">
                       {userAnalytics.users.filter(u => u.gamesPlayed > 0).length}
                     </div>
                     <div className="text-sm text-muted-foreground">Active Players</div>
                   </div>
-                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 text-center">
-                    <div className="text-3xl font-bold text-blue-400">
-                      {userAnalytics.users.reduce((sum, u) => sum + u.gamesPlayed, 0)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Total Games Played</div>
-                  </div>
                   <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 text-center">
-                    <div className="text-3xl font-bold text-orange-400">
-                      {userAnalytics.users.reduce((sum, u) => sum + u.marbles, 0)}
+                    <div className="text-3xl font-bold text-orange-400" data-testid="stat-with-preferences">
+                      {userAnalytics.users.filter(u => u.adPreferences.length > 0).length}
                     </div>
-                    <div className="text-sm text-muted-foreground">Total Marbles</div>
+                    <div className="text-sm text-muted-foreground">With Ad Prefs</div>
                   </div>
                 </div>
 
+                {/* Age Demographics */}
+                <div>
+                  <h3 className="flex items-center gap-2 text-lg font-semibold text-primary mb-3">
+                    <BarChart3 className="w-5 h-5" /> Age Demographics
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-yellow-400">{userAnalytics.ageDemographics.under15}</div>
+                      <div className="text-xs text-muted-foreground">Under 15</div>
+                    </div>
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-green-400">{userAnalytics.ageDemographics.age15to18}</div>
+                      <div className="text-xs text-muted-foreground">15-17</div>
+                    </div>
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-blue-400">{userAnalytics.ageDemographics.age18to25}</div>
+                      <div className="text-xs text-muted-foreground">18-25</div>
+                    </div>
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-purple-400">{userAnalytics.ageDemographics.above25}</div>
+                      <div className="text-xs text-muted-foreground">25+</div>
+                    </div>
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-gray-400">{userAnalytics.ageDemographics.unknown}</div>
+                      <div className="text-xs text-muted-foreground">Unknown</div>
+                    </div>
+                  </div>
+                </div>
 
+                {/* Ad Preference Breakdown */}
+                <div>
+                  <h3 className="flex items-center gap-2 text-lg font-semibold text-primary mb-3">
+                    <TrendingUp className="w-5 h-5" /> Ad Interest Categories
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {Object.entries(userAnalytics.adPreferenceStats).length === 0 ? (
+                      <p className="text-muted-foreground col-span-full text-center py-4">No ad preferences recorded yet</p>
+                    ) : (
+                      Object.entries(userAnalytics.adPreferenceStats)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([category, count]) => (
+                          <div 
+                            key={category}
+                            className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/30 rounded-lg p-3 flex justify-between items-center"
+                            data-testid={`ad-pref-${category}`}
+                          >
+                            <span className="text-sm capitalize">{category.replace(/([A-Z])/g, ' $1').trim()}</span>
+                            <span className="text-lg font-bold text-primary">{count}</span>
+                          </div>
+                        ))
+                    )}
+                  </div>
+                </div>
               </div>
             ) : (
               <p className="text-muted-foreground text-center py-6">Failed to load analytics</p>
@@ -567,6 +548,8 @@ export default function Admin() {
                             <th className="text-right py-2 px-3">Users</th>
                             <th className="text-right py-2 px-3">Playtime</th>
                             <th className="text-right py-2 px-3">Games</th>
+                            <th className="text-right py-2 px-3">Ads</th>
+                            <th className="text-right py-2 px-3">Revenue</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -578,6 +561,10 @@ export default function Admin() {
                                 {Math.floor(stat.totalPlaytimeSeconds / 60)}m
                               </td>
                               <td className="text-right py-2 px-3">{stat.totalGamesPlayed}</td>
+                              <td className="text-right py-2 px-3 text-purple-400">{stat.totalAdsViewed}</td>
+                              <td className="text-right py-2 px-3 text-green-400">
+                                ₹{(stat.totalAdRevenue / 100).toFixed(2)}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -606,7 +593,7 @@ export default function Admin() {
                             <div>
                               <p className="font-semibold">{user.displayName}</p>
                               <p className="text-xs text-muted-foreground">
-                                {user.totalGamesPlayed} games played
+                                {user.totalGamesPlayed} games | {user.totalAdsViewed} ads
                               </p>
                             </div>
                           </div>
@@ -614,7 +601,9 @@ export default function Admin() {
                             <p className="text-lg font-bold text-blue-400">
                               {Math.floor(user.totalPlaytimeSeconds / 60)}m
                             </p>
-
+                            <p className="text-xs text-green-400">
+                              ₹{(user.totalAdRevenue / 100).toFixed(2)}
+                            </p>
                           </div>
                         </div>
                       ))}
@@ -622,7 +611,46 @@ export default function Admin() {
                   )}
                 </div>
 
-
+                {/* Ad Performance */}
+                <div>
+                  <h3 className="flex items-center gap-2 text-lg font-semibold text-purple-400 mb-3">
+                    <Eye className="w-5 h-5" /> Ad Performance by Type
+                  </h3>
+                  {engagementAnalytics.adStats.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-4">No ad data yet</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {engagementAnalytics.adStats.map((ad) => (
+                        <div 
+                          key={ad.adType}
+                          className="bg-gradient-to-r from-purple-500/10 to-purple-500/5 border border-purple-500/30 rounded-lg p-4"
+                          data-testid={`ad-stat-${ad.adType}`}
+                        >
+                          <h4 className="text-lg font-semibold capitalize mb-2">{ad.adType}</h4>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div>
+                              <p className="text-2xl font-bold text-purple-400">{ad.impressions}</p>
+                              <p className="text-xs text-muted-foreground">Views</p>
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold text-blue-400">{ad.clicks}</p>
+                              <p className="text-xs text-muted-foreground">Clicks</p>
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold text-green-400">₹{(ad.revenue / 100).toFixed(0)}</p>
+                              <p className="text-xs text-muted-foreground">Revenue</p>
+                            </div>
+                          </div>
+                          <div className="mt-2 text-center">
+                            <p className="text-sm text-muted-foreground">
+                              CTR: {ad.impressions > 0 ? ((ad.clicks / ad.impressions) * 100).toFixed(1) : 0}%
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <p className="text-muted-foreground text-center py-6">Failed to load engagement analytics</p>
