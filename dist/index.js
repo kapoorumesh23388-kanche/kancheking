@@ -220,6 +220,7 @@ var catalogItems = pgTable("catalog_items", {
   description: text("description"),
   pointsCost: integer("points_cost").notNull(),
   imageUrl: varchar("image_url"),
+  category: varchar("category").default("gift"),
   createdAt: timestamp("created_at").defaultNow()
 });
 var marbleTransactions = pgTable("marble_transactions", {
@@ -447,8 +448,8 @@ var MemStorage = class {
       windowNumber: 1,
       playerCount: 0,
       status: "waiting",
-      maxPlayers: 10,
-      entryFee: 250,
+      maxPlayers: 100,
+      entryFee: 2500,
       prizePool: 0,
       winnerId: null,
       winnerMarblesAwarded: 0,
@@ -456,34 +457,6 @@ var MemStorage = class {
       endedAt: null
     };
     this.tournamentWindows.set(window.id, window);
-    this.ensureSettingsTable();
-  }
-  async ensureSettingsTable() {
-    try {
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS app_settings (
-          key VARCHAR PRIMARY KEY,
-          value TEXT NOT NULL DEFAULT ''
-        )
-      `);
-    } catch (err) {
-      console.error("Failed to ensure app_settings table:", err);
-    }
-  }
-  async getSetting(key) {
-    try {
-      const [row] = await db.select().from(appSettings).where(eq(appSettings.key, key));
-      return row?.value || "";
-    } catch {
-      return "";
-    }
-  }
-  async setSetting(key, value) {
-    try {
-      await db.insert(appSettings).values({ key, value }).onConflictDoUpdate({ target: appSettings.key, set: { value } });
-    } catch (err) {
-      console.error("Failed to set setting:", err);
-    }
   }
   async getUser(id) {
     const cached = this.users.get(id);
@@ -795,14 +768,14 @@ var MemStorage = class {
     const window = this.tournamentWindows.get(windowId);
     if (window) {
       window.playerCount = count;
-      if (count >= window.maxPlayers) {
+      if (count >= 100) {
         window.status = "active";
         await this.addTournamentWindow({
           windowNumber: window.windowNumber + 1,
           playerCount: 0,
           status: "waiting",
-          maxPlayers: 10,
-          entryFee: 250,
+          maxPlayers: 100,
+          entryFee: 2500,
           prizePool: 0,
           winnerId: null,
           winnerMarblesAwarded: 0,
@@ -1181,6 +1154,57 @@ var MemStorage = class {
   }
 };
 var storage = new MemStorage();
+
+// server/emailService.ts
+import nodemailer from "nodemailer";
+var transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS
+  }
+});
+var otpStore = /* @__PURE__ */ new Map();
+function generateOTP() {
+  return Math.floor(1e5 + Math.random() * 9e5).toString();
+}
+async function sendOTPEmail(email, otp, playerName) {
+  try {
+    await transporter.sendMail({
+      from: `"Kanche King" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: "Kanche King \u2014 Your Redemption OTP",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #1a0a2e; color: #fff; padding: 30px; border-radius: 12px;">
+          <h2 style="color: #a855f7; text-align: center;">\u{1F3AE} Kanche King</h2>
+          <p>Hi <strong>${playerName}</strong>,</p>
+          <p>Your OTP for point redemption is:</p>
+          <div style="background: #2d1b69; border: 2px solid #a855f7; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+            <h1 style="color: #f0abfc; font-size: 40px; letter-spacing: 8px; margin: 0;">${otp}</h1>
+          </div>
+          <p style="color: #aaa;">This OTP is valid for <strong>10 minutes</strong>.</p>
+          <p style="color: #aaa;">If you did not request this, please ignore this email.</p>
+        </div>
+      `
+    });
+    otpStore.set(email, { otp, expiresAt: Date.now() + 10 * 60 * 1e3 });
+    return true;
+  } catch (err) {
+    console.error("[sendOTPEmail] Error:", err);
+    return false;
+  }
+}
+function verifyOTP(email, otp) {
+  const entry = otpStore.get(email);
+  if (!entry) return false;
+  if (Date.now() > entry.expiresAt) {
+    otpStore.delete(email);
+    return false;
+  }
+  if (entry.otp !== otp) return false;
+  otpStore.delete(email);
+  return true;
+}
 
 // server/ws-manager.ts
 var connectedPlayers = /* @__PURE__ */ new Map();
@@ -2203,6 +2227,48 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to record match result" });
     }
   });
+  app2.post("/api/otp/send", async (req, res) => {
+    try {
+      const { email, userId } = req.body;
+      if (!email || !userId) return res.status(400).json({ error: "Email and userId required" });
+      const user = await storage.getUser(userId);
+      const playerName = user?.displayName || user?.username || "Player";
+      const otp = generateOTP();
+      const sent = await sendOTPEmail(email, otp, playerName);
+      if (!sent) return res.status(500).json({ error: "Failed to send OTP email" });
+      res.json({ success: true, message: "OTP sent to " + email });
+    } catch (err) {
+      console.error("[otp/send]", err);
+      res.status(500).json({ error: "Failed to send OTP" });
+    }
+  });
+  app2.post("/api/otp/verify-redeem", async (req, res) => {
+    try {
+      const { email, otp, userId, itemId } = req.body;
+      if (!email || !otp || !userId || !itemId) return res.status(400).json({ error: "All fields required" });
+      const valid = verifyOTP(email, otp);
+      if (!valid) return res.status(400).json({ error: "Invalid or expired OTP" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+      const items = await storage.getCatalogItems();
+      const item = items.find((i) => i.id === itemId);
+      if (!item) return res.status(404).json({ error: "Item not found" });
+      if (user.points < item.pointsCost) return res.status(400).json({ error: "Insufficient points" });
+      const newPoints = user.points - item.pointsCost;
+      await storage.updateUserPoints(userId, newPoints);
+      await storage.recordTransaction({
+        userId,
+        amount: -item.pointsCost,
+        type: "catalog_redemption",
+        description: `Redeemed: ${item.name}`,
+        transactionId: null
+      });
+      res.json({ success: true, points: newPoints, item: item.name });
+    } catch (err) {
+      console.error("[otp/verify-redeem]", err);
+      res.status(500).json({ error: "Failed to verify and redeem" });
+    }
+  });
   app2.post("/api/catalog/redeem", async (req, res) => {
     try {
       const { userId, itemId } = req.body;
@@ -2399,11 +2465,11 @@ async function registerRoutes(app2) {
       if (!user) {
         user = await storage.createUser(
           { username: username || userId, password: "guest" },
-          void 0
+          void 0,
+          userId
         );
-        user.id = userId;
       }
-      res.json(user);
+      res.json(user || { id: userId, username: userId, marbles: 150 });
     } catch (error) {
       console.error("User init error:", error);
       res.status(500).json({ error: "Failed to initialize user" });
@@ -2624,7 +2690,10 @@ async function registerRoutes(app2) {
     try {
       const { type = "global" } = req.query;
       const allUsers = await storage.getAllUsers();
-      const leaderboard = allUsers.filter((u) => (u.displayName || u.username || "").trim() !== "").map((u) => ({
+      const leaderboard = allUsers.filter((u) => {
+        const name = u.displayName || u.username || "";
+        return name.trim() !== "" && !name.startsWith("player-");
+      }).map((u) => ({
         id: u.id,
         name: u.displayName || u.username || "Player",
         avatar: u.profileImage || "",
@@ -2646,19 +2715,29 @@ async function registerRoutes(app2) {
       if (!userId) {
         return res.status(400).json({ error: "User ID required" });
       }
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.createUser(
-          { username: userId, password: "guest" },
-          void 0,
-          userId
+      const cleanName = displayName && displayName.trim() ? displayName.trim() : null;
+      let userRow = await pool.query(`SELECT id FROM users WHERE id = $1`, [userId]);
+      if (userRow.rows.length === 0) {
+        userRow = await pool.query(`SELECT id FROM users WHERE username = $1`, [userId]);
+      }
+      if (userRow.rows.length === 0) {
+        await pool.query(
+          `INSERT INTO users (id, username, password, marbles, points, games_won, games_played, ai_wins, earned_marbles, purchased_marbles, tournament_winnings, is_age_verified, is_admin, created_at)
+           VALUES ($1, $2, 'guest', 150, 0, 0, 0, 0, 0, 0, 0, false, false, NOW())
+           ON CONFLICT DO NOTHING`,
+          [userId, userId]
+        );
+        userRow = await pool.query(`SELECT id FROM users WHERE id = $1`, [userId]);
+      }
+      const realId = userRow.rows[0]?.id || userId;
+      if (cleanName) {
+        await pool.query(
+          `UPDATE users SET display_name = $1, gender = COALESCE($2, gender) WHERE id = $3`,
+          [cleanName, gender || "boy", realId]
         );
       }
-      const updatedUser = await storage.updateUserProfile(userId, {
-        displayName: displayName || void 0,
-        profileImage: profileImage || void 0,
-        gender: gender || void 0
-      });
+      const result = await pool.query(`SELECT * FROM users WHERE id = $1`, [realId]);
+      const updatedUser = result.rows[0];
       res.json({
         success: true,
         message: "Profile updated successfully",

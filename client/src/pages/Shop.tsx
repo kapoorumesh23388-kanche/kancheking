@@ -73,8 +73,7 @@ export default function Shop() {
     marblesReward: number;
     watching: boolean;
     countdown: number;
-    breakCountdown: number;
-  }>({ packId: null, adsWatched: 0, adsTotal: 0, marblesReward: 0, watching: false, countdown: 30, breakCountdown: 0 });
+  }>({ packId: null, adsWatched: 0, adsTotal: 0, marblesReward: 0, watching: false, countdown: 30 });
   const [pointsHistory, setPointsHistory] = useState<PointsHistoryEntry[]>([]);
   // OTP Modal state
   const [otpModal, setOtpModal] = useState<{ open: boolean; item: any | null }>({ open: false, item: null });
@@ -162,25 +161,11 @@ export default function Shop() {
         });
         setAdWatchState({ packId: null, adsWatched: 0, adsTotal: 0, marblesReward: 0, watching: false, countdown: 30 });
       } else {
-        // Next ad — add 7 sec break between ads (AdMob policy)
-        setAdWatchState((prev) => ({ ...prev, adsWatched: nextWatched, countdown: 0, breakCountdown: 7 }));
+        // Next ad
+        setAdWatchState((prev) => ({ ...prev, adsWatched: nextWatched, countdown: 30 }));
       }
     }
   }, [adWatchState.watching, adWatchState.countdown]);
-
-  // Break timer between ads
-  useEffect(() => {
-    if (!adWatchState.watching || adWatchState.breakCountdown <= 0) return;
-    const timer = setTimeout(() => {
-      if (adWatchState.breakCountdown === 1) {
-        // Break over — start next ad
-        setAdWatchState((prev) => ({ ...prev, breakCountdown: 0, countdown: 30 }));
-      } else {
-        setAdWatchState((prev) => ({ ...prev, breakCountdown: prev.breakCountdown - 1 }));
-      }
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [adWatchState.watching, adWatchState.breakCountdown]);
 
   // --- OTP Redeem handlers ---
   const handleSendOTP = async () => {
@@ -342,11 +327,7 @@ export default function Shop() {
                     />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    {adWatchState.breakCountdown > 0 ? (
-                      <span className="text-2xl font-bold text-yellow-400">⏳{adWatchState.breakCountdown}</span>
-                    ) : (
-                      <span className="text-3xl font-bold text-white">{adWatchState.countdown}</span>
-                    )}
+                    <span className="text-3xl font-bold text-white">{adWatchState.countdown}</span>
                   </div>
                 </div>
                 <div className="bg-black/40 rounded-xl p-4 flex items-center justify-center" style={{ minHeight: 120 }}>
@@ -459,8 +440,8 @@ export default function Shop() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {catalogItems.filter(i => (i as any).category === "voucher").map((item) => (
-                  <Card key={item.id} className="border-yellow-500/30">
+                {catalogItems.map((item) => (
+                  <Card key={item.id} className="border-primary/20">
                     <CardHeader>
                       <CardTitle className="text-lg">{item.name}</CardTitle>
                     </CardHeader>
@@ -477,38 +458,7 @@ export default function Shop() {
                       </Button>
                     </CardContent>
                   </Card>
-                    ))}
-                    </div>
-                  </div>
-                )}
-                {/* Return Gifts */}
-                {catalogItems.filter(i => !((i as any).category === "voucher") ).length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-bold text-purple-400 mb-3">🎁 Return Gifts</h3>
-                    <div className="space-y-3">
-                      {catalogItems.filter(i => !((i as any).category === "voucher")).map((item) => (
-                        <Card key={item.id} className="border-primary/20">
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <p className="font-semibold">{item.name}</p>
-                                <p className="text-sm text-muted-foreground">{item.description}</p>
-                                <p className="text-2xl font-bold text-purple-400">{item.pointsCost?.toLocaleString()} Points</p>
-                              </div>
-                              <Button
-                                size="sm"
-                                disabled={pointCount < (item.pointsCost || 0)}
-                                onClick={() => { if (pointCount >= (item.pointsCost || 0)) { setOtpModal({ open: true, item }); setOtpSent(false); setOtpCode(""); setOtpEmail(""); } }}
-                              >
-                                {pointCount >= (item.pointsCost || 0) ? "Redeem" : "Not Enough Points"}
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                ))}
               </div>
             )}
           </div>
@@ -557,7 +507,7 @@ export default function Shop() {
           </div>
         )}
 
-        {/* Referral Tab */}}
+        {/* Referral Tab */}
         {activeTab === "referral" && (
           <Card className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30">
             <CardHeader>
