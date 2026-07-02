@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
 import { storage } from "./storage";
+import { generateOTP, sendLoginOTPEmail, verifyLoginOTP } from "./emailService";
 import { handleNewConnection } from "./ws-manager";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1745,6 +1746,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } else {
       socket.destroy();
+    }
+  });
+
+
+  // ─── Auth: Send Login/Register OTP ──────────────────────────────────────────
+  app.post("/api/auth/send-otp", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email || !email.includes("@")) {
+        return res.status(400).json({ error: "Valid email required" });
+      }
+      const otp = generateOTP();
+      const sent = await sendLoginOTPEmail(email.toLowerCase().trim(), otp);
+      if (!sent) return res.status(500).json({ error: "Failed to send OTP" });
+      res.json({ success: true, message: "OTP sent to your email" });
+    } catch (error) {
+      console.error("Send OTP error:", error);
+      res.status(500).json({ error: "Failed to send OTP" });
+    }
+  });
+
+  // ─── Auth: Verify OTP and Login/Register ────────────────────────────────────
+  app.post("/api/auth/verify-otp", async (req, res) => {
+    try {
+      const { email, otp, displayName, gender, dateOfBirth } = req.body;
+      if (!email || !otp) {
+        return res.status(400).json({ error: "Email and OTP required" });
+      }
+
+      const emailKey = email.toLowerCase().trim();
+      const isValid = verifyLoginOTP(emailKey, otp);
+      if (!isValid) {
+        return res.status(400).json({ error: "Invalid or expired OTP" });
+      }
+
+      // Check if user already exists with this email
+      let user = await storage.getUserByEmail(emailKey);
+
+      if (user) {
+        // Existing user - login
+        res.json({
+          success: true,
+          isNewUser: false,
+          userId: user.id,
+          displayName: user.displayName || user.username,
+          message: "Login successful"
+        });
+      } else {
+        // New user - register
+        const newUserId = `player-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+        user = await storage.createUser(
+          { username: newUserId, password: "guest" },
+          undefined,
+          newUserId
+        );
+        // Update with email and profile info
+        await storage.updateUserProfile(user.id, {
+          email: emailKey,
+          displayName: displayName || undefined,
+          gender: gender || "boy",
+        });
+
+        res.json({
+          success: true,
+          isNewUser: true,
+          userId: newUserId,
+          displayName: displayName || newUserId,
+          message: "Account created successfully"
+        });
+      }
+    } catch (error) {
+      console.error("Verify OTP error:", error);
+      res.status(500).json({ error: "Failed to verify OTP" });
     }
   });
 

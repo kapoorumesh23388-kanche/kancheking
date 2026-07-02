@@ -205,6 +205,9 @@ var users = pgTable("users", {
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   isAdmin: boolean("is_admin").notNull().default(false),
+  email: varchar("email", { length: 255 }),
+  phone: varchar("phone", { length: 20 }),
+  isVerified: boolean("is_verified").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   lastActiveAt: timestamp("last_active_at")
 });
@@ -462,8 +465,20 @@ var MemStorage = class {
     const cached = this.users.get(id);
     if (cached) return cached;
     try {
-      const [user] = await db.select().from(users).where(eq(users.id, id));
-      if (user) this.users.set(id, user);
+      let [user] = await db.select().from(users).where(eq(users.id, id));
+      if (!user) {
+        [user] = await db.select().from(users).where(eq(users.username, id));
+      }
+      if (user) this.users.set(user.id, user);
+      return user;
+    } catch {
+      return void 0;
+    }
+  }
+  async getUserByEmail(email) {
+    try {
+      const [user] = await db.select().from(users).where(eq(users.email, email));
+      if (user) this.users.set(user.id, user);
       return user;
     } catch {
       return void 0;
@@ -591,6 +606,7 @@ var MemStorage = class {
       if (profile.displayName !== void 0) updateData.displayName = profile.displayName;
       if (profile.profileImage !== void 0) updateData.profileImage = profile.profileImage;
       if (profile.gender !== void 0) updateData.gender = profile.gender;
+      if (profile.email !== void 0) updateData.email = profile.email;
       const [updated] = await db.update(users).set(updateData).where(eq(users.id, userId)).returning();
       if (updated) this.users.set(userId, updated);
       return updated;
@@ -1154,6 +1170,56 @@ var MemStorage = class {
   }
 };
 var storage = new MemStorage();
+
+// server/emailService.ts
+import nodemailer from "nodemailer";
+var transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS
+  }
+});
+var otpStore = /* @__PURE__ */ new Map();
+function generateOTP() {
+  return Math.floor(1e5 + Math.random() * 9e5).toString();
+}
+async function sendLoginOTPEmail(email, otp) {
+  try {
+    await transporter.sendMail({
+      from: `"Kanche King" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: "Kanche King \u2014 Login OTP",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #1a0a2e; color: #fff; padding: 30px; border-radius: 12px;">
+          <h2 style="color: #a855f7; text-align: center;">\u{1F3AE} Kanche King</h2>
+          <p>Your login OTP is:</p>
+          <div style="background: #2d1b69; border: 2px solid #a855f7; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+            <h1 style="color: #f0abfc; font-size: 40px; letter-spacing: 8px; margin: 0;">${otp}</h1>
+          </div>
+          <p style="color: #aaa;">Valid for <strong>10 minutes</strong>. Do not share this OTP.</p>
+        </div>
+      `
+    });
+    otpStore.set(`login:${email}`, { otp, expiresAt: Date.now() + 10 * 60 * 1e3, type: "login" });
+    return true;
+  } catch (err) {
+    console.error("[sendLoginOTPEmail] Error:", err);
+    return false;
+  }
+}
+function verifyLoginOTP(email, otp) {
+  const key = `login:${email}`;
+  const entry = otpStore.get(key);
+  if (!entry) return false;
+  if (Date.now() > entry.expiresAt) {
+    otpStore.delete(key);
+    return false;
+  }
+  if (entry.otp !== otp) return false;
+  otpStore.delete(key);
+  return true;
+}
 
 // server/ws-manager.ts
 var connectedPlayers = /* @__PURE__ */ new Map();
@@ -3143,6 +3209,66 @@ async function registerRoutes(app2) {
       });
     } else {
       socket.destroy();
+    }
+  });
+  app2.post("/api/auth/send-otp", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email || !email.includes("@")) {
+        return res.status(400).json({ error: "Valid email required" });
+      }
+      const otp = generateOTP();
+      const sent = await sendLoginOTPEmail(email.toLowerCase().trim(), otp);
+      if (!sent) return res.status(500).json({ error: "Failed to send OTP" });
+      res.json({ success: true, message: "OTP sent to your email" });
+    } catch (error) {
+      console.error("Send OTP error:", error);
+      res.status(500).json({ error: "Failed to send OTP" });
+    }
+  });
+  app2.post("/api/auth/verify-otp", async (req, res) => {
+    try {
+      const { email, otp, displayName, gender, dateOfBirth } = req.body;
+      if (!email || !otp) {
+        return res.status(400).json({ error: "Email and OTP required" });
+      }
+      const emailKey = email.toLowerCase().trim();
+      const isValid = verifyLoginOTP(emailKey, otp);
+      if (!isValid) {
+        return res.status(400).json({ error: "Invalid or expired OTP" });
+      }
+      let user = await storage.getUserByEmail(emailKey);
+      if (user) {
+        res.json({
+          success: true,
+          isNewUser: false,
+          userId: user.id,
+          displayName: user.displayName || user.username,
+          message: "Login successful"
+        });
+      } else {
+        const newUserId = `player-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+        user = await storage.createUser(
+          { username: newUserId, password: "guest" },
+          void 0,
+          newUserId
+        );
+        await storage.updateUserProfile(user.id, {
+          email: emailKey,
+          displayName: displayName || void 0,
+          gender: gender || "boy"
+        });
+        res.json({
+          success: true,
+          isNewUser: true,
+          userId: newUserId,
+          displayName: displayName || newUserId,
+          message: "Account created successfully"
+        });
+      }
+    } catch (error) {
+      console.error("Verify OTP error:", error);
+      res.status(500).json({ error: "Failed to verify OTP" });
     }
   });
   return httpServer;

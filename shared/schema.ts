@@ -27,6 +27,9 @@ export const users = pgTable("users", {
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   isAdmin: boolean("is_admin").notNull().default(false),
+  email: varchar("email", { length: 255 }),
+  phone: varchar("phone", { length: 20 }),
+  isVerified: boolean("is_verified").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   lastActiveAt: timestamp("last_active_at"),
 });

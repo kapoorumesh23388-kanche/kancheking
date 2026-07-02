@@ -12,7 +12,7 @@ export interface IStorage {
   updateUserMarbles(userId: string, marbles: number): Promise<User | undefined>;
   updateUserPoints(userId: string, points: number): Promise<User | undefined>;
   updateUserStats(userId: string, stats: { gamesWon?: number; gamesPlayed?: number }): Promise<User | undefined>;
-  updateUserProfile(userId: string, profile: { displayName?: string; profileImage?: string; gender?: string }): Promise<User | undefined>;
+  updateUserProfile(userId: string, profile: { displayName?: string; profileImage?: string; gender?: string; email?: string }): Promise<User | undefined>;
   updateUserOnboarding(userId: string, data: { displayName?: string; dateOfBirth?: string; adPreferences?: string[]; isAgeVerified?: boolean }): Promise<User | undefined>;
   incrementAiWins(userId: string): Promise<User | undefined>;
   addEarnedMarbles(userId: string, amount: number): Promise<User | undefined>;
@@ -126,12 +126,22 @@ export class MemStorage implements IStorage {
   }
 
   async getUser(id: string): Promise<User | undefined> {
-    // Check in-memory first (faster), then database
     const cached = this.users.get(id);
     if (cached) return cached;
     try {
-      const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
-      if (user) this.users.set(id, user);
+      let [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+      if (!user) {
+        [user] = await db.select().from(usersTable).where(eq(usersTable.username, id));
+      }
+      if (user) this.users.set(user.id, user);
+      return user;
+    } catch { return undefined; }
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    try {
+      const [user] = await db.select().from(usersTable).where(eq((usersTable as any).email, email));
+      if (user) this.users.set(user.id, user);
       return user;
     } catch { return undefined; }
   }
@@ -252,12 +262,13 @@ export class MemStorage implements IStorage {
     }
   }
 
-  async updateUserProfile(userId: string, profile: { displayName?: string; profileImage?: string; gender?: string }): Promise<User | undefined> {
+  async updateUserProfile(userId: string, profile: { displayName?: string; profileImage?: string; gender?: string; email?: string }): Promise<User | undefined> {
     try {
       const updateData: any = {};
       if (profile.displayName !== undefined) updateData.displayName = profile.displayName;
       if (profile.profileImage !== undefined) updateData.profileImage = profile.profileImage;
       if (profile.gender !== undefined) updateData.gender = profile.gender;
+      if (profile.email !== undefined) (updateData as any).email = profile.email;
       const [updated] = await db.update(usersTable).set(updateData).where(eq(usersTable.id, userId)).returning();
       if (updated) this.users.set(userId, updated);
       return updated;
