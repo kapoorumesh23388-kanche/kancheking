@@ -54,3 +54,4 @@ export function verifyOTP(email: string, otp: string): boolean {
   otpStore.delete(email); // One-time use
   return true;
 }
+
