@@ -87,34 +87,18 @@ function App() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   useEffect(() => {
-    let userId = localStorage.getItem("userId");
-    if (!userId) {
-      localStorage.clear();
-      
-      userId = `player-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-      localStorage.setItem("userId", userId);
-      localStorage.setItem("playerId", userId);
-      localStorage.setItem("playerProfileCompleted", "false");
-      localStorage.setItem("playerMarbles", "150");
-      localStorage.setItem("playerRewardPoints", "0");
-      localStorage.setItem("gamesPlayed", "0");
-      localStorage.setItem("gamesWon", "0");
-      
-      fetch("/api/user/init", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, username: userId }),
-      }).catch(() => {});
-    } else {
-      if (!localStorage.getItem("playerId")) {
-        localStorage.setItem("playerId", userId);
-      }
-    }
-
+    const userId = localStorage.getItem("userId");
     const profileCompleted = localStorage.getItem("playerProfileCompleted");
     const profileName = localStorage.getItem("playerDisplayName");
-    
-    if (profileCompleted !== "true" && !profileName) {
+
+    // If there's no verified account yet (no userId from OTP signup/login),
+    // or profile/name isn't set, send the player to the Email OTP onboarding flow.
+    // NOTE: We intentionally do NOT generate a random guest userId or call
+    // /api/user/init here anymore — doing so used to create empty "ghost"
+    // user rows in the database (no display name) for every visitor who
+    // never completed signup. Real accounts are now only created when a
+    // player verifies their email OTP (see OnboardingProfile.tsx).
+    if (!userId || (profileCompleted !== "true" && !profileName)) {
       setNeedsOnboarding(true);
     } else {
       setNeedsOnboarding(false);
