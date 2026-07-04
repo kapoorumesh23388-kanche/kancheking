@@ -16,6 +16,7 @@ export interface IStorage {
   updateUserOnboarding(userId: string, data: { displayName?: string; dateOfBirth?: string; adPreferences?: string[]; isAgeVerified?: boolean }): Promise<User | undefined>;
   incrementAiWins(userId: string): Promise<User | undefined>;
   addEarnedMarbles(userId: string, amount: number): Promise<User | undefined>;
+  addPvpWinMarbles(userId: string, amount: number): Promise<User | undefined>;
   updateEarnedMarbles(userId: string, earnedMarbles: number): Promise<User | undefined>;
   
   getCatalogItems(): Promise<CatalogItem[]>;
@@ -332,6 +333,24 @@ export class MemStorage implements IStorage {
       if (user) {
         user.marbles = (user.marbles || 0) + amount;
         user.earnedMarbles = (user.earnedMarbles || 0) + amount;
+        this.users.set(userId, user); return user;
+      }
+      return undefined;
+    }
+  }
+
+  async addPvpWinMarbles(userId: string, amount: number): Promise<User | undefined> {
+    try {
+      const current = await this.getUser(userId);
+      if (!current) return undefined;
+      const newPvpWins = (current.pvpWinMarbles || 0) + amount;
+      const [updated] = await db.update(usersTable).set({ pvpWinMarbles: newPvpWins }).where(eq(usersTable.id, userId)).returning();
+      if (updated) this.users.set(userId, updated);
+      return updated;
+    } catch {
+      const user = this.users.get(userId);
+      if (user) {
+        user.pvpWinMarbles = (user.pvpWinMarbles || 0) + amount;
         this.users.set(userId, user); return user;
       }
       return undefined;

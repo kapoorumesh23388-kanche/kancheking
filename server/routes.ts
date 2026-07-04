@@ -210,6 +210,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (won && opponentType && opponentType !== "ai") {
         // Add marbles to earned marbles for tournament eligibility
         await storage.addEarnedMarbles(userId, 10);
+        // Add to dedicated PvP win marbles counter (used ONLY for leaderboard ranking)
+        await storage.addPvpWinMarbles(userId, 10);
       }
 
       await storage.addGamePoints({
@@ -1080,32 +1082,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get Leaderboard - Real player data sorted by wins and earnings
+  // Get Leaderboard - Ranked purely by PvP Win Marbles, top 20, no eligibility filter
   app.get("/api/leaderboard", async (req, res) => {
     try {
-      const { type = "global" } = req.query;
-      
+      const { type = "global", userId } = req.query;
+
       // Get all users from database
       const allUsers = await storage.getAllUsers();
-      
-      // Filter and sort users for leaderboard
-      const leaderboard = allUsers
-        .filter(u => u.gamesPlayed > 0 || u.earnedMarbles > 0)
+
+      // Sort ALL users by PvP Win Marbles only (no filter, no minimum requirement)
+      const fullSorted = allUsers
         .map(u => ({
           id: u.id,
           name: u.displayName || u.username || "Player",
           avatar: u.profileImage || "",
-          marbles: u.earnedMarbles || 0,
+          marbles: u.pvpWinMarbles || 0,
           gamesWon: u.gamesWon || 0,
           gamesPlayed: u.gamesPlayed || 0,
           winRate: u.gamesPlayed > 0 ? Math.round((u.gamesWon / u.gamesPlayed) * 100) : 0,
           points: u.points || 0,
         }))
         .sort((a, b) => b.marbles - a.marbles)
-        .slice(0, 100)
         .map((entry, index) => ({ ...entry, rank: index + 1 }));
-      
-      res.json({ success: true, leaderboard, type });
+
+      // Top 20 only for display
+      const leaderboard = fullSorted.slice(0, 20);
+
+      // Find the requesting player's own rank & marbles, even if outside top 20
+      let yourRank = 0;
+      let yourMarbles = 0;
+      if (userId) {
+        const found = fullSorted.find(e => e.id === userId);
+        if (found) {
+          yourRank = found.rank;
+          yourMarbles = found.marbles;
+        }
+      }
+
+      res.json({ success: true, leaderboard, type, yourRank, yourMarbles });
     } catch (error) {
       console.error("Leaderboard fetch error:", error);
       res.status(500).json({ error: "Failed to fetch leaderboard" });

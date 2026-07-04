@@ -12,6 +12,7 @@ export const users = pgTable("users", {
   gender: varchar("gender").default("boy"),
   marbles: integer("marbles").notNull().default(150),
   earnedMarbles: integer("earned_marbles").notNull().default(0),
+  pvpWinMarbles: integer("pvp_win_marbles").notNull().default(0),
   purchasedMarbles: integer("purchased_marbles").notNull().default(0),
   tournamentWinnings: integer("tournament_winnings").notNull().default(0),
   points: integer("points").notNull().default(0),

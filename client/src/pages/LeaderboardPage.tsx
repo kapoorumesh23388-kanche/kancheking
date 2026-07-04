@@ -43,16 +43,23 @@ export default function LeaderboardPage() {
   const bonusCheckedRef = useRef(false);
   const [timeUntilReset, setTimeUntilReset] = useState("");
 
-  const { data: leaderboardData, isLoading, refetch } = useQuery<{ leaderboard: LeaderboardEntry[] }>({
-    queryKey: ["/api/leaderboard"],
+  const playerId = localStorage.getItem("playerId") || "";
+
+  const { data: leaderboardData, isLoading, refetch } = useQuery<{
+    leaderboard: LeaderboardEntry[];
+    yourRank: number;
+    yourMarbles: number;
+  }>({
+    queryKey: ["/api/leaderboard", playerId],
+    queryFn: async () => {
+      const res = await fetch(`/api/leaderboard?userId=${encodeURIComponent(playerId)}`);
+      return res.json();
+    },
     refetchInterval: 10000,
     staleTime: 5000,
   });
 
   const globalEntries = useMemo(() => leaderboardData?.leaderboard || [], [leaderboardData]);
-
-  const getWinningMarbles = (): number =>
-    parseInt(localStorage.getItem("pvpWinMarbles") || "0");
 
   // Countdown to next 1st of month
   useEffect(() => {
@@ -72,15 +79,10 @@ export default function LeaderboardPage() {
   }, []);
 
   useEffect(() => {
+    if (!leaderboardData) return;
     const name = localStorage.getItem("playerDisplayName") || "You";
-    const winningMarbles = getWinningMarbles();
-
-    // Rank is determined purely by pvpWinMarbles count
-    let rank = 1;
-    for (const entry of globalEntries) {
-      if (entry.marbles > winningMarbles) rank++;
-    }
-    const finalRank = globalEntries.length > 0 ? rank : 0;
+    const winningMarbles = leaderboardData.yourMarbles || 0;
+    const finalRank = leaderboardData.yourRank || 0;
 
     setCurrentPlayer({ name, winningMarbles, rank: finalRank });
 
@@ -99,7 +101,7 @@ export default function LeaderboardPage() {
         });
       }
     }
-  }, [globalEntries, toast]);
+  }, [leaderboardData, toast]);
 
   return (
     <div className="min-h-screen pt-20 pb-10 overflow-x-hidden">
@@ -220,7 +222,7 @@ export default function LeaderboardPage() {
               Global
             </TabsTrigger>
             <TabsTrigger value="tournament" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" data-testid="tab-tournament">
-              Top 10
+              Top 20
             </TabsTrigger>
             <TabsTrigger value="friends" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" data-testid="tab-friends">
               Friends
@@ -231,7 +233,7 @@ export default function LeaderboardPage() {
             <Leaderboard entries={globalEntries} />
           </TabsContent>
           <TabsContent value="tournament">
-            <Leaderboard entries={globalEntries.slice(0, 10)} />
+            <Leaderboard entries={globalEntries} />
           </TabsContent>
           <TabsContent value="friends">
             <div className="text-center p-10 text-muted-foreground">
