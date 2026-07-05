@@ -708,6 +708,7 @@ export default function GamePlay() {
       {/* Victory Spin Wheel */}
       <SpinWheel
         isOpen={showSpinWheel}
+        userId={localStorage.getItem("userId") || ""}
         onClose={() => {
           setShowSpinWheel(false);
           setPlayer2Marbles(120);
@@ -719,14 +720,12 @@ export default function GamePlay() {
           setIsHiderPlayer1(true);
         }}
         onPrizeWon={(prize) => {
-          if (prize.type === "marbles") {
-            addMarbles('free', prize.value);
-            setPlayer1Marbles(getTotalMarbles());
+          if (prize.type !== "none") {
+            toast({
+              title: "Prize Won!",
+              description: `You won ${prize.name}! Claim it to add it to your account.`,
+            });
           }
-          toast({
-            title: "Prize Won!",
-            description: `You won ${prize.name}!`,
-          });
         }}
       />
 
