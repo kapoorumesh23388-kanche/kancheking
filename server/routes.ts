@@ -1090,7 +1090,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all users from database
       const allUsers = await storage.getAllUsers();
 
-      // Sort ALL users by PvP Win Marbles only (no filter, no minimum requirement)
+      // Sort by PvP Win Marbles first; when tied (common right now since this
+      // is a newly-added counter), break ties by total games won, then games
+      // played — so a brand-new zero-activity account can never outrank an
+      // established player just due to arbitrary database ordering.
       const fullSorted = allUsers
         .map(u => ({
           id: u.id,
@@ -1102,7 +1105,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           winRate: u.gamesPlayed > 0 ? Math.round((u.gamesWon / u.gamesPlayed) * 100) : 0,
           points: u.points || 0,
         }))
-        .sort((a, b) => b.marbles - a.marbles)
+        .sort((a, b) =>
+          b.marbles - a.marbles ||
+          b.gamesWon - a.gamesWon ||
+          b.gamesPlayed - a.gamesPlayed
+        )
         .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
       // Top 20 only for display
