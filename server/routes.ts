@@ -1808,31 +1808,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Login successful"
         });
       } else {
-        // New user - register
-        const newUserId = `player-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-        user = await storage.createUser(
-          { username: newUserId, password: "guest" },
-          undefined,
-          newUserId
-        );
-        // Update with email and profile info
-        await storage.updateUserProfile(user.id, {
-          email: emailKey,
-          displayName: displayName || undefined,
-          gender: gender || "boy",
-        });
-
+        // New user - do NOT create the DB record yet. We only create the
+        // account once the player has also provided their display name
+        // (see /api/auth/complete-signup), so a nameless/incomplete account
+        // can never exist in the database.
         res.json({
           success: true,
           isNewUser: true,
-          userId: newUserId,
-          displayName: displayName || newUserId,
-          message: "Account created successfully"
+          email: emailKey,
+          message: "OTP verified — please complete your profile"
         });
       }
     } catch (error) {
       console.error("Verify OTP error:", error);
       res.status(500).json({ error: "Failed to verify OTP" });
+    }
+  });
+
+  // Complete signup for a brand-new player: creates the user record ONLY
+  // once we have their email AND display name together, so there is never
+  // a moment where an account exists without a name.
+  app.post("/api/auth/complete-signup", async (req, res) => {
+    try {
+      const { email, displayName, gender, dateOfBirth, age } = req.body;
+      if (!email) {
+        return res.status(400).json({ error: "Email required" });
+      }
+      if (!displayName || !displayName.trim()) {
+        return res.status(400).json({ error: "Display name required" });
+      }
+
+      const emailKey = email.toLowerCase().trim();
+
+      // Safety check: if this email somehow already has an account
+      // (e.g. duplicate/retry request), log them in instead of duplicating.
+      const existing = await storage.getUserByEmail(emailKey);
+      if (existing) {
+        return res.json({
+          success: true,
+          isNewUser: false,
+          userId: existing.id,
+          displayName: existing.displayName || existing.username,
+          message: "Account already exists — logged in"
+        });
+      }
+
+      const newUserId = `player-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const isAgeVerified = typeof age === "number" ? age >= 15 : false;
+
+      await storage.createUser(
+        { username: newUserId, password: "guest" },
+        undefined,
+        newUserId
+      );
+
+      await storage.updateUserProfile(newUserId, {
+        email: emailKey,
+        displayName: displayName.trim(),
+        gender: gender || "boy",
+      });
+
+      if (dateOfBirth) {
+        await storage.updateUserOnboarding(newUserId, {
+          displayName: displayName.trim(),
+          dateOfBirth,
+          isAgeVerified,
+        });
+      }
+
+      res.json({
+        success: true,
+        isNewUser: true,
+        userId: newUserId,
+        displayName: displayName.trim(),
+        message: "Account created successfully"
+      });
+    } catch (error) {
+      console.error("Complete signup error:", error);
+      res.status(500).json({ error: "Failed to complete signup" });
     }
   });
 

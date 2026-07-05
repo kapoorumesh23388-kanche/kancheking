@@ -99,14 +99,9 @@ export default function OnboardingProfile() {
       if (!res.ok) throw new Error(data.error || "Invalid OTP");
 
       if (data.isNewUser) {
-        // New user — go to profile setup
+        // New user — do NOT touch localStorage account state yet.
+        // The account is only created once the profile (name) step is submitted.
         setIsNewUser(true);
-        localStorage.setItem("userId", data.userId);
-        localStorage.setItem("playerId", data.userId);
-        localStorage.setItem("playerRewardPoints", "0");
-        localStorage.setItem("playerMarbles", "150");
-        localStorage.setItem("gamesPlayed", "0");
-        localStorage.setItem("gamesWon", "0");
         setStep("profile");
       } else {
         // Existing user — login directly
@@ -127,7 +122,7 @@ export default function OnboardingProfile() {
     }
   };
 
-  // Step 3: Save Profile (new users only)
+  // Step 3: Save Profile (new users only) - creates the account atomically with the name
   const handleSaveProfile = async () => {
     if (!displayName.trim()) {
       toast({ title: "Error", description: "Please enter your name", variant: "destructive" });
@@ -140,21 +135,42 @@ export default function OnboardingProfile() {
     const age = calculateAge(dateOfBirth);
     setIsLoading(true);
     try {
-      const userId = localStorage.getItem("userId");
-      if (!userId) throw new Error("No user ID");
+      const res = await fetch("/api/auth/complete-signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          displayName: displayName.trim(),
+          gender,
+          dateOfBirth,
+          age,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create account");
 
-      localStorage.setItem("playerDisplayName", displayName);
+      const userId = data.userId;
+      localStorage.setItem("userId", userId);
+      localStorage.setItem("playerId", userId);
+      localStorage.setItem("playerRewardPoints", "0");
+      localStorage.setItem("playerMarbles", "150");
+      localStorage.setItem("gamesPlayed", "0");
+      localStorage.setItem("gamesWon", "0");
+      localStorage.setItem("playerDisplayName", data.displayName);
       localStorage.setItem("playerGender", gender);
       localStorage.setItem("playerDateOfBirth", dateOfBirth);
       localStorage.setItem("playerAge", String(age));
       localStorage.setItem("playerIsAgeVerified", age >= 15 ? "true" : "false");
       localStorage.setItem("playerProfileCompleted", "true");
 
-      await fetch("/api/profile/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, displayName, profileImage, gender, dateOfBirth, age }),
-      });
+      // Upload profile image separately if one was chosen (non-critical, best-effort)
+      if (profileImage) {
+        fetch("/api/profile/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, profileImage }),
+        }).catch(() => {});
+      }
 
       window.dispatchEvent(new Event("profileUpdated"));
       if (age >= 15) window.dispatchEvent(new Event("ageVerified"));
