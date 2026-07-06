@@ -78,7 +78,7 @@ export const tournamentWindows = pgTable("tournament_windows", {
   playerCount: integer("player_count").notNull().default(0),
   status: varchar("status").notNull().default("waiting"),
   maxPlayers: integer("max_players").notNull().default(100),
-  entryFee: integer("entry_fee").notNull().default(2500),
+  entryFee: integer("entry_fee").notNull().default(250),
   prizePool: integer("prize_pool").notNull().default(0),
   winnerId: varchar("winner_id"),
   winnerMarblesAwarded: integer("winner_marbles_awarded").notNull().default(0),

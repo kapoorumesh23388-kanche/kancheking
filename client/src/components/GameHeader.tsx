@@ -4,6 +4,7 @@ import { switchBGM, startBGM, stopBGM, isBGMEnabled, initAudioSettings, setMaste
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useState, useRef, useEffect } from "react";
+import { getTotalMarbles, syncWalletFromServer } from "@/lib/marbleStorage";
 import {
   Dialog,
   DialogContent,
@@ -58,10 +59,16 @@ export default function GameHeader() {
         setPlayerName(savedDisplayName);
       }
       if (savedProfilePic) setProfilePic(savedProfilePic);
+
+      setTotalMarbles(getTotalMarbles());
     };
 
     syncFromStorage();
+    const userId = localStorage.getItem("userId");
+    if (userId) syncWalletFromServer(userId);
+
     window.addEventListener("storage", syncFromStorage);
+    window.addEventListener("marbleUpdate", syncFromStorage);
     
     // Listen for profile update event
     const handleProfileUpdate = (event: Event) => {
@@ -73,6 +80,7 @@ export default function GameHeader() {
     
     return () => {
       window.removeEventListener("storage", syncFromStorage);
+      window.removeEventListener("marbleUpdate", syncFromStorage);
       window.removeEventListener("profileUpdated", handleProfileUpdate);
     };
   }, [location]);

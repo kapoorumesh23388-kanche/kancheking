@@ -192,18 +192,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Record game result (player vs player) - ADDS earnedMarbles ONLY for player wins, NOT for AI
   app.post("/api/game-points", async (req, res) => {
     try {
-      const { userId, points, gameType, opponent, won, opponentType } = req.body;
-      
+      const { userId, points, gameType, opponent, won, opponentType, marblesDelta } = req.body;
+
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const newPoints = user.points + points;
       const newGamesPlayed = user.gamesPlayed + 1;
       const newGamesWon = won ? user.gamesWon + 1 : user.gamesWon;
 
-      await storage.updateUserPoints(userId, newPoints);
+      // Single source of truth: apply BOTH points and marbles change atomically here.
+      const delta = typeof marblesDelta === "number" ? marblesDelta : 0;
+      const updatedUser = await storage.adjustWallet(userId, delta, points || 0);
       await storage.updateUserStats(userId, { gamesWon: newGamesWon, gamesPlayed: newGamesPlayed });
 
       // If player won against friend or random player, add earned marbles
@@ -222,9 +223,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         won,
       });
 
-      res.json({ points: newPoints, success: true });
+      const finalUser = await storage.getUser(userId);
+      res.json({
+        points: finalUser?.points ?? 0,
+        marbles: finalUser?.marbles ?? 0,
+        success: true,
+      });
     } catch (error) {
       res.status(500).json({ error: "Failed to record game points" });
+    }
+  });
+
+  // Single generic endpoint for any other marbles/points change (ads reward,
+  // points->marbles shop conversion, daily/playtime/referral bonuses, etc.)
+  // This — together with adjustWallet in storage.ts — is now the ONLY path
+  // that changes a player's wallet, so the database is always the source
+  // of truth and every screen (Home, Profile, GameHeader) shows the same number.
+  app.post("/api/wallet/adjust", async (req, res) => {
+    try {
+      const { userId, marblesDelta, pointsDelta, reason } = req.body;
+      if (!userId) return res.status(400).json({ error: "userId required" });
+
+      const updated = await storage.adjustWallet(
+        userId,
+        typeof marblesDelta === "number" ? marblesDelta : 0,
+        typeof pointsDelta === "number" ? pointsDelta : 0
+      );
+      if (!updated) return res.status(404).json({ error: "User not found" });
+
+      res.json({ success: true, marbles: updated.marbles, points: updated.points, reason });
+    } catch (error) {
+      console.error("Wallet adjust error:", error);
+      res.status(500).json({ error: "Failed to adjust wallet" });
     }
   });
 
@@ -246,32 +276,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Tournament entry: Requires 2500 marbles from EARNED (player wins) + PURCHASED combined
-      // Does NOT count: AI wins or ad rewards
-      const earnedFromPlayers = user.earnedMarbles || 0;
-      const purchasedMarbles = user.purchasedMarbles || 0;
-      const validMarblesForTournament = earnedFromPlayers + purchasedMarbles;
-      
-      if (validMarblesForTournament < 2500) {
-        return res.status(400).json({ 
-          error: "Insufficient marbles for tournament entry. You need 2500 marbles from earned (player wins) or purchased marbles (AI wins and ad rewards don't count).",
-          earnedMarblesAvailable: earnedFromPlayers,
-          purchasedMarblesAvailable: purchasedMarbles,
-          totalValidMarbles: validMarblesForTournament,
-          requiredMarbles: 2500,
-          message: `You need ${2500 - validMarblesForTournament} more marbles from player wins or purchases`
+      // Tournament entry: 250 marbles from PvP Win Marbles ONLY.
+      // (AI wins, ad rewards, and purchased marbles don't count.)
+      const ENTRY_FEE = 250;
+      const eligibleMarbles = user.pvpWinMarbles || 0;
+
+      if (eligibleMarbles < ENTRY_FEE) {
+        return res.status(400).json({
+          error: `Insufficient eligible marbles for tournament entry. You need ${ENTRY_FEE} PvP Win Marbles (AI wins and ad rewards don't count).`,
+          eligibleMarblesAvailable: eligibleMarbles,
+          requiredMarbles: ENTRY_FEE,
+          message: `You need ${ENTRY_FEE - eligibleMarbles} more PvP Win Marbles`
         });
       }
 
-      // Deduct 2500 from total marbles
-      const newMarbles = user.marbles - 2500;
-      await storage.updateUserMarbles(userId, newMarbles);
+      // Deduct entry fee from both the spendable balance and the
+      // PvP-win-marbles eligibility counter (single source of truth = DB)
+      const updatedUser = await storage.adjustWallet(userId, -ENTRY_FEE, 0);
+      await storage.addPvpWinMarbles(userId, -ENTRY_FEE);
 
       await storage.recordTransaction({
         userId,
-        amount: -2500,
+        amount: -ENTRY_FEE,
         type: "tournament_entry",
-        description: "Tournament entry fee (2500 marbles from earned/purchased)",
+        description: "Tournament entry fee (250 PvP Win Marbles)",
         transactionId: null,
       });
 
@@ -281,16 +309,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let tournamentId = null;
       if (window) {
         await storage.updateTournamentPlayerCount(window.id, window.playerCount + 1);
+        await storage.addToPrizePool(window.id, ENTRY_FEE);
         // Use the actual database window ID as tournament ID
         tournamentId = window.id;
       }
 
       res.json({ 
         success: true, 
-        marbles: newMarbles,
+        marbles: updatedUser?.marbles ?? 0,
         tournamentId,
         windowId: window?.id || windowId,
-        message: "Tournament entry confirmed. 2500 marbles deducted (from earned/purchased)."
+        message: "Tournament entry confirmed. 250 marbles deducted (PvP wins only)."
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to join tournament" });
@@ -300,34 +329,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tournament/winner", async (req, res) => {
     try {
       const { userId, windowId } = req.body;
-      const WINNING_MARBLES = 250000; // Temporary marbles shown during tournament
-      
+      const WINNER_POINTS_BONUS = 2500;
+
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // AWARD TEMPORARY WINNING MARBLES (visible only during tournament)
-      const newTournamentWinnings = user.tournamentWinnings + WINNING_MARBLES;
-      const newMarbles = user.marbles + WINNING_MARBLES;
-      
-      await storage.updateUserMarbles(userId, newMarbles);
+      const windows = await storage.getTournamentWindows();
+      const window = windows.find(w => w.id === windowId || w.id === String(windowId));
+      const prizePoolMarbles = window?.prizePool || 0;
+
+      // Winner gets the FULL prize pool (accumulated 250-marble entry fees
+      // from every participant) as real marbles, PLUS a flat 2500 points
+      // bonus — both credited directly to the database balance.
+      const updatedUser = await storage.adjustWallet(userId, prizePoolMarbles, WINNER_POINTS_BONUS);
+
+      if (window) {
+        await storage.setTournamentWinnerReward(window.id, userId, prizePoolMarbles);
+      }
 
       await storage.recordTransaction({
         userId,
-        amount: WINNING_MARBLES,
+        amount: prizePoolMarbles,
         type: "tournament_winning_marbles",
-        description: `Tournament Win - 250,000 winning marbles (TEMPORARY - shown until tournament converts to points)`,
+        description: `Tournament Win - ${prizePoolMarbles} marbles (prize pool) + ${WINNER_POINTS_BONUS} points`,
         transactionId: null,
       });
 
       res.json({ 
         success: true, 
-        marbles: newMarbles,
-        tournamentWinnings: newTournamentWinnings,
-        message: "🏆 Tournament Win! 250,000 marbles awarded. Will convert to 1 lakh (100,000) redeemable points when tournament ends.",
-        conversionRate: "250,000 winning marbles = 1 lakh (100,000) points",
-        note: "These marbles will disappear after tournament conversion - you'll receive 1 lakh points instead"
+        marbles: updatedUser?.marbles ?? 0,
+        points: updatedUser?.points ?? 0,
+        marblesAwarded: prizePoolMarbles,
+        pointsAwarded: WINNER_POINTS_BONUS,
+        message: `🏆 Tournament Win! ${prizePoolMarbles} marbles + ${WINNER_POINTS_BONUS} points awarded.`
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to record tournament win" });

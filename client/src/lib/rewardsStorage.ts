@@ -39,6 +39,20 @@ function getTodayDate(): string {
   return new Date().toISOString().split("T")[0];
 }
 
+// Persist a points change to the database in the background. Local
+// localStorage bookkeeping above still gives instant UI feedback and
+// tracks "have I already claimed this today" — this call is what makes
+// the points balance itself survive a cache clear / different device.
+function syncPointsToServer(pointsDelta: number, reason: string): void {
+  const userId = localStorage.getItem("userId");
+  if (!userId || pointsDelta === 0) return;
+  fetch("/api/wallet/adjust", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, marblesDelta: 0, pointsDelta, reason }),
+  }).catch(() => {});
+}
+
 function getDailyData(): DailyRewardsData {
   const today = getTodayDate();
   const stored = localStorage.getItem(`${REWARDS_KEY_PREFIX}${today}`);
@@ -187,6 +201,7 @@ export function checkAndClaimDailyLoginBonus(): { claimed: boolean; points: numb
   });
 
   window.dispatchEvent(new Event("rewardPointsUpdate"));
+  syncPointsToServer(points, "daily_login_bonus");
   return { claimed: true, points };
 }
 
@@ -229,6 +244,7 @@ export function checkAndClaimPlaytimeRewards(): { claimed: boolean; points: numb
     });
 
     window.dispatchEvent(new Event("rewardPointsUpdate"));
+    syncPointsToServer(totalPoints, "playtime_bonus");
     return { claimed: true, points: totalPoints, milestones: unclaimed };
   }
 
@@ -256,6 +272,7 @@ export function checkAndClaimDefeatBonuses(): { claimed: boolean; points: number
     });
 
     window.dispatchEvent(new Event("rewardPointsUpdate"));
+    syncPointsToServer(pointsEarned, "ai_defeat_bonus");
     return { claimed: true, points: pointsEarned, defeats: unclaimedDefeats };
   }
 
@@ -280,6 +297,7 @@ export function awardLeaderboardBonus(): void {
   });
 
   window.dispatchEvent(new Event("rewardPointsUpdate"));
+  syncPointsToServer(points, "leaderboard_monthly_bonus");
 }
 
 export function awardTournamentWin(tournamentName?: string): void {
@@ -295,6 +313,7 @@ export function awardTournamentWin(tournamentName?: string): void {
   });
 
   window.dispatchEvent(new Event("rewardPointsUpdate"));
+  syncPointsToServer(points, "tournament_win");
 }
 
 export function awardPvpWin(): void {
@@ -310,6 +329,7 @@ export function awardPvpWin(): void {
   });
 
   window.dispatchEvent(new Event("rewardPointsUpdate"));
+  syncPointsToServer(points, "pvp_win_bonus");
 }
 
 export function getDailyStats(): {

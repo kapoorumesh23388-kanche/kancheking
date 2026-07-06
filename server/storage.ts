@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, catalogItems, users as usersTable, spinRewards as spinRewardsTable } from "@shared/schema";
+import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type TournamentParticipant, type TournamentMatch, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, catalogItems, users as usersTable, spinRewards as spinRewardsTable, tournamentWindows as tournamentWindowsTable, tournamentParticipants as tournamentParticipantsTable, tournamentMatches as tournamentMatchesTable } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -16,6 +16,7 @@ export interface IStorage {
   updateUserOnboarding(userId: string, data: { displayName?: string; dateOfBirth?: string; adPreferences?: string[]; isAgeVerified?: boolean }): Promise<User | undefined>;
   incrementAiWins(userId: string): Promise<User | undefined>;
   addEarnedMarbles(userId: string, amount: number): Promise<User | undefined>;
+  adjustWallet(userId: string, marblesDelta: number, pointsDelta: number): Promise<User | undefined>;
   addPvpWinMarbles(userId: string, amount: number): Promise<User | undefined>;
   createSpinReward(userId: string, prizeName: string, prizeType: string, prizeValue: number): Promise<SpinReward>;
   getPendingSpinRewards(userId: string): Promise<SpinReward[]>;
@@ -38,6 +39,8 @@ export interface IStorage {
   getActiveTournamentWindow(): Promise<TournamentWindow | undefined>;
   addTournamentWindow(window: Omit<TournamentWindow, 'id' | 'createdAt'>): Promise<TournamentWindow>;
   updateTournamentPlayerCount(windowId: string, count: number): Promise<void>;
+  addToPrizePool(windowId: string, amount: number): Promise<void>;
+  setTournamentWinnerReward(windowId: string, winnerId: string, marblesAwarded: number): Promise<void>;
   
   createGameRoom(creatorId: string, gameMode: string): Promise<GameRoom>;
   getGameRoom(roomCode: string): Promise<GameRoom | undefined>;
@@ -73,12 +76,12 @@ export interface IStorage {
   getEngagementAnalytics(): Promise<{ dailyStats: any[]; topUsers: any[]; adStats: any[] }>;
   
   // Tournament Bracket Methods
-  getTournamentParticipants(tournamentId: string): Promise<any[]>;
-  addTournamentParticipant(participant: any): Promise<any>;
-  getTournamentMatches(tournamentId: string): Promise<any[]>;
-  getTournamentMatch(matchId: string): Promise<any>;
-  createTournamentMatch(match: any): Promise<any>;
-  updateTournamentMatch(matchId: string, updates: any): Promise<any>;
+  getTournamentParticipants(tournamentId: string): Promise<TournamentParticipant[]>;
+  addTournamentParticipant(participant: Omit<TournamentParticipant, 'id' | 'createdAt'>): Promise<TournamentParticipant>;
+  getTournamentMatches(tournamentId: string): Promise<TournamentMatch[]>;
+  getTournamentMatch(matchId: string): Promise<TournamentMatch | undefined>;
+  createTournamentMatch(match: Omit<TournamentMatch, 'id' | 'createdAt'>): Promise<TournamentMatch>;
+  updateTournamentMatch(matchId: string, updates: Partial<TournamentMatch>): Promise<TournamentMatch | undefined>;
   updateTournamentStatus(tournamentId: string, status: string): Promise<void>;
   setTournamentWinner(tournamentId: string, winnerId: string, winnerName: string): Promise<void>;
 }
@@ -88,7 +91,6 @@ export class MemStorage implements IStorage {
   private catalogItems: Map<string, CatalogItem>;
   private transactions: MarbleTransaction[];
   private gamePoints: GamePoint[];
-  private tournamentWindows: Map<string, TournamentWindow>;
   private gameRooms: Map<string, GameRoom>;
   private matchQueue: Map<string, { userId: string; username: string; marbles: number }>;
   private feedbackSubmissions: FeedbackSubmission[];
@@ -99,7 +101,6 @@ export class MemStorage implements IStorage {
     this.catalogItems = new Map();
     this.transactions = [];
     this.gamePoints = [];
-    this.tournamentWindows = new Map();
     this.gameRooms = new Map();
     this.matchQueue = new Map();
     this.feedbackSubmissions = [];
@@ -112,21 +113,6 @@ export class MemStorage implements IStorage {
       password: "admin123",
       createdAt: new Date(),
     });
-    
-    const window: TournamentWindow = {
-      id: randomUUID(),
-      windowNumber: 1,
-      playerCount: 0,
-      status: "waiting",
-      maxPlayers: 100,
-      entryFee: 2500,
-      prizePool: 0,
-      winnerId: null,
-      winnerMarblesAwarded: 0,
-      createdAt: new Date(),
-      endedAt: null,
-    };
-    this.tournamentWindows.set(window.id, window);
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -322,6 +308,30 @@ export class MemStorage implements IStorage {
     }
   }
 
+  async adjustWallet(userId: string, marblesDelta: number, pointsDelta: number): Promise<User | undefined> {
+    try {
+      const current = await this.getUser(userId);
+      if (!current) return undefined;
+      const newMarbles = Math.max(0, (current.marbles || 0) + marblesDelta);
+      const newPoints = Math.max(0, (current.points || 0) + pointsDelta);
+      const [updated] = await db.update(usersTable)
+        .set({ marbles: newMarbles, points: newPoints })
+        .where(eq(usersTable.id, userId))
+        .returning();
+      if (updated) this.users.set(userId, updated);
+      return updated;
+    } catch {
+      const user = this.users.get(userId);
+      if (user) {
+        user.marbles = Math.max(0, (user.marbles || 0) + marblesDelta);
+        user.points = Math.max(0, (user.points || 0) + pointsDelta);
+        this.users.set(userId, user);
+        return user;
+      }
+      return undefined;
+    }
+  }
+
   async addEarnedMarbles(userId: string, amount: number): Promise<User | undefined> {
     try {
       const current = await this.getUser(userId);
@@ -379,7 +389,7 @@ export class MemStorage implements IStorage {
     try {
       const current = await this.getUser(userId);
       if (!current) return undefined;
-      const newPvpWins = (current.pvpWinMarbles || 0) + amount;
+      const newPvpWins = Math.max(0, (current.pvpWinMarbles || 0) + amount);
       const [updated] = await db.update(usersTable).set({ pvpWinMarbles: newPvpWins }).where(eq(usersTable.id, userId)).returning();
       if (updated) this.users.set(userId, updated);
       return updated;
@@ -485,47 +495,74 @@ export class MemStorage implements IStorage {
   }
 
   async getTournamentWindows(): Promise<TournamentWindow[]> {
-    return Array.from(this.tournamentWindows.values());
+    return await db.select().from(tournamentWindowsTable);
   }
 
   async getActiveTournamentWindow(): Promise<TournamentWindow | undefined> {
-    const windows = Array.from(this.tournamentWindows.values());
-    return windows.find((w) => w.status === "waiting" && w.playerCount < w.maxPlayers);
-  }
+    const windows = await db.select().from(tournamentWindowsTable);
+    const active = windows.find((w) => w.status === "waiting" && w.playerCount < w.maxPlayers);
+    if (active) return active;
 
-  async addTournamentWindow(window: Omit<TournamentWindow, 'id' | 'createdAt'>): Promise<TournamentWindow> {
-    const newWindow: TournamentWindow = {
-      ...window,
-      id: randomUUID(),
+    // No open window exists yet — create the first one automatically.
+    return await this.addTournamentWindow({
+      windowNumber: windows.length + 1,
+      playerCount: 0,
+      status: "waiting",
+      maxPlayers: 100,
+      entryFee: 250,
+      prizePool: 0,
       winnerId: null,
       winnerMarblesAwarded: 0,
       endedAt: null,
-      createdAt: new Date(),
-    };
-    this.tournamentWindows.set(newWindow.id, newWindow);
+    });
+  }
+
+  async addTournamentWindow(window: Omit<TournamentWindow, 'id' | 'createdAt'>): Promise<TournamentWindow> {
+    const [newWindow] = await db.insert(tournamentWindowsTable).values({
+      ...window,
+      winnerId: null,
+      winnerMarblesAwarded: 0,
+      endedAt: null,
+    }).returning();
     return newWindow;
   }
 
   async updateTournamentPlayerCount(windowId: string, count: number): Promise<void> {
-    const window = this.tournamentWindows.get(windowId);
-    if (window) {
-      window.playerCount = count;
-      if (count >= 100) {
-        window.status = "active";
-        await this.addTournamentWindow({
-          windowNumber: window.windowNumber + 1,
-          playerCount: 0,
-          status: "waiting",
-          maxPlayers: 100,
-          entryFee: 2500,
-          prizePool: 0,
-          winnerId: null,
-          winnerMarblesAwarded: 0,
-          endedAt: null,
-        });
-      }
-      this.tournamentWindows.set(windowId, window);
+    const [window] = await db.select().from(tournamentWindowsTable).where(eq(tournamentWindowsTable.id, windowId));
+    if (!window) return;
+
+    const newStatus = count >= window.maxPlayers ? "active" : window.status;
+    await db.update(tournamentWindowsTable)
+      .set({ playerCount: count, status: newStatus })
+      .where(eq(tournamentWindowsTable.id, windowId));
+
+    if (count >= window.maxPlayers) {
+      await this.addTournamentWindow({
+        windowNumber: window.windowNumber + 1,
+        playerCount: 0,
+        status: "waiting",
+        maxPlayers: 100,
+        entryFee: 250,
+        prizePool: 0,
+        winnerId: null,
+        winnerMarblesAwarded: 0,
+        endedAt: null,
+      });
     }
+  }
+
+  async addToPrizePool(windowId: string, amount: number): Promise<void> {
+    const [window] = await db.select().from(tournamentWindowsTable).where(eq(tournamentWindowsTable.id, windowId));
+    if (!window) return;
+    await db.update(tournamentWindowsTable)
+      .set({ prizePool: (window.prizePool || 0) + amount })
+      .where(eq(tournamentWindowsTable.id, windowId));
+  }
+
+  async setTournamentWinnerReward(windowId: string, winnerId: string, marblesAwarded: number): Promise<void> {
+    await db.update(tournamentWindowsTable)
+      .set({ winnerId, winnerMarblesAwarded: marblesAwarded, status: "completed", endedAt: new Date() })
+      .where(eq(tournamentWindowsTable.id, windowId));
   }
 
   async createGameRoom(creatorId: string, gameMode: string): Promise<GameRoom> {
@@ -900,64 +937,52 @@ export class MemStorage implements IStorage {
     return { dailyStats, topUsers, adStats };
   }
 
-  // Tournament Bracket Methods
-  private tournamentParticipants: Map<string, any[]> = new Map();
-  private tournamentMatches: Map<string, any> = new Map();
+  // Tournament Bracket Methods — all persisted to the real database now,
+  // so tournament progress survives server restarts / free-tier spin-downs.
 
-  async getTournamentParticipants(tournamentId: string): Promise<any[]> {
-    return this.tournamentParticipants.get(tournamentId) || [];
+  async getTournamentParticipants(tournamentId: string): Promise<TournamentParticipant[]> {
+    return await db.select().from(tournamentParticipantsTable)
+      .where(eq(tournamentParticipantsTable.tournamentId, tournamentId));
   }
 
-  async addTournamentParticipant(participant: any): Promise<any> {
-    const id = randomUUID();
-    const newParticipant = { ...participant, id, createdAt: new Date() };
-    const participants = this.tournamentParticipants.get(participant.tournamentId) || [];
-    participants.push(newParticipant);
-    this.tournamentParticipants.set(participant.tournamentId, participants);
+  async addTournamentParticipant(participant: Omit<TournamentParticipant, 'id' | 'createdAt'>): Promise<TournamentParticipant> {
+    const [newParticipant] = await db.insert(tournamentParticipantsTable).values(participant).returning();
     return newParticipant;
   }
 
-  async getTournamentMatches(tournamentId: string): Promise<any[]> {
-    return Array.from(this.tournamentMatches.values()).filter(m => m.tournamentId === tournamentId);
+  async getTournamentMatches(tournamentId: string): Promise<TournamentMatch[]> {
+    return await db.select().from(tournamentMatchesTable)
+      .where(eq(tournamentMatchesTable.tournamentId, tournamentId));
   }
 
-  async getTournamentMatch(matchId: string): Promise<any> {
-    return this.tournamentMatches.get(matchId);
+  async getTournamentMatch(matchId: string): Promise<TournamentMatch | undefined> {
+    const [match] = await db.select().from(tournamentMatchesTable).where(eq(tournamentMatchesTable.id, matchId));
+    return match;
   }
 
-  async createTournamentMatch(match: any): Promise<any> {
-    const id = randomUUID();
-    const newMatch = { ...match, id, createdAt: new Date() };
-    this.tournamentMatches.set(id, newMatch);
+  async createTournamentMatch(match: Omit<TournamentMatch, 'id' | 'createdAt'>): Promise<TournamentMatch> {
+    const [newMatch] = await db.insert(tournamentMatchesTable).values(match).returning();
     return newMatch;
   }
 
-  async updateTournamentMatch(matchId: string, updates: any): Promise<any> {
-    const match = this.tournamentMatches.get(matchId);
-    if (match) {
-      const updated = { ...match, ...updates };
-      this.tournamentMatches.set(matchId, updated);
-      return updated;
-    }
-    return null;
+  async updateTournamentMatch(matchId: string, updates: Partial<TournamentMatch>): Promise<TournamentMatch | undefined> {
+    const [updated] = await db.update(tournamentMatchesTable)
+      .set(updates)
+      .where(eq(tournamentMatchesTable.id, matchId))
+      .returning();
+    return updated;
   }
 
   async updateTournamentStatus(tournamentId: string, status: string): Promise<void> {
-    const window = this.tournamentWindows.get(tournamentId);
-    if (window) {
-      window.status = status;
-      this.tournamentWindows.set(tournamentId, window);
-    }
+    await db.update(tournamentWindowsTable)
+      .set({ status })
+      .where(eq(tournamentWindowsTable.id, tournamentId));
   }
 
   async setTournamentWinner(tournamentId: string, winnerId: string, winnerName: string): Promise<void> {
-    const window = this.tournamentWindows.get(tournamentId);
-    if (window) {
-      window.winnerId = winnerId;
-      window.status = "completed";
-      window.endedAt = new Date();
-      this.tournamentWindows.set(tournamentId, window);
-    }
+    await db.update(tournamentWindowsTable)
+      .set({ winnerId, status: "completed", endedAt: new Date() })
+      .where(eq(tournamentWindowsTable.id, tournamentId));
   }
 }
 

@@ -13,6 +13,8 @@ import {
   initializeMarbles,
   addMarbles,
   buyMarblesWithPoints,
+  setCachedTotals,
+  syncWalletFromServer,
 } from "@/lib/marbleStorage";
 import {
   getRedemptionHistory,
@@ -98,6 +100,8 @@ export default function Shop() {
 
   useEffect(() => {
     initializeMarbles();
+    const userId = localStorage.getItem("userId");
+    if (userId) syncWalletFromServer(userId);
   }, []);
 
   const updateStats = useCallback(() => {
@@ -153,8 +157,20 @@ export default function Shop() {
       // Ad finished
       const nextWatched = adWatchState.adsWatched + 1;
       if (nextWatched >= adWatchState.adsTotal) {
-        // All ads done — reward marbles
-        addMarbles("ads", adWatchState.marblesReward);
+        // All ads done — reward marbles via the database (single source of truth)
+        const userId = localStorage.getItem("userId");
+        if (userId) {
+          fetch("/api/wallet/adjust", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, marblesDelta: adWatchState.marblesReward, pointsDelta: 0, reason: "ad_reward" }),
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (typeof data.marbles === "number") setCachedTotals(data.marbles, data.points);
+            })
+            .catch(() => {});
+        }
         toast({
           title: "🎉 Ads Complete!",
           description: `You earned ${adWatchState.marblesReward} marbles!`,
@@ -222,22 +238,41 @@ export default function Shop() {
   };
 
   // --- Buy marbles with points ---
-  const handleBuyWithPoints = (pack: typeof MARBLE_PACKS_POINTS[0]) => {
+  const handleBuyWithPoints = async (pack: typeof MARBLE_PACKS_POINTS[0]) => {
     if (pointCount < pack.points) {
       toast({ title: "Not enough points", description: `You need ${pack.points} points.`, variant: "destructive" });
       return;
     }
-    const success = buyMarblesWithPoints(pack.marbles, pack.points);
-    if (success) {
-      addRedemptionHistoryEntry({
-        date: new Date().toISOString(),
-        type: "marble_purchase",
-        pointsSpent: pack.points,
-        marblesReceived: pack.marbles,
-        description: `Bought ${pack.marbles} marbles for ${pack.points} points`,
+    const userId = localStorage.getItem("userId");
+    if (!userId) return;
+    try {
+      const res = await fetch("/api/wallet/adjust", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          marblesDelta: pack.marbles,
+          pointsDelta: -pack.points,
+          reason: "points_to_marbles",
+        }),
       });
-      updateStats();
-      toast({ title: "✅ Purchase Successful!", description: `${pack.marbles} marbles added to your account.` });
+      const data = await res.json();
+      if (data.success) {
+        setCachedTotals(data.marbles, data.points);
+        addRedemptionHistoryEntry({
+          date: new Date().toISOString(),
+          type: "marble_purchase",
+          pointsSpent: pack.points,
+          marblesReceived: pack.marbles,
+          description: `Bought ${pack.marbles} marbles for ${pack.points} points`,
+        });
+        updateStats();
+        toast({ title: "✅ Purchase Successful!", description: `${pack.marbles} marbles added to your account.` });
+      } else {
+        toast({ title: "Error", description: "Purchase failed. Try again.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Network error. Try again.", variant: "destructive" });
     }
   };
 

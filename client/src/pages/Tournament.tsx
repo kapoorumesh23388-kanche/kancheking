@@ -12,8 +12,9 @@ import {
   getTotalMarbles,
   isTournamentEligible,
   getMarblesNeededForTournament,
-  spendMarbles,
-  initializeMarbles
+  initializeMarbles,
+  setCachedTotals,
+  syncEligibleMarblesFromServer,
 } from "@/lib/marbleStorage";
 
 interface TournamentMatch {
@@ -85,6 +86,10 @@ export default function Tournament() {
   // Initialize marbles on first load
   useEffect(() => {
     initializeMarbles();
+    const userId = localStorage.getItem("userId");
+    if (userId) syncEligibleMarblesFromServer(userId).then((val) => {
+      if (val !== null) setEligibleMarbles(val);
+    });
   }, []);
   
   // Real-time update of player stats
@@ -164,18 +169,19 @@ export default function Tournament() {
       
       if (response.ok) {
         const data = await response.json();
-        
-        // Deduct marbles using proper accounting
-        const deducted = spendMarbles(entryFee);
-        if (!deducted) {
-          toast({
-            title: "Deduction Failed",
-            description: "Could not deduct entry fee. You may not have enough eligible marbles.",
-            variant: "destructive",
-          });
-          return;
+
+        // Server already deducted 250 marbles from the database (single
+        // source of truth) — just sync the local cache to match, no
+        // separate local deduction needed here anymore.
+        if (typeof data.marbles === "number") {
+          setCachedTotals(data.marbles);
         }
         updatePlayerStats();
+        const userId = localStorage.getItem("userId");
+        if (userId) {
+          const val = await syncEligibleMarblesFromServer(userId);
+          if (val !== null) setEligibleMarbles(val);
+        }
         
         // Store the tournament ID for bracket viewing
         if (data.tournamentId) {

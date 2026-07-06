@@ -21,7 +21,9 @@ import {
   loseMarbles,
   getTotalMarbles, 
   initializeMarbles,
-  recordGameResult 
+  recordGameResult,
+  setCachedTotals,
+  syncWalletFromServer,
 } from "@/lib/marbleStorage";
 import {
   initializeDailyRewards,
@@ -150,11 +152,16 @@ export default function GamePlay() {
       try {
         const userId = localStorage.getItem("userId");
         if (userId) {
-          // Fetch fresh profile from API - ensures latest picture
+          // Fetch fresh profile from API - ensures latest picture AND
+          // the true marbles/points balance (database is source of truth)
           const response = await fetch(`/api/user/${userId}`);
           const userData = await response.json();
           if (userData.displayName) setPlayer1Name(userData.displayName);
           if (userData.profileImage) setPlayer1Image(userData.profileImage);
+          if (typeof userData.marbles === "number") {
+            setPlayer1Marbles(userData.marbles);
+            setCachedTotals(userData.marbles, userData.points);
+          }
         }
       } catch (err) {
         // Fallback to localStorage if API fails
@@ -339,23 +346,22 @@ export default function GamePlay() {
         playerWon = won;
       }
       
-      // Update marble counts using marble storage utility
+      // Update marble counts — the SERVER call below is what actually
+      // changes the database balance now. We optimistically show the
+      // new number immediately, then overwrite with the server's
+      // confirmed value once the response comes back.
       let newPlayer1Marbles = player1Marbles;
       let newPlayer2Marbles = player2Marbles;
 
       if (playerWon) {
-        // Player won against AI - add to 'ai' bucket (gameplay only, not tournament eligible)
-        addMarbles('ai', lastBet);
-        newPlayer1Marbles = getTotalMarbles();
+        newPlayer1Marbles = player1Marbles + lastBet;
         newPlayer2Marbles = player2Marbles - lastBet;
       } else {
-        // Player lost to AI - lose marbles (cascades through all buckets)
-        loseMarbles(lastBet);
-        newPlayer1Marbles = getTotalMarbles();
+        newPlayer1Marbles = Math.max(0, player1Marbles - lastBet);
         newPlayer2Marbles = player2Marbles + lastBet;
       }
       
-      // Record game result for stats
+      // Record game result for stats (local daily stats/streaks only)
       recordGameResult(playerWon);
 
       // Check for zero marbles and show ads
@@ -385,7 +391,9 @@ export default function GamePlay() {
           }).catch(() => {});
         }
 
-        // Save game points and stats to backend
+        // Save game points and stats to backend — this is also the ONLY
+        // place that now actually changes the marbles balance in the
+        // database (marblesDelta), so Home/Profile/GameHeader always agree.
         fetch("/api/game-points", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -394,9 +402,16 @@ export default function GamePlay() {
             won,
             opponentType: "ai",
             pointsEarned: won ? 10 : 0,
+            points: won ? 10 : 0,
+            marblesDelta: playerWon ? lastBet : -lastBet,
           })
         })
-        .then(() => {
+        .then((res) => res.json())
+        .then((data) => {
+          if (typeof data.marbles === "number") {
+            setPlayer1Marbles(data.marbles);
+            setCachedTotals(data.marbles, data.points);
+          }
           // Dispatch event to refresh profile stats
           window.dispatchEvent(new Event("gameStatsUpdated"));
         })
@@ -709,7 +724,7 @@ export default function GamePlay() {
       <SpinWheel
         isOpen={showSpinWheel}
         userId={localStorage.getItem("userId") || ""}
-        onClose={() => {
+        onClose={async () => {
           setShowSpinWheel(false);
           setPlayer2Marbles(120);
           setPhase("selecting");
@@ -718,6 +733,11 @@ export default function GamePlay() {
           setGameResult(null);
           setShowRevealButton(false);
           setIsHiderPlayer1(true);
+          const userId = localStorage.getItem("userId");
+          if (userId) {
+            const wallet = await syncWalletFromServer(userId);
+            if (wallet) setPlayer1Marbles(wallet.marbles);
+          }
         }}
         onPrizeWon={(prize) => {
           if (prize.type !== "none") {

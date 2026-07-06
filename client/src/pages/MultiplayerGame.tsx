@@ -22,7 +22,9 @@ import {
   loseMarbles, 
   getTotalMarbles, 
   initializeMarbles,
-  recordGameResult 
+  recordGameResult,
+  setCachedTotals,
+  syncWalletFromServer,
 } from "@/lib/marbleStorage";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -61,6 +63,16 @@ export default function MultiplayerGame() {
     initializeMarbles();
     return getTotalMarbles();
   });
+
+  useEffect(() => {
+    const uid = localStorage.getItem("userId");
+    if (uid) {
+      syncWalletFromServer(uid).then((wallet) => {
+        if (wallet) setMyMarbles(wallet.marbles);
+      });
+    }
+  }, []);
+
   const [opponentMarbles, setOpponentMarbles] = useState(150);
   const [opponentName, setOpponentName] = useState("Waiting...");
   const [opponentImage, setOpponentImage] = useState<string | null>(null);
@@ -293,28 +305,26 @@ export default function MultiplayerGame() {
         
         console.log(`[ROUND_RESULT] I am ${iAmGuesser ? 'guesser' : 'hider'}, won: ${won}`);
         
-        // Update marbles locally
+        // Optimistic local update — will be overwritten by server's
+        // confirmed balance once the /api/game-points response arrives.
         if (won) {
-          addMarbles('pvp', change);
-          setMyMarbles(getTotalMarbles());
+          setMyMarbles(prev => prev + change);
           setOpponentMarbles(iAmGuesser ? message.data.hider.marbles : message.data.guesser.marbles);
         } else {
-          loseMarbles(change);
-          setMyMarbles(getTotalMarbles());
+          setMyMarbles(prev => Math.max(0, prev - change));
           setOpponentMarbles(iAmGuesser ? message.data.hider.marbles : message.data.guesser.marbles);
         }
         
-        // Record game result for stats
+        // Record game result for stats (local streak/daily tracking only)
         recordGameResult(won);
         
         // +5 points on win, -5 points on lose
-        const currentPoints = parseInt(localStorage.getItem("playerRewardPoints") || "0");
         const pointChange = won ? 5 : -5;
-        const newPoints = Math.max(0, currentPoints + pointChange); // Don't go below 0
-        localStorage.setItem("playerRewardPoints", newPoints.toString());
         setRoundPoints(prev => prev + pointChange);
         
-        // Send points to server for persistence
+        // Send points AND marbles change to server — this is the ONLY
+        // place that actually changes the database balance now, so
+        // Home/Profile/GameHeader always show the same, correct number.
         const userId = localStorage.getItem("userId") || playerId;
         const gameMode = window.location.pathname.includes("random") ? "random" : "friend";
         apiRequest("POST", "/api/game-points", {
@@ -324,7 +334,16 @@ export default function MultiplayerGame() {
           opponent: opponentName,
           won,
           opponentType: "player", // PvP match
-        }).catch((err) => console.error("Failed to record game points:", err));
+          marblesDelta: won ? change : -change,
+        })
+          .then((res: any) => res.json?.() ?? res)
+          .then((data: any) => {
+            if (typeof data.marbles === "number") {
+              setMyMarbles(data.marbles);
+              setCachedTotals(data.marbles, data.points);
+            }
+          })
+          .catch((err: any) => console.error("Failed to record game points:", err));
         
         // Different messages for hider vs guesser
         let resultDetails = "";
@@ -908,13 +927,19 @@ export default function MultiplayerGame() {
       <SpinWheel
         isOpen={showSpinWheel}
         userId={playerId}
-        onClose={() => {
+        onClose={async () => {
           setShowSpinWheel(false);
           setOpponentMarbles(150);
           setPhase("selecting");
           setSelectedMarbleIds([]);
           setGameResult(null);
-          setMyMarbles(getTotalMarbles());
+          const uid = localStorage.getItem("userId");
+          if (uid) {
+            const wallet = await syncWalletFromServer(uid);
+            if (wallet) setMyMarbles(wallet.marbles);
+          } else {
+            setMyMarbles(getTotalMarbles());
+          }
         }}
         onPrizeWon={(prize) => {
           if (prize.type !== "none") {

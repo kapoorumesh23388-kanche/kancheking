@@ -8,6 +8,7 @@ import { useLanguage } from "@/lib/LanguageContext";
 import { t, LANGUAGES, getMarbleName, type Language } from "@/lib/translations";
 import { Volume2, VolumeX } from "lucide-react";
 import { checkAndClaimDailyLoginBonus, initializeDailyRewards } from "@/lib/rewardsStorage";
+import { syncWalletFromServer } from "@/lib/marbleStorage";
 
 export default function Home() {
   const { language, setLanguage } = useLanguage();
@@ -92,6 +93,12 @@ export default function Home() {
     };
 
     loadPlayerProfile();
+    // Database is the source of truth — pull the real balance on load,
+    // which will overwrite the cache and trigger loadPlayerProfile again
+    // via the marbleUpdate/rewardPointsUpdate events it dispatches.
+    const userId = localStorage.getItem("userId");
+    if (userId) syncWalletFromServer(userId);
+
     window.addEventListener("profileUpdated", loadPlayerProfile);
     window.addEventListener("marbleUpdate", loadPlayerProfile);
     window.addEventListener("rewardPointsUpdate", loadPlayerProfile);

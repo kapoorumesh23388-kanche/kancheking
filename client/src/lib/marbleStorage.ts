@@ -68,8 +68,61 @@ export function getEligibleMarbles(): number {
   return parseInt(localStorage.getItem(STORAGE_KEYS.pvp) || '0');
 }
 
+// Sync the local "eligible marbles" (PvP win marbles) display bucket with
+// the real database column, so the Tournament page always shows the
+// correct, server-confirmed eligibility number.
+export async function syncEligibleMarblesFromServer(userId: string): Promise<number | null> {
+  if (!userId) return null;
+  try {
+    const res = await fetch(`/api/user/${userId}`);
+    const data = await res.json();
+    if (typeof data.pvpWinMarbles === 'number') {
+      localStorage.setItem(STORAGE_KEYS.pvp, String(data.pvpWinMarbles));
+      window.dispatchEvent(new Event('marbleUpdate'));
+      return data.pvpWinMarbles;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function getTotalMarbles(): number {
   return parseInt(localStorage.getItem(STORAGE_KEYS.total) || '0');
+}
+
+// --- Server sync (single source of truth = database) ---
+// The DB's `marbles` and `points` columns are the real balance. These
+// functions pull that real value and overwrite the local cache, so every
+// screen (Home, GameHeader, Profile) shows the same, correct number even
+// after AI/PvP games, spin wheel claims, or shop purchases.
+export async function syncWalletFromServer(userId: string): Promise<{ marbles: number; points: number } | null> {
+  if (!userId) return null;
+  try {
+    const res = await fetch(`/api/user/${userId}`);
+    const data = await res.json();
+    if (typeof data.marbles === 'number') {
+      localStorage.setItem(STORAGE_KEYS.total, String(data.marbles));
+    }
+    if (typeof data.points === 'number') {
+      localStorage.setItem(STORAGE_KEYS.points, String(data.points));
+    }
+    window.dispatchEvent(new Event('marbleUpdate'));
+    window.dispatchEvent(new Event('rewardPointsUpdate'));
+    return { marbles: data.marbles, points: data.points };
+  } catch {
+    return null;
+  }
+}
+
+// Call this right after any backend call that returns an updated
+// marbles/points balance, to keep the local display cache in sync
+// with the database without needing a second network round-trip.
+export function setCachedTotals(marbles?: number, points?: number): void {
+  if (typeof marbles === 'number') localStorage.setItem(STORAGE_KEYS.total, String(marbles));
+  if (typeof points === 'number') localStorage.setItem(STORAGE_KEYS.points, String(points));
+  window.dispatchEvent(new Event('marbleUpdate'));
+  window.dispatchEvent(new Event('rewardPointsUpdate'));
 }
 
 export function getRewardPoints(): number {
