@@ -1,7 +1,7 @@
-import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type GameRoom, type FeedbackSubmission, type AdminUser, catalogItems, users as usersTable } from "@shared/schema";
+import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, catalogItems, users as usersTable, spinRewards as spinRewardsTable } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -17,6 +17,9 @@ export interface IStorage {
   incrementAiWins(userId: string): Promise<User | undefined>;
   addEarnedMarbles(userId: string, amount: number): Promise<User | undefined>;
   addPvpWinMarbles(userId: string, amount: number): Promise<User | undefined>;
+  createSpinReward(userId: string, prizeName: string, prizeType: string, prizeValue: number): Promise<SpinReward>;
+  getPendingSpinRewards(userId: string): Promise<SpinReward[]>;
+  claimSpinReward(rewardId: string, userId: string): Promise<{ reward: SpinReward; user: User } | null>;
   updateEarnedMarbles(userId: string, earnedMarbles: number): Promise<User | undefined>;
   
   getCatalogItems(): Promise<CatalogItem[]>;
@@ -337,6 +340,39 @@ export class MemStorage implements IStorage {
       }
       return undefined;
     }
+  }
+
+  async createSpinReward(userId: string, prizeName: string, prizeType: string, prizeValue: number): Promise<SpinReward> {
+    const [reward] = await db.insert(spinRewardsTable).values({ userId, prizeName, prizeType, prizeValue }).returning();
+    return reward;
+  }
+
+  async getPendingSpinRewards(userId: string): Promise<SpinReward[]> {
+    return await db.select().from(spinRewardsTable)
+      .where(and(eq(spinRewardsTable.userId, userId), eq(spinRewardsTable.status, "pending")));
+  }
+
+  async claimSpinReward(rewardId: string, userId: string): Promise<{ reward: SpinReward; user: User } | null> {
+    const [reward] = await db.select().from(spinRewardsTable).where(eq(spinRewardsTable.id, rewardId));
+    if (!reward || reward.userId !== userId || reward.status !== "pending") return null;
+
+    if (reward.prizeType === "marbles") {
+      await this.addEarnedMarbles(userId, reward.prizeValue);
+    } else if (reward.prizeType === "points") {
+      const current = await this.getUser(userId);
+      if (current) {
+        await this.updateUserPoints(userId, (current.points || 0) + reward.prizeValue);
+      }
+    }
+
+    const [updatedReward] = await db.update(spinRewardsTable)
+      .set({ status: "claimed", claimedAt: new Date() })
+      .where(eq(spinRewardsTable.id, rewardId))
+      .returning();
+
+    const user = await this.getUser(userId);
+    if (!user) return null;
+    return { reward: updatedReward, user };
   }
 
   async addPvpWinMarbles(userId: string, amount: number): Promise<User | undefined> {

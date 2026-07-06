@@ -907,22 +907,22 @@ export default function MultiplayerGame() {
       {/* Victory Spin Wheel */}
       <SpinWheel
         isOpen={showSpinWheel}
+        userId={playerId}
         onClose={() => {
           setShowSpinWheel(false);
           setOpponentMarbles(150);
           setPhase("selecting");
           setSelectedMarbleIds([]);
           setGameResult(null);
+          setMyMarbles(getTotalMarbles());
         }}
         onPrizeWon={(prize) => {
-          if (prize.type === "marbles") {
-            addMarbles('pvp', prize.value);
-            setMyMarbles(getTotalMarbles());
+          if (prize.type !== "none") {
+            toast({
+              title: "Prize Won!",
+              description: `You won ${prize.name}! Claim it to add it to your account.`,
+            });
           }
-          toast({
-            title: "Prize Won!",
-            description: `You won ${prize.name}!`,
-          });
         }}
       />
 

@@ -24,6 +24,43 @@ export default function Profile() {
   const [adsPreference, setAdsPreference] = useState("family");
   const [userAge, setUserAge] = useState<number | null>(null);
   const [gender, setGender] = useState<"boy" | "girl">("boy");
+  const [pendingRewards, setPendingRewards] = useState<any[]>([]);
+  const [claimingId, setClaimingId] = useState<string | null>(null);
+
+  const loadPendingRewards = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/spin/pending/${userId}`);
+      const data = await res.json();
+      setPendingRewards(data.rewards || []);
+    } catch (err) {
+      console.error("Failed to load pending rewards:", err);
+    }
+  };
+
+  const handleClaimReward = async (rewardId: string) => {
+    const userId = localStorage.getItem("userId");
+    if (!userId) return;
+    setClaimingId(rewardId);
+    try {
+      const res = await fetch(`/api/spin/claim/${rewardId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Claimed!", description: "Reward added to your account." });
+        setUser({ ...data.user, userId });
+        loadPendingRewards(userId);
+      } else {
+        toast({ title: "Error", description: data.error || "Could not claim", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Error", description: "Network error while claiming", variant: "destructive" });
+    } finally {
+      setClaimingId(null);
+    }
+  };
 
   // Function to load user data
   const loadUserData = async (userId: string) => {
@@ -65,6 +102,7 @@ export default function Profile() {
     }
 
     loadUserData(userId);
+    loadPendingRewards(userId);
   }, [navigate]);
 
   // Listen for game completion and stats update events
@@ -326,6 +364,29 @@ export default function Profile() {
                 <p className="text-xs text-secondary mt-2">
                   Will convert to points when tournament ends
                 </p>
+              </div>
+            )}
+
+            {/* Pending Spin Wheel Rewards */}
+            {pendingRewards.length > 0 && (
+              <div className="bg-primary/10 p-4 rounded-md border border-primary/30 space-y-3">
+                <p className="text-sm font-bold text-primary">🎰 Unclaimed Spin Wheel Rewards</p>
+                {pendingRewards.map((reward) => (
+                  <div
+                    key={reward.id}
+                    className="flex items-center justify-between bg-background/50 p-3 rounded-md border border-primary/10"
+                  >
+                    <span className="text-sm">{reward.prizeName}</span>
+                    <Button
+                      size="sm"
+                      onClick={() => handleClaimReward(reward.id)}
+                      disabled={claimingId === reward.id}
+                      data-testid={`button-claim-reward-${reward.id}`}
+                    >
+                      {claimingId === reward.id ? "Claiming..." : "Claim"}
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
 

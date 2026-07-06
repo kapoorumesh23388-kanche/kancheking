@@ -239,6 +239,17 @@ export const appSettings = pgTable("app_settings", {
   value: text("value").notNull().default(""),
 });
 
+export const spinRewards = pgTable("spin_rewards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  prizeName: text("prize_name").notNull(),
+  prizeType: varchar("prize_type").notNull(), // "marbles" | "points"
+  prizeValue: integer("prize_value").notNull(),
+  status: varchar("status").notNull().default("pending"), // pending | claimed
+  wonAt: timestamp("won_at").defaultNow(),
+  claimedAt: timestamp("claimed_at"),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -264,3 +275,4 @@ export type AdImpression = typeof adImpressions.$inferSelect;
 export type DailyUserStats = typeof dailyUserStats.$inferSelect;
 
 export type AppSetting = typeof appSettings.$inferSelect;
+export type SpinReward = typeof spinRewards.$inferSelect;

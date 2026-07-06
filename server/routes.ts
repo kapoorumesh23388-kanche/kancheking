@@ -1896,5 +1896,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Spin Wheel: record a won prize as PENDING (not yet credited)
+  app.post("/api/spin/win", async (req, res) => {
+    try {
+      const { userId, prizeName, prizeType, prizeValue } = req.body;
+      if (!userId || !prizeName || !prizeType || prizeValue === undefined) {
+        return res.status(400).json({ error: "Missing fields" });
+      }
+      if (prizeType !== "marbles" && prizeType !== "points") {
+        // "Better luck next time" or any non-creditable prize — nothing to store
+        return res.json({ success: true, reward: null });
+      }
+      const reward = await storage.createSpinReward(userId, prizeName, prizeType, prizeValue);
+      res.json({ success: true, reward });
+    } catch (error) {
+      console.error("Spin win error:", error);
+      res.status(500).json({ error: "Failed to record spin win" });
+    }
+  });
+
+  // Spin Wheel: get all unclaimed rewards for a player
+  app.get("/api/spin/pending/:userId", async (req, res) => {
+    try {
+      const rewards = await storage.getPendingSpinRewards(req.params.userId);
+      res.json({ success: true, rewards });
+    } catch (error) {
+      console.error("Get pending spin rewards error:", error);
+      res.status(500).json({ error: "Failed to fetch pending rewards" });
+    }
+  });
+
+  // Spin Wheel: claim a pending reward — actually credits marbles/points now
+  app.post("/api/spin/claim/:rewardId", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ error: "userId required" });
+
+      const result = await storage.claimSpinReward(req.params.rewardId, userId);
+      if (!result) {
+        return res.status(400).json({ error: "Reward not found, already claimed, or does not belong to you" });
+      }
+      res.json({ success: true, reward: result.reward, user: result.user });
+    } catch (error) {
+      console.error("Claim spin reward error:", error);
+      res.status(500).json({ error: "Failed to claim reward" });
+    }
+  });
+
   return httpServer;
 }
