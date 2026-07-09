@@ -75,7 +75,10 @@ export default function Shop() {
     marblesReward: number;
     watching: boolean;
     countdown: number;
-  }>({ packId: null, adsWatched: 0, adsTotal: 0, marblesReward: 0, watching: false, countdown: 30 });
+    inGap: boolean; // 7-second pause between ads (AdMob/AdSense policy)
+    gapCountdown: number;
+  }>({ packId: null, adsWatched: 0, adsTotal: 0, marblesReward: 0, watching: false, countdown: 30, inGap: false, gapCountdown: 7 });
+  const [claimedToday, setClaimedToday] = useState<Record<string, boolean>>({});
   const [pointsHistory, setPointsHistory] = useState<PointsHistoryEntry[]>([]);
   // OTP Modal state
   const [otpModal, setOtpModal] = useState<{ open: boolean; item: any | null }>({ open: false, item: null });
@@ -127,8 +130,29 @@ export default function Shop() {
 
   const { data: catalogItems = [] } = useQuery<CatalogItem[]>({ queryKey: ["/api/catalog"] });
 
+  // Load today's ad-claim status from the server (survives cache clears,
+  // can't be bypassed by clearing localStorage)
+  useEffect(() => {
+    const userId = localStorage.getItem("userId");
+    if (!userId) return;
+    fetch(`/api/ads/status/${userId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.claimed) setClaimedToday(data.claimed);
+      })
+      .catch(() => {});
+  }, []);
+
   // --- Ad watching logic ---
   const startWatchingAds = (pack: typeof AD_PACKS[0]) => {
+    if (claimedToday[pack.id]) {
+      toast({
+        title: "Already Claimed Today",
+        description: "You can claim each ad reward once per day. Come back tomorrow!",
+        variant: "destructive",
+      });
+      return;
+    }
     setAdWatchState({
       packId: pack.id,
       adsWatched: 0,
@@ -136,17 +160,27 @@ export default function Shop() {
       marblesReward: pack.marbles,
       watching: true,
       countdown: 30,
+      inGap: false,
+      gapCountdown: 7,
     });
-    startSingleAd();
-  };
-
-  const startSingleAd = () => {
-    // Each ad is 30 seconds; no cancel allowed
-    setAdWatchState((prev) => ({ ...prev, countdown: 30 }));
   };
 
   useEffect(() => {
     if (!adWatchState.watching) return;
+
+    // --- 7-second gap between ads (required for AdMob/AdSense policy) ---
+    if (adWatchState.inGap) {
+      if (adWatchState.gapCountdown > 0) {
+        const timer = setTimeout(() => {
+          setAdWatchState((prev) => ({ ...prev, gapCountdown: prev.gapCountdown - 1 }));
+        }, 1000);
+        return () => clearTimeout(timer);
+      } else {
+        // Gap finished — start the next ad
+        setAdWatchState((prev) => ({ ...prev, inGap: false, countdown: 30 }));
+      }
+      return;
+    }
 
     if (adWatchState.countdown > 0) {
       const timer = setTimeout(() => {
@@ -154,34 +188,43 @@ export default function Shop() {
       }, 1000);
       return () => clearTimeout(timer);
     } else {
-      // Ad finished
+      // This single ad finished
       const nextWatched = adWatchState.adsWatched + 1;
       if (nextWatched >= adWatchState.adsTotal) {
-        // All ads done — reward marbles via the database (single source of truth)
+        // All ads done — claim via the server (checks + records the daily
+        // once-per-pack limit, then credits marbles atomically in the DB)
         const userId = localStorage.getItem("userId");
-        if (userId) {
-          fetch("/api/wallet/adjust", {
+        const packId = adWatchState.packId;
+        if (userId && packId) {
+          fetch("/api/ads/claim", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId, marblesDelta: adWatchState.marblesReward, pointsDelta: 0, reason: "ad_reward" }),
+            body: JSON.stringify({ userId, packId }),
           })
             .then((res) => res.json())
             .then((data) => {
-              if (typeof data.marbles === "number") setCachedTotals(data.marbles, data.points);
+              if (data.success) {
+                setCachedTotals(data.marbles);
+                setClaimedToday((prev) => ({ ...prev, [packId]: true }));
+                toast({
+                  title: "🎉 Ads Complete!",
+                  description: `You earned ${data.marblesAwarded} marbles!`,
+                });
+              } else {
+                toast({ title: "Error", description: data.error || "Could not claim reward.", variant: "destructive" });
+              }
             })
-            .catch(() => {});
+            .catch(() => {
+              toast({ title: "Error", description: "Network error. Try again.", variant: "destructive" });
+            });
         }
-        toast({
-          title: "🎉 Ads Complete!",
-          description: `You earned ${adWatchState.marblesReward} marbles!`,
-        });
-        setAdWatchState({ packId: null, adsWatched: 0, adsTotal: 0, marblesReward: 0, watching: false, countdown: 30 });
+        setAdWatchState({ packId: null, adsWatched: 0, adsTotal: 0, marblesReward: 0, watching: false, countdown: 30, inGap: false, gapCountdown: 7 });
       } else {
-        // Next ad
-        setAdWatchState((prev) => ({ ...prev, adsWatched: nextWatched, countdown: 30 }));
+        // Enter the 7-second gap before the next ad
+        setAdWatchState((prev) => ({ ...prev, adsWatched: nextWatched, inGap: true, gapCountdown: 7 }));
       }
     }
-  }, [adWatchState.watching, adWatchState.countdown]);
+  }, [adWatchState.watching, adWatchState.countdown, adWatchState.inGap, adWatchState.gapCountdown]);
 
   // --- OTP Redeem handlers ---
   const handleSendOTP = async () => {
@@ -345,29 +388,40 @@ export default function Shop() {
             <Card className="w-full max-w-sm mx-4 bg-gradient-to-b from-[#1a0a2e] to-[#0d0416] border-2 border-[#00D9FF]/50">
               <CardHeader>
                 <CardTitle className="text-center text-[#00D9FF]">
-                  📺 Watching Ad {adWatchState.adsWatched + 1} of {adWatchState.adsTotal}
+                  {adWatchState.inGap
+                    ? `⏳ Next Ad Starting In ${adWatchState.gapCountdown}s`
+                    : `📺 Watching Ad ${adWatchState.adsWatched + 1} of ${adWatchState.adsTotal}`}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 text-center">
-                <div className="relative mx-auto w-24 h-24">
-                  <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="#ffffff20" strokeWidth="8" />
-                    <circle
-                      cx="50" cy="50" r="45" fill="none"
-                      stroke="#00D9FF" strokeWidth="8"
-                      strokeDasharray={`${2 * Math.PI * 45}`}
-                      strokeDashoffset={`${2 * Math.PI * 45 * (adWatchState.countdown / 30)}`}
-                      strokeLinecap="round"
-                      style={{ transition: "stroke-dashoffset 1s linear" }}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-3xl font-bold text-white">{adWatchState.countdown}</span>
+                {adWatchState.inGap ? (
+                  <div className="bg-black/40 rounded-xl p-6 flex flex-col items-center justify-center gap-2" style={{ minHeight: 120 }}>
+                    <span className="text-4xl font-bold text-[#00D9FF]">{adWatchState.gapCountdown}</span>
+                    <p className="text-white/70 text-sm">Please wait before the next ad plays...</p>
                   </div>
-                </div>
-                <div className="bg-black/40 rounded-xl p-4 flex items-center justify-center" style={{ minHeight: 120 }}>
-                  <p className="text-[#00D9FF]/70 text-sm">[ Ad Playing... ]</p>
-                </div>
+                ) : (
+                  <>
+                    <div className="relative mx-auto w-24 h-24">
+                      <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#ffffff20" strokeWidth="8" />
+                        <circle
+                          cx="50" cy="50" r="45" fill="none"
+                          stroke="#00D9FF" strokeWidth="8"
+                          strokeDasharray={`${2 * Math.PI * 45}`}
+                          strokeDashoffset={`${2 * Math.PI * 45 * (adWatchState.countdown / 30)}`}
+                          strokeLinecap="round"
+                          style={{ transition: "stroke-dashoffset 1s linear" }}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-3xl font-bold text-white">{adWatchState.countdown}</span>
+                      </div>
+                    </div>
+                    <div className="bg-black/40 rounded-xl p-4 flex items-center justify-center" style={{ minHeight: 120 }}>
+                      <p className="text-[#00D9FF]/70 text-sm">[ Ad Playing... ]</p>
+                    </div>
+                  </>
+                )}
                 <p className="text-yellow-400 font-semibold">
                   Reward: {adWatchState.marblesReward} marbles after all ads
                 </p>
@@ -406,7 +460,7 @@ export default function Shop() {
         {activeTab === "ads" && (
           <div className="space-y-4">
             <div className="text-center mb-2">
-              <p className="text-muted-foreground text-sm">Watch ads to earn free marbles. You must watch every ad — no skipping!</p>
+              <p className="text-muted-foreground text-sm">Watch ads to earn free marbles. You must watch every ad — no skipping! Each option can be claimed once per day.</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {AD_PACKS.map((pack) => (
@@ -419,10 +473,11 @@ export default function Shop() {
                       +{pack.marbles} Marbles
                     </Badge>
                     <Button
-                      className="w-full bg-gradient-to-r from-[#00D9FF] to-[#E91E8C] font-bold"
+                      className="w-full bg-gradient-to-r from-[#00D9FF] to-[#E91E8C] font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => startWatchingAds(pack)}
+                      disabled={!!claimedToday[pack.id]}
                     >
-                      Watch Now
+                      {claimedToday[pack.id] ? "✅ Claimed Today" : "Watch Now"}
                     </Button>
                   </CardContent>
                 </Card>

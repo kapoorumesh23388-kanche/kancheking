@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type TournamentParticipant, type TournamentMatch, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, catalogItems, users as usersTable, spinRewards as spinRewardsTable, tournamentWindows as tournamentWindowsTable, tournamentParticipants as tournamentParticipantsTable, tournamentMatches as tournamentMatchesTable } from "@shared/schema";
+import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type TournamentParticipant, type TournamentMatch, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, type AdClaim, catalogItems, users as usersTable, spinRewards as spinRewardsTable, adClaims as adClaimsTable, tournamentWindows as tournamentWindowsTable, tournamentParticipants as tournamentParticipantsTable, tournamentMatches as tournamentMatchesTable } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -19,6 +19,8 @@ export interface IStorage {
   adjustWallet(userId: string, marblesDelta: number, pointsDelta: number): Promise<User | undefined>;
   addPvpWinMarbles(userId: string, amount: number): Promise<User | undefined>;
   createSpinReward(userId: string, prizeName: string, prizeType: string, prizeValue: number): Promise<SpinReward>;
+  hasClaimedAdToday(userId: string, packId: string, claimDate: string): Promise<boolean>;
+  recordAdClaim(userId: string, packId: string, claimDate: string, marblesAwarded: number): Promise<AdClaim>;
   getPendingSpinRewards(userId: string): Promise<SpinReward[]>;
   claimSpinReward(rewardId: string, userId: string): Promise<{ reward: SpinReward; user: User } | null>;
   updateEarnedMarbles(userId: string, earnedMarbles: number): Promise<User | undefined>;
@@ -350,6 +352,23 @@ export class MemStorage implements IStorage {
       }
       return undefined;
     }
+  }
+
+  async hasClaimedAdToday(userId: string, packId: string, claimDate: string): Promise<boolean> {
+    const rows = await db.select().from(adClaimsTable)
+      .where(and(
+        eq(adClaimsTable.userId, userId),
+        eq(adClaimsTable.packId, packId),
+        eq(adClaimsTable.claimDate, claimDate)
+      ));
+    return rows.length > 0;
+  }
+
+  async recordAdClaim(userId: string, packId: string, claimDate: string, marblesAwarded: number): Promise<AdClaim> {
+    const [claim] = await db.insert(adClaimsTable)
+      .values({ userId, packId, claimDate, marblesAwarded })
+      .returning();
+    return claim;
   }
 
   async createSpinReward(userId: string, prizeName: string, prizeType: string, prizeValue: number): Promise<SpinReward> {

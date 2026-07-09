@@ -258,6 +258,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Watch-Ads-for-Marbles: each of the 4 packs can only be claimed ONCE
+  // PER CALENDAR DAY per player. Enforced server-side so it can't be
+  // bypassed by clearing the browser cache/localStorage.
+  const AD_PACKS_SERVER: Record<string, number> = {
+    ad1: 15,
+    ad2: 40,
+    ad3: 75,
+    ad4: 170,
+  };
+
+  function todayDateString(): string {
+    return new Date().toISOString().split("T")[0];
+  }
+
+  app.get("/api/ads/status/:userId", async (req, res) => {
+    try {
+      const today = todayDateString();
+      const claimed: Record<string, boolean> = {};
+      for (const packId of Object.keys(AD_PACKS_SERVER)) {
+        claimed[packId] = await storage.hasClaimedAdToday(req.params.userId, packId, today);
+      }
+      res.json({ success: true, claimed, date: today });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch ad claim status" });
+    }
+  });
+
+  app.post("/api/ads/claim", async (req, res) => {
+    try {
+      const { userId, packId } = req.body;
+      if (!userId || !packId || !(packId in AD_PACKS_SERVER)) {
+        return res.status(400).json({ error: "Invalid request" });
+      }
+
+      const today = todayDateString();
+      const alreadyClaimed = await storage.hasClaimedAdToday(userId, packId, today);
+      if (alreadyClaimed) {
+        return res.status(400).json({ error: "You've already claimed this ad reward today. Come back tomorrow!" });
+      }
+
+      const marblesAwarded = AD_PACKS_SERVER[packId];
+      await storage.recordAdClaim(userId, packId, today, marblesAwarded);
+      const updated = await storage.adjustWallet(userId, marblesAwarded, 0);
+      if (!updated) return res.status(404).json({ error: "User not found" });
+
+      res.json({ success: true, marbles: updated.marbles, marblesAwarded });
+    } catch (error) {
+      console.error("Ad claim error:", error);
+      res.status(500).json({ error: "Failed to claim ad reward" });
+    }
+  });
+
   app.get("/api/tournament/windows", async (req, res) => {
     try {
       const windows = await storage.getTournamentWindows();

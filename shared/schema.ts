@@ -250,6 +250,15 @@ export const spinRewards = pgTable("spin_rewards", {
   claimedAt: timestamp("claimed_at"),
 });
 
+export const adClaims = pgTable("ad_claims", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  packId: varchar("pack_id").notNull(), // ad1 / ad2 / ad3 / ad4
+  claimDate: varchar("claim_date").notNull(), // YYYY-MM-DD, one claim per pack per day
+  marblesAwarded: integer("marbles_awarded").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -276,3 +285,4 @@ export type DailyUserStats = typeof dailyUserStats.$inferSelect;
 
 export type AppSetting = typeof appSettings.$inferSelect;
 export type SpinReward = typeof spinRewards.$inferSelect;
+export type AdClaim = typeof adClaims.$inferSelect;
