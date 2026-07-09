@@ -31,6 +31,7 @@ import {
   recordAiDefeat,
   checkAndClaimPlaytimeRewards,
   checkAndClaimDefeatBonuses,
+  recordGameRoundActivity,
 } from "@/lib/rewardsStorage";
 import {
   startBGM, stopBGM, switchBGM, isBGMEnabled,
@@ -363,6 +364,9 @@ export default function GamePlay() {
       
       // Record game result for stats (local daily stats/streaks only)
       recordGameResult(playerWon);
+      // This round actually completed — counts as real gameplay for
+      // playtime-reward purposes (not just having the tab open)
+      recordGameRoundActivity();
 
       // Check for zero marbles and show ads
       if (newPlayer1Marbles <= 0) {

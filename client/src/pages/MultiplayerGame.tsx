@@ -28,6 +28,12 @@ import {
 } from "@/lib/marbleStorage";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import {
+  initializeDailyRewards,
+  updatePlaytime,
+  checkAndClaimPlaytimeRewards,
+  recordGameRoundActivity,
+} from "@/lib/rewardsStorage";
 
 interface ChatMessage {
   id: string;
@@ -53,6 +59,24 @@ export default function MultiplayerGame() {
   const { roomCode } = useParams<{ roomCode: string }>();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  // Same playtime-reward system as the AI game — points only accrue
+  // while real rounds are actually completing (see recordGameRoundActivity
+  // calls below), not just from having this page open.
+  useEffect(() => {
+    initializeDailyRewards();
+    const interval = setInterval(() => {
+      updatePlaytime();
+      const playtimeReward = checkAndClaimPlaytimeRewards();
+      if (playtimeReward.claimed) {
+        toast({
+          title: "Playtime Reward!",
+          description: `+${playtimeReward.points} points for active gameplay!`,
+        });
+      }
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [toast]);
   
   const playerId = localStorage.getItem("playerId") || `player_${Date.now()}`;
   const playerName = localStorage.getItem("playerDisplayName") || `Player_${playerId.slice(-6)}`;
@@ -321,6 +345,9 @@ export default function MultiplayerGame() {
         
         // Record game result for stats (local streak/daily tracking only)
         recordGameResult(won);
+        // A real round just completed between both players — counts as
+        // genuine gameplay for playtime-reward purposes
+        recordGameRoundActivity();
         
         // +5 points on win, -5 points on lose
         const pointChange = won ? 5 : -5;

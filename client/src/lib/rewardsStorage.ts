@@ -82,34 +82,35 @@ function saveDailyData(data: DailyRewardsData): void {
 }
 
 // --- Activity tracking (anti-cheat) ---
-// Points are only earned while the user is actually interacting with the
-// page (click/touch/scroll/keypress) and the tab is visible. Simply
-// leaving the game open in the background no longer earns playtime.
-let lastActivityTime = Date.now();
+// Points are only earned while the player is actually completing game
+// rounds — NOT just moving the mouse or clicking randomly, and NOT just
+// leaving the game open. Every play mode (AI or PvP) must call
+// recordGameRoundActivity() itself whenever a round actually resolves.
+// If no round finishes within ACTIVITY_TIMEOUT_MS, playtime tracking
+// pauses until real gameplay resumes.
+let lastActivityTime = 0; // 0 = no round completed yet this session
 let activityTrackingInitialized = false;
 
-function recordActivity(): void {
+// Call this from GamePlay.tsx / MultiplayerGame.tsx every time a round
+// actually finishes (win or lose) — this is the ONLY thing that counts
+// as "the player is really playing" for reward purposes.
+export function recordGameRoundActivity(): void {
   lastActivityTime = Date.now();
 }
 
 export function initActivityTracking(): void {
   if (activityTrackingInitialized || typeof window === "undefined") return;
   activityTrackingInitialized = true;
-
-  const events: (keyof WindowEventMap)[] = ["click", "touchstart", "keydown", "mousemove", "scroll", "wheel"];
-  events.forEach((ev) => window.addEventListener(ev, recordActivity, { passive: true }));
-
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") recordActivity();
-  });
-
-  recordActivity();
+  // Intentionally no mouse/click/scroll listeners here anymore — those
+  // could be faked with a mouse jiggler without any real gameplay.
+  // Activity is driven entirely by recordGameRoundActivity() calls.
 }
 
 function isUserActive(): boolean {
   if (typeof document === "undefined") return true;
   if (document.visibilityState !== "visible") return false;
   if (!document.hasFocus()) return false;
+  if (lastActivityTime === 0) return false; // no round completed yet
   return Date.now() - lastActivityTime < ACTIVITY_TIMEOUT_MS;
 }
 
