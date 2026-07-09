@@ -92,6 +92,10 @@ export default function MultiplayerGame() {
   const [opponentHiddenCount, setOpponentHiddenCount] = useState(0);
   const [lastBet, setLastBet] = useState(10);
   const [opponentBet, setOpponentBet] = useState<{ bet: number; guess: string } | null>(null);
+  // Increments every new round — used as a React `key` on GuessingPanel so
+  // its bet input always resets to the default instead of carrying over
+  // whatever amount was typed in a previous round.
+  const [roundNumber, setRoundNumber] = useState(0);
   const [roundPoints, setRoundPoints] = useState(0);
   const [countdown, setCountdown] = useState<number | null>(null);
   
@@ -425,6 +429,7 @@ export default function MultiplayerGame() {
             setSelectedMarbleIds([]);
             setGameResult(null);
             setOpponentBet(null); // Clear opponent bet for new round
+            setRoundNumber(n => n + 1); // Force GuessingPanel to reset its bet input
             nextHiderRef.current = null;
             console.log(`[AUTO-RESTART CLIENT] Transitioned to selecting phase, isHider: ${nextHider === playerId}`);
           } else {
@@ -452,6 +457,7 @@ export default function MultiplayerGame() {
         setSelectedMarbleIds([]);
         setGameResult(null);
         setOpponentBet(null); // Clear opponent bet for new round
+        setRoundNumber(n => n + 1); // Force GuessingPanel to reset its bet input
         break;
         
       case "marble_update":
@@ -778,6 +784,7 @@ export default function MultiplayerGame() {
                 <h3 className="text-2xl font-bold text-primary text-center">Your Turn to Guess!</h3>
                 <p className="text-muted-foreground text-center">{opponentName} has hidden marbles. Guess if it's Odd or Even!</p>
                 <GuessingPanel
+                  key={roundNumber}
                   maxBet={myMarbles}
                   onGuess={handleGuess}
                 />

@@ -27,8 +27,6 @@ const prizes: Prize[] = [
   { id: "5", name: "100 Points", value: 100, type: "points", color: "#FFEAA7", icon: "💫" },
   { id: "6", name: "3x Marbles!", value: 30, type: "marbles", color: "#96CEB4", icon: "🎯" },
   { id: "7", name: "5x Marbles!", value: 50, type: "marbles", color: "#DDA0DD", icon: "💎" },
-  { id: "8", name: "2x Points!", value: 100, type: "points", color: "#F7DC6F", icon: "✨" },
-  { id: "9", name: "3x Points!", value: 150, type: "points", color: "#FFB6C1", icon: "🌟" },
   { id: "10", name: "Better Luck Next Time", value: 0, type: "none", color: "#8899AA", icon: "😔" },
   { id: "11", name: "Better Luck Next Time", value: 0, type: "none", color: "#778899", icon: "🍀" },
 ];
