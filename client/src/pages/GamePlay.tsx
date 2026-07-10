@@ -67,7 +67,8 @@ export default function GamePlay() {
     initializeDailyRewards();
     return getTotalMarbles();
   });
-  const [player2Marbles, setPlayer2Marbles] = useState(120);
+  const [player2Marbles, setPlayer2Marbles] = useState(150);
+  const [nextAiLevel, setNextAiLevel] = useState(150);
   const [player1Name, setPlayer1Name] = useState(() => localStorage.getItem("playerDisplayName") || "You");
   const [player1Image, setPlayer1Image] = useState<string | null>(() => localStorage.getItem("playerProfileImageUpdate"));
   const [player1Gender, setPlayer1Gender] = useState<"boy" | "girl">(() => {
@@ -163,6 +164,10 @@ export default function GamePlay() {
             setPlayer1Marbles(userData.marbles);
             setCachedTotals(userData.marbles, userData.points);
           }
+          if (typeof userData.aiOpponentMarbles === "number") {
+            setPlayer2Marbles(userData.aiOpponentMarbles);
+            setNextAiLevel(userData.aiOpponentMarbles);
+          }
         }
       } catch (err) {
         // Fallback to localStorage if API fails
@@ -231,6 +236,20 @@ export default function GamePlay() {
   useEffect(() => {
     if (player2Marbles === 0) {
       recordAiDefeat();
+      // Permanently raise this player's AI difficulty for their next match
+      const userId = localStorage.getItem("userId");
+      if (userId) {
+        fetch("/api/ai-opponent/level-up", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (typeof data.newAiLevel === "number") setNextAiLevel(data.newAiLevel);
+          })
+          .catch(() => {});
+      }
       setTimeout(() => {
         setShowCelebration(true);
         const defeatBonus = checkAndClaimDefeatBonuses();
@@ -373,6 +392,22 @@ export default function GamePlay() {
         setAdRewardPlayer("player1");
         setShowAdReward(true);
         newPlayer1Marbles = 0;
+        // AI defeated the player — its ending marbles (whatever it
+        // absorbed) directly carry over as its starting point next time,
+        // same as a real opponent keeping its winnings.
+        const userId = localStorage.getItem("userId");
+        if (userId && newPlayer2Marbles > 0) {
+          fetch("/api/ai-opponent/carry-over", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, aiEndingMarbles: newPlayer2Marbles }),
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (typeof data.newAiLevel === "number") setNextAiLevel(data.newAiLevel);
+            })
+            .catch(() => {});
+        }
       }
       if (newPlayer2Marbles <= 0) {
         setAdRewardPlayer("player2");
@@ -694,7 +729,7 @@ export default function GamePlay() {
                 className="bg-gradient-to-r from-[#00D9FF] to-[#00FF88] hover:opacity-90 text-black font-bold py-6 text-lg"
                 onClick={() => {
                   setShowCelebration(false);
-                  setPlayer2Marbles(120);
+                  setPlayer2Marbles(nextAiLevel);
                   setPhase("selecting");
                   setSelectedMarbleIds([]);
                   setFistOpen(false);
@@ -730,7 +765,7 @@ export default function GamePlay() {
         userId={localStorage.getItem("userId") || ""}
         onClose={async () => {
           setShowSpinWheel(false);
-          setPlayer2Marbles(120);
+          setPlayer2Marbles(nextAiLevel);
           setPhase("selecting");
           setSelectedMarbleIds([]);
           setFistOpen(false);

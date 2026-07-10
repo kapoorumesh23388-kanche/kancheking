@@ -1287,6 +1287,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Called ONCE when a player fully defeats their AI opponent (its
+  // marbles reach 0) — NOT on every round win. Permanently raises this
+  // player's persistent AI difficulty for their next match: first
+  // defeat +50 (150->200), every defeat after that +100.
+  app.post("/api/ai-opponent/level-up", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ error: "userId required" });
+
+      const newAiLevel = await storage.increaseAiOpponentLevel(userId);
+      res.json({ success: true, newAiLevel });
+    } catch (error) {
+      console.error("AI level-up error:", error);
+      res.status(500).json({ error: "Failed to level up AI opponent" });
+    }
+  });
+
+  // Called when the AI defeats the PLAYER (player's marbles hit 0) — the
+  // AI's ending marbles (whatever it absorbed) directly carry over as its
+  // starting point next time, just like a real opponent would keep its
+  // winnings. No formula here, unlike the level-up-on-defeat endpoint above.
+  app.post("/api/ai-opponent/carry-over", async (req, res) => {
+    try {
+      const { userId, aiEndingMarbles } = req.body;
+      if (!userId || typeof aiEndingMarbles !== "number") {
+        return res.status(400).json({ error: "userId and aiEndingMarbles required" });
+      }
+
+      const newAiLevel = await storage.setAiOpponentLevel(userId, aiEndingMarbles);
+      res.json({ success: true, newAiLevel });
+    } catch (error) {
+      console.error("AI carry-over error:", error);
+      res.status(500).json({ error: "Failed to carry over AI level" });
+    }
+  });
+
   app.post("/api/admin/login", async (req, res) => {
     try {
       const { adminId, password } = req.body;

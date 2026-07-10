@@ -18,6 +18,8 @@ export interface IStorage {
   addEarnedMarbles(userId: string, amount: number): Promise<User | undefined>;
   adjustWallet(userId: string, marblesDelta: number, pointsDelta: number): Promise<User | undefined>;
   addPvpWinMarbles(userId: string, amount: number): Promise<User | undefined>;
+  increaseAiOpponentLevel(userId: string): Promise<number>;
+  setAiOpponentLevel(userId: string, level: number): Promise<number>;
   createSpinReward(userId: string, prizeName: string, prizeType: string, prizeValue: number): Promise<SpinReward>;
   hasClaimedAdToday(userId: string, packId: string, claimDate: string): Promise<boolean>;
   recordAdClaim(userId: string, packId: string, claimDate: string, marblesAwarded: number): Promise<AdClaim>;
@@ -402,6 +404,48 @@ export class MemStorage implements IStorage {
     const user = await this.getUser(userId);
     if (!user) return null;
     return { reward: updatedReward, user };
+  }
+
+  async increaseAiOpponentLevel(userId: string): Promise<number> {
+    const current = await this.getUser(userId);
+    if (!current) return 150;
+    const currentLevel = current.aiOpponentMarbles || 150;
+    // First-ever defeat: +50 (150 -> 200). Every defeat after that: +100.
+    const newLevel = currentLevel === 150 ? 200 : currentLevel + 100;
+    try {
+      const [updated] = await db.update(usersTable)
+        .set({ aiOpponentMarbles: newLevel })
+        .where(eq(usersTable.id, userId))
+        .returning();
+      if (updated) this.users.set(userId, updated);
+      return updated?.aiOpponentMarbles ?? newLevel;
+    } catch {
+      const user = this.users.get(userId);
+      if (user) {
+        user.aiOpponentMarbles = newLevel;
+        this.users.set(userId, user);
+      }
+      return newLevel;
+    }
+  }
+
+  async setAiOpponentLevel(userId: string, level: number): Promise<number> {
+    const safeLevel = Math.max(0, Math.round(level));
+    try {
+      const [updated] = await db.update(usersTable)
+        .set({ aiOpponentMarbles: safeLevel })
+        .where(eq(usersTable.id, userId))
+        .returning();
+      if (updated) this.users.set(userId, updated);
+      return updated?.aiOpponentMarbles ?? safeLevel;
+    } catch {
+      const user = this.users.get(userId);
+      if (user) {
+        user.aiOpponentMarbles = safeLevel;
+        this.users.set(userId, user);
+      }
+      return safeLevel;
+    }
   }
 
   async addPvpWinMarbles(userId: string, amount: number): Promise<User | undefined> {

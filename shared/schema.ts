@@ -13,6 +13,7 @@ export const users = pgTable("users", {
   marbles: integer("marbles").notNull().default(150),
   earnedMarbles: integer("earned_marbles").notNull().default(0),
   pvpWinMarbles: integer("pvp_win_marbles").notNull().default(0),
+  aiOpponentMarbles: integer("ai_opponent_marbles").notNull().default(150),
   purchasedMarbles: integer("purchased_marbles").notNull().default(0),
   tournamentWinnings: integer("tournament_winnings").notNull().default(0),
   points: integer("points").notNull().default(0),
