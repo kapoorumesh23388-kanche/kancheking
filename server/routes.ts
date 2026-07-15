@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
 import { storage } from "./storage";
-import { generateOTP, sendLoginOTPEmail, verifyLoginOTP } from "./emailService";
+import { generateOTP, sendLoginOTPEmail, verifyLoginOTP, sendAdminNotificationEmail, sendRedeemOTPEmail, verifyRedeemOTP } from "./emailService";
 import { handleNewConnection } from "./ws-manager";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -668,21 +668,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/catalog/redeem", async (req, res) => {
+  // Step 1: send an OTP to the player's email before letting them redeem
+  app.post("/api/otp/send", async (req, res) => {
     try {
-      const { userId, itemId } = req.body;
-      
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
+      const { email, userId } = req.body;
+      if (!email || !email.includes("@")) {
+        return res.status(400).json({ error: "Valid email required" });
       }
+      if (!userId) {
+        return res.status(400).json({ error: "userId required" });
+      }
+
+      const otp = generateOTP();
+      const sent = await sendRedeemOTPEmail(email.trim().toLowerCase(), otp);
+      if (!sent) {
+        return res.status(500).json({ error: "Failed to send OTP. Try again." });
+      }
+
+      res.json({ success: true, message: "OTP sent" });
+    } catch (error) {
+      console.error("Redeem OTP send error:", error);
+      res.status(500).json({ error: "Failed to send OTP" });
+    }
+  });
+
+  // Step 2: verify the OTP and, if correct, actually perform the
+  // redemption (deduct points, record transaction, notify admin)
+  app.post("/api/otp/verify-redeem", async (req, res) => {
+    try {
+      const { email, otp, userId, itemId } = req.body;
+      if (!email || !otp || !userId || !itemId) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const isValid = verifyRedeemOTP(email.trim().toLowerCase(), otp);
+      if (!isValid) {
+        return res.status(400).json({ error: "Invalid or expired OTP" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
 
       const items = await storage.getCatalogItems();
       const item = items.find(i => i.id === itemId);
-      
-      if (!item) {
-        return res.status(404).json({ error: "Item not found" });
-      }
+      if (!item) return res.status(404).json({ error: "Item not found" });
 
       if (user.points < item.pointsCost) {
         return res.status(400).json({ error: "Insufficient points" });
@@ -695,12 +724,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         amount: -item.pointsCost,
         type: "catalog_redemption",
-        description: `Redeemed: ${item.name}`,
+        description: `Redeemed: ${item.name} (OTP verified: ${email})`,
         transactionId: null,
       });
 
+      // Notify admin — don't block the response on this
+      sendAdminNotificationEmail(
+        "🎁 New Redemption Request (OTP Verified)",
+        `
+          <p><strong>Player:</strong> ${user.displayName || user.username}</p>
+          <p><strong>Item:</strong> ${item.name}</p>
+          <p><strong>Points Spent:</strong> ${item.pointsCost}</p>
+          <p><strong>Verified Email:</strong> ${email}</p>
+          <p><strong>Player Contact:</strong> ${user.email || "N/A"} ${user.phone ? `— ${user.phone}` : ""}</p>
+          <p style="color:#facc15;">⚠️ Please arrange delivery/fulfillment for this reward.</p>
+        `
+      ).catch(() => {});
+
       res.json({ success: true, points: newPoints, item: item.name });
     } catch (error) {
+      console.error("Verify-redeem error:", error);
       res.status(500).json({ error: "Failed to redeem item" });
     }
   });
@@ -797,6 +840,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       console.log(`${type} received:`, submission);
+
+      // Notify admin — don't block the response on this
+      sendAdminNotificationEmail(
+        type === "support" ? "🆘 New Support Request" : "💬 New Feedback Received",
+        `
+          <p><strong>Type:</strong> ${type}</p>
+          <p><strong>From:</strong> ${name || "Anonymous"} ${email ? `(${email})` : ""} ${phone ? `— ${phone}` : ""}</p>
+          <p><strong>Subject:</strong> ${subject || "N/A"}</p>
+          <p><strong>Message:</strong></p>
+          <div style="background:#2d1b69;border-radius:8px;padding:15px;margin-top:8px;">${message}</div>
+        `
+      ).catch(() => {});
+
       res.json({ success: true, submission });
     } catch (error) {
       res.status(500).json({ error: "Failed to submit feedback" });
