@@ -35,6 +35,8 @@ export default function OnboardingProfile() {
   const [isLoading, setIsLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
 
+  const MIN_AGE = 18;
+
   const calculateAge = (dob: string): number => {
     const birthDate = new Date(dob);
     const today = new Date();
@@ -133,6 +135,19 @@ export default function OnboardingProfile() {
       return;
     }
     const age = calculateAge(dateOfBirth);
+
+    // Hard block: Kanche King requires players to be 18 or older.
+    // No account is created for anyone under this age — this is checked
+    // again on the server too, this is just the first line of defense.
+    if (age < MIN_AGE) {
+      toast({
+        title: "Age Requirement Not Met",
+        description: `Kanche King is only available to players aged ${MIN_AGE} and above. We're not able to create an account for you at this time.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const res = await fetch("/api/auth/complete-signup", {
@@ -160,7 +175,7 @@ export default function OnboardingProfile() {
       localStorage.setItem("playerGender", gender);
       localStorage.setItem("playerDateOfBirth", dateOfBirth);
       localStorage.setItem("playerAge", String(age));
-      localStorage.setItem("playerIsAgeVerified", age >= 15 ? "true" : "false");
+      localStorage.setItem("playerIsAgeVerified", age >= MIN_AGE ? "true" : "false");
       localStorage.setItem("playerProfileCompleted", "true");
 
       // Upload profile image separately if one was chosen (non-critical, best-effort)
@@ -173,7 +188,7 @@ export default function OnboardingProfile() {
       }
 
       window.dispatchEvent(new Event("profileUpdated"));
-      if (age >= 15) window.dispatchEvent(new Event("ageVerified"));
+      window.dispatchEvent(new Event("ageVerified"));
       navigate("/");
     } catch (error) {
       toast({ title: "Error", description: error instanceof Error ? error.message : "Failed", variant: "destructive" });
@@ -304,6 +319,7 @@ export default function OnboardingProfile() {
                   onChange={(e) => setDateOfBirth(e.target.value)}
                   className="bg-primary/10 border-primary/30 text-white"
                 />
+                <p className="text-xs text-muted-foreground mt-2">You must be 18 or older to create an account.</p>
               </div>
 
               <Button

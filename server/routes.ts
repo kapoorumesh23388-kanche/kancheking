@@ -2017,12 +2017,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // a moment where an account exists without a name.
   app.post("/api/auth/complete-signup", async (req, res) => {
     try {
-      const { email, displayName, gender, dateOfBirth, age } = req.body;
+      const { email, displayName, gender, dateOfBirth } = req.body;
       if (!email) {
         return res.status(400).json({ error: "Email required" });
       }
       if (!displayName || !displayName.trim()) {
         return res.status(400).json({ error: "Display name required" });
+      }
+      if (!dateOfBirth) {
+        return res.status(400).json({ error: "Date of birth required" });
+      }
+
+      // Kanche King requires players to be 18+. We recalculate age here
+      // from the date of birth ourselves rather than trusting a client-sent
+      // "age" number, so this can't be bypassed by editing the request.
+      const MIN_AGE = 18;
+      const birthDate = new Date(dateOfBirth);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
+
+      if (isNaN(age) || age < MIN_AGE) {
+        return res.status(403).json({
+          error: `Kanche King is only available to players aged ${MIN_AGE} and above. We're not able to create an account for you.`
+        });
       }
 
       const emailKey = email.toLowerCase().trim();
@@ -2041,7 +2060,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const newUserId = `player-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-      const isAgeVerified = typeof age === "number" ? age >= 15 : false;
+      const isAgeVerified = true; // guaranteed true here — we already rejected anyone under 18 above
 
       await storage.createUser(
         { username: newUserId, password: "guest" },

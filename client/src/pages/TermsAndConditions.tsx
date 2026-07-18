@@ -18,114 +18,125 @@ export default function TermsAndConditions() {
           <p className="text-sm text-gray-400">Last updated: {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}</p>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">1. Age Requirements</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">1. Logging In</h2>
             <ul className="space-y-3 text-gray-200">
-              <li className="flex gap-3"><span className="text-primary">•</span><span>Kanche King is intended for users aged <strong>18 years and above</strong>.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span>Users under 18 may play only with explicit parental or guardian consent and supervision.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span>The game involves no real money and no gambling. It is a traditional Indian marble guessing game (Kali Jotta) based purely on skill and chance.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span>By using this app, you confirm that you are 18+ or have parental consent to do so.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Every player signs in with their email address. We send a 6-digit one-time code (OTP) to that inbox, and entering it logs you in — there's no password to create or remember.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>New players are asked for a display name, gender for their avatar, and date of birth right after verifying their OTP, before an account is created.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Your account, marbles, and progress are tied to your email — not to a specific phone or browser — so clearing your browser data or switching devices won't wipe your progress as long as you can access that inbox.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Redeeming Reward Points for a catalog item requires a second, separate OTP sent to your email at the time of redemption, as an extra confirmation step.</span></li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">2. Game Play Rules</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">2. Age Requirements</h2>
             <ul className="space-y-3 text-gray-200">
-              <li className="flex gap-3"><span className="text-primary">•</span><span>Each game requires players to hide marbles (1–20) in their fist.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span>Opponent must guess if the count is Odd (Kali) or Even (Jotta).</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span>Correct guess wins the marbles; incorrect guess loses marbles.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span>Minimum marble bet: 10. Maximum bet: Your total marbles.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Kanche King is intended for players aged <strong>18 and above</strong>. We ask for your date of birth during signup to confirm this.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>By creating an account, you're confirming that you are 18 or older.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>There is no real money, gambling, or wagering anywhere in Kanche King. It's a traditional Indian marble-guessing game — Kali Jotta — built around skill and a bit of luck, nothing more.</span></li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">3. Marble System</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">3. How a Round Works</h2>
             <ul className="space-y-3 text-gray-200">
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Free Marbles (150):</strong> Given on signup. Used for gameplay only.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>PvP Win Marbles:</strong> Won by defeating other players. These count for tournament eligibility and leaderboard ranking.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>AI Win Marbles:</strong> Earned by defeating AI opponents. Cannot be used for tournaments.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Ad Marbles:</strong> Earned by watching rewarded video ads. Cannot be used for tournaments.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Points-Redeemed Marbles:</strong> Bought using Reward Points. Cannot be used for tournaments.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>No Real Money:</strong> Marbles have no real-world monetary value and cannot be purchased or exchanged for real money.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>One player hides a handful of marbles (anywhere from 1 to 20) in a closed fist.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>The other player guesses whether that count is Odd (Kali) or Even (Jotta).</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Guess right, and the marbles wagered that round come to you. Guess wrong, and they go the other way.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>You choose how many marbles to wager each round, up to whatever you currently have.</span></li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">4. Game Modes</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">4. Marbles — What Counts Where</h2>
             <ul className="space-y-3 text-gray-200">
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Play with AI:</strong> Earn AI Win Marbles and +25 Reward Points per win.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Challenge Friend / Random:</strong> Play PvP matches and earn PvP Win Marbles (+25 Reward Points per win).</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Tournament:</strong> Compete for 2,500 Reward Points. Requires 250 PvP Win Marbles to enter.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Every new account starts with 150 free marbles to play with.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>PvP Win Marbles</strong> — earned only by beating other real players — are the ones that count toward tournament eligibility and your leaderboard rank.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Marbles earned by beating the AI, watching ads, or converting Reward Points are great for continuing to play, but they don't move your leaderboard rank or unlock tournament entry.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>None of this has any real-world money value. Marbles can't be bought with cash and can't be cashed out.</span></li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">5. Tournament Entry Requirements</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">5. Playing Against the AI</h2>
             <ul className="space-y-3 text-gray-200">
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Entry Fee:</strong> 250 PvP Win Marbles (deducted from your balance).</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Eligibility:</strong> You must have at least 250 PvP Win Marbles.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>NOT Counted:</strong> Free marbles, AI Win Marbles, and Points-redeemed marbles do not count toward eligibility.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Winner Prize:</strong> 2,500 Reward Points. Marbles won from opponents during the tournament are kept in your account.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Your AI opponent starts at 150 marbles and grows stronger the more you beat it — the first time you fully defeat it, it comes back next time with 200; every defeat after that adds another 100.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>If the AI beats you instead, it simply keeps whatever it won and starts your next match at that level — think of it as a rival that remembers, rather than resetting every time.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>This difficulty is personal to your account — other players face their own version of the AI, growing at their own pace.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Fully defeating the AI opens the Victory Spin Wheel for a bonus prize (see Section 8).</span></li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">6. Reward Points System</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">6. Tournaments</h2>
             <ul className="space-y-3 text-gray-200">
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Daily Login Bonus:</strong> +20 points just for logging in each day.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>30-Minute Play Bonus:</strong> +30 points after playing actively for 30 minutes.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>1-Hour Play Bonus:</strong> +50 points for completing 1 full hour of active gameplay (total +80 points for 1 hour including the 30-min bonus).</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Repeating Bonus:</strong> This pattern repeats every hour — e.g. 1.5 hours of play earns +80 (1hr) + +30 (extra 30 min) = +110 points for that session.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>AI Defeat Bonus:</strong> +25 points per AI opponent defeated.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>PvP Win Bonus:</strong> +25 points per PvP match won.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Monthly #1 Leaderboard Bonus:</strong> +500 points.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Tournament Winner:</strong> +2,500 points.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Entering a tournament costs 250 PvP Win Marbles — this comes only from marbles won against real players, nothing else.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Whatever you win from opponents during the tournament stays in your account regardless of how far you go.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>The tournament winner receives the full accumulated entry pool as marbles, plus a flat 2,500 Reward Points.</span></li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">7. Leaderboard & Monthly #1 Bonus</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">7. Reward Points</h2>
             <ul className="space-y-3 text-gray-200">
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Ranking:</strong> Determined solely by PvP Win Marbles. Updates in real-time.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Monthly #1 Bonus:</strong> On the 1st of each month, the player at Rank #1 receives +500 Reward Points.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Eligibility:</strong> Must have at least 1 PvP Win Marble to qualify.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Daily login:</strong> +20 points just for showing up each day.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Active play:</strong> +30 points after 30 minutes of genuinely playing (completing rounds — not just leaving the tab open), and +50 more at the one-hour mark. This keeps repeating every half hour you're actively playing.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Beating the AI:</strong> +25 points each time.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Winning a PvP match:</strong> +25 points; losing one costs 5 points from that match's tally.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Monthly #1 on the leaderboard:</strong> +500 points, awarded to whoever holds rank #1 at the start of the month.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Winning a tournament:</strong> +2,500 points.</span></li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">8. Shop & Rewards Redemption</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">8. The Victory Spin Wheel</h2>
             <ul className="space-y-3 text-gray-200">
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Watch Ads:</strong> Players can earn free marbles by watching rewarded video ads. Multiple ad packs are available (1, 3, 5, or 10 ads). Ad must be watched fully to receive the marble reward.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Points-to-Marbles:</strong> Reward Points can be redeemed to purchase marbles at fixed exchange rates in the Shop.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>Catalog Items:</strong> Premium catalog items are updated quarterly by the admin and can be redeemed with Reward Points.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span><strong>No Real-Money Purchases:</strong> Marbles cannot be purchased with real money. This is a free-to-play game.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Fully defeating an opponent — AI or player — unlocks a spin for a bonus prize: extra marbles, bonus points, or better luck next time.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>You can claim your prize immediately or leave it for later — unclaimed prizes wait for you in your Profile page under "Unclaimed Rewards" until you come back for them.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>A prize only actually lands in your account once you claim it — spinning the wheel alone doesn't credit anything.</span></li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">9. Points History & Transparency</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">9. Watching Ads for Marbles</h2>
             <ul className="space-y-3 text-gray-200">
-              <li className="flex gap-3"><span className="text-primary">•</span><span>Players can view their full Reward Points earning history in the Shop → History tab.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span>Redemption history (points spent on marbles) is also recorded and visible.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span>History logs store up to 200 entries per category.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Four ad packs are available in the Shop, each watched fully (no skipping) in exchange for marbles.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Each of the four packs can be claimed once per calendar day — this resets at midnight.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>A short pause is built in between ads within a pack, in line with ad network policies.</span></li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">10. Referral Program</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">10. Shop & Redeeming Rewards</h2>
             <ul className="space-y-3 text-gray-200">
-              <li className="flex gap-3"><span className="text-primary">•</span><span>Each player receives a unique referral code.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span>Earn 50 marbles for each new friend who joins using your referral code.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span>Referral bonuses are added as free marbles and cannot be used for tournament entry.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Reward Points can be converted into marbles at fixed rates directly in the Shop.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Premium catalog items, refreshed periodically by the admin team, can be redeemed with Reward Points — this requires confirming a one-time code sent to your email before the redemption goes through.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Everything in the Shop runs on Reward Points and marbles only. There is no way to spend real money in Kanche King.</span></li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">11. General Rules</h2>
+            <h2 className="text-2xl font-bold text-primary mb-4">11. Leaderboard</h2>
             <ul className="space-y-3 text-gray-200">
-              <li className="flex gap-3"><span className="text-primary">•</span><span>Cheating, exploiting bugs, or using third-party tools is strictly prohibited and will result in a permanent ban.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span>The admin reserves the right to modify the game rules, rewards, and catalog at any time.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span>Reward Points have no cash value and cannot be transferred or withdrawn.</span></li>
-              <li className="flex gap-3"><span className="text-primary">•</span><span>By playing Kanche King, you agree to these terms and conditions.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Ranking is based purely on PvP Win Marbles and updates roughly every ten seconds.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>The board shows the current top 20 players; your own rank and marble count are always shown separately, even if you're outside the top 20.</span></li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-primary mb-4">12. Referrals</h2>
+            <ul className="space-y-3 text-gray-200">
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Every player gets a personal referral code to share.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>When someone joins using your code, you receive 50 marbles as a thank-you.</span></li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-primary mb-4">13. Fair Play</h2>
+            <ul className="space-y-3 text-gray-200">
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Exploiting bugs, using bots, or manipulating the app to earn marbles or points outside of genuine gameplay isn't allowed, and accounts found doing this may be suspended or banned.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>We may adjust rules, rewards, or the catalog as the game evolves — this page will always reflect the current version.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Reward Points and marbles exist only inside Kanche King. They can't be transferred, sold, or withdrawn as cash.</span></li>
+              <li className="flex gap-3"><span className="text-primary">•</span><span>Playing Kanche King means you're agreeing to the terms on this page.</span></li>
             </ul>
           </section>
         </div>
