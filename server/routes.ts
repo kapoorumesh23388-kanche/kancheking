@@ -2142,5 +2142,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // --- Blog ---
+  async function isAdminUser(userId?: string): Promise<boolean> {
+    if (!userId) return false;
+    const user = await storage.getUser(userId);
+    return !!user?.isAdmin;
+  }
+
+  app.get("/api/blog", async (req, res) => {
+    try {
+      const lang = (req.query.lang as string) === "hi" ? "hi" : "en";
+      const posts = await storage.getPublishedBlogPosts();
+      const summaries = posts.map(p => {
+        const hasHindi = !!(p.titleHi && p.bodyHi);
+        const useHindi = lang === "hi" && hasHindi;
+        return {
+          id: p.id,
+          category: p.category,
+          coverColor: p.coverColor,
+          readTimeMinutes: p.readTimeMinutes,
+          publishedAt: p.createdAt,
+          title: useHindi ? p.titleHi : p.titleEn,
+          excerpt: useHindi ? p.excerptHi : p.excerptEn,
+          isTranslated: lang === "en" ? true : hasHindi,
+        };
+      });
+      res.json({ success: true, posts: summaries });
+    } catch (error) {
+      console.error("Blog list error:", error);
+      res.status(500).json({ error: "Failed to fetch stories" });
+    }
+  });
+
+  app.get("/api/blog/:id", async (req, res) => {
+    try {
+      const lang = (req.query.lang as string) === "hi" ? "hi" : "en";
+      const p = await storage.getBlogPost(req.params.id);
+      if (!p || !p.isPublished) return res.status(404).json({ error: "Story not found" });
+
+      const hasHindi = !!(p.titleHi && p.bodyHi);
+      const useHindi = lang === "hi" && hasHindi;
+      res.json({
+        success: true,
+        post: {
+          id: p.id,
+          category: p.category,
+          coverColor: p.coverColor,
+          readTimeMinutes: p.readTimeMinutes,
+          publishedAt: p.createdAt,
+          title: useHindi ? p.titleHi : p.titleEn,
+          body: useHindi ? p.bodyHi : p.bodyEn,
+          isTranslated: lang === "en" ? true : hasHindi,
+        },
+      });
+    } catch (error) {
+      console.error("Blog detail error:", error);
+      res.status(500).json({ error: "Failed to fetch story" });
+    }
+  });
+
+  app.get("/api/admin/blog", async (req, res) => {
+    try {
+      const posts = await storage.getAllBlogPostsAdmin();
+      const formatted = posts.map(p => ({
+        id: p.id,
+        category: p.category,
+        coverColor: p.coverColor,
+        readTimeMinutes: p.readTimeMinutes,
+        languages: [
+          ...(p.titleEn ? ["en"] : []),
+          ...(p.titleHi ? ["hi"] : []),
+        ],
+        content: {
+          en: { title: p.titleEn || "", excerpt: p.excerptEn || "", body: p.bodyEn || "" },
+          ...(p.titleHi ? { hi: { title: p.titleHi, excerpt: p.excerptHi || "", body: p.bodyHi || "" } } : {}),
+        },
+      }));
+      res.json({ success: true, posts: formatted });
+    } catch (error) {
+      console.error("Admin blog list error:", error);
+      res.status(500).json({ error: "Failed to fetch stories" });
+    }
+  });
+
+  app.post("/api/admin/blog", async (req, res) => {
+    try {
+      const { adminId, category, coverColor, readTimeMinutes, content } = req.body;
+      if (!(await isAdminUser(adminId))) return res.status(403).json({ error: "Admin access required" });
+      if (!content?.en?.title || !content?.en?.body) {
+        return res.status(400).json({ error: "English title and story are required" });
+      }
+
+      const post = await storage.createBlogPost({
+        category: category || "Childhood Stories",
+        coverColor: coverColor || "#00D9FF",
+        readTimeMinutes: readTimeMinutes || 6,
+        titleEn: content.en.title,
+        excerptEn: content.en.excerpt || "",
+        bodyEn: content.en.body,
+        titleHi: content.hi?.title || null,
+        excerptHi: content.hi?.excerpt || null,
+        bodyHi: content.hi?.body || null,
+        isPublished: true,
+      });
+      res.json({ success: true, post });
+    } catch (error) {
+      console.error("Create blog post error:", error);
+      res.status(500).json({ error: "Failed to publish story" });
+    }
+  });
+
+  app.put("/api/admin/blog/:id", async (req, res) => {
+    try {
+      const { adminId, category, coverColor, readTimeMinutes, content } = req.body;
+      if (!(await isAdminUser(adminId))) return res.status(403).json({ error: "Admin access required" });
+
+      const post = await storage.updateBlogPost(req.params.id, {
+        category,
+        coverColor,
+        readTimeMinutes,
+        titleEn: content?.en?.title,
+        excerptEn: content?.en?.excerpt,
+        bodyEn: content?.en?.body,
+        titleHi: content?.hi?.title || null,
+        excerptHi: content?.hi?.excerpt || null,
+        bodyHi: content?.hi?.body || null,
+      });
+      if (!post) return res.status(404).json({ error: "Story not found" });
+      res.json({ success: true, post });
+    } catch (error) {
+      console.error("Update blog post error:", error);
+      res.status(500).json({ error: "Failed to update story" });
+    }
+  });
+
+  app.delete("/api/admin/blog/:id", async (req, res) => {
+    try {
+      const { adminId } = req.body;
+      if (!(await isAdminUser(adminId))) return res.status(403).json({ error: "Admin access required" });
+
+      await storage.deleteBlogPost(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete blog post error:", error);
+      res.status(500).json({ error: "Failed to delete story" });
+    }
+  });
+
   return httpServer;
 }

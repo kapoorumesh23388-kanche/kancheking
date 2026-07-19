@@ -28,6 +28,9 @@ import Profile from "@/pages/Profile";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsAndConditions from "@/pages/TermsAndConditions";
 import About from "@/pages/About";
+import BlogPage from "@/pages/BlogPage";
+import BlogPost from "@/pages/BlogPost";
+import AdminBlog from "@/pages/AdminBlog";
 import NotFound from "@/pages/not-found";
 
 function Router({ needsOnboarding }: { needsOnboarding: boolean }) {
@@ -61,6 +64,9 @@ function Router({ needsOnboarding }: { needsOnboarding: boolean }) {
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/terms" component={TermsAndConditions} />
       <Route path="/about" component={About} />
+      <Route path="/blog" component={BlogPage} />
+      <Route path="/blog/:id" component={BlogPost} />
+      <Route path="/admin/blog" component={AdminBlog} />
       <Route component={NotFound} />
     </Switch>
   );

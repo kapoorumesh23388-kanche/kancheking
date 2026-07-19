@@ -1,7 +1,7 @@
-import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type TournamentParticipant, type TournamentMatch, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, type AdClaim, catalogItems, users as usersTable, spinRewards as spinRewardsTable, adClaims as adClaimsTable, tournamentWindows as tournamentWindowsTable, tournamentParticipants as tournamentParticipantsTable, tournamentMatches as tournamentMatchesTable } from "@shared/schema";
+import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type TournamentParticipant, type TournamentMatch, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, type AdClaim, type BlogPost, catalogItems, users as usersTable, spinRewards as spinRewardsTable, adClaims as adClaimsTable, blogPosts as blogPostsTable, tournamentWindows as tournamentWindowsTable, tournamentParticipants as tournamentParticipantsTable, tournamentMatches as tournamentMatchesTable } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -23,6 +23,12 @@ export interface IStorage {
   createSpinReward(userId: string, prizeName: string, prizeType: string, prizeValue: number): Promise<SpinReward>;
   hasClaimedAdToday(userId: string, packId: string, claimDate: string): Promise<boolean>;
   recordAdClaim(userId: string, packId: string, claimDate: string, marblesAwarded: number): Promise<AdClaim>;
+  getPublishedBlogPosts(): Promise<BlogPost[]>;
+  getAllBlogPostsAdmin(): Promise<BlogPost[]>;
+  getBlogPost(id: string): Promise<BlogPost | undefined>;
+  createBlogPost(data: Partial<BlogPost>): Promise<BlogPost>;
+  updateBlogPost(id: string, data: Partial<BlogPost>): Promise<BlogPost | undefined>;
+  deleteBlogPost(id: string): Promise<void>;
   getPendingSpinRewards(userId: string): Promise<SpinReward[]>;
   claimSpinReward(rewardId: string, userId: string): Promise<{ reward: SpinReward; user: User } | null>;
   updateEarnedMarbles(userId: string, earnedMarbles: number): Promise<User | undefined>;
@@ -371,6 +377,38 @@ export class MemStorage implements IStorage {
       .values({ userId, packId, claimDate, marblesAwarded })
       .returning();
     return claim;
+  }
+
+  // --- Blog ---
+  async getPublishedBlogPosts(): Promise<BlogPost[]> {
+    const posts = await db.select().from(blogPostsTable).orderBy(desc(blogPostsTable.createdAt));
+    return posts.filter(p => p.isPublished);
+  }
+
+  async getAllBlogPostsAdmin(): Promise<BlogPost[]> {
+    return await db.select().from(blogPostsTable).orderBy(desc(blogPostsTable.createdAt));
+  }
+
+  async getBlogPost(id: string): Promise<BlogPost | undefined> {
+    const [post] = await db.select().from(blogPostsTable).where(eq(blogPostsTable.id, id));
+    return post;
+  }
+
+  async createBlogPost(data: Partial<BlogPost>): Promise<BlogPost> {
+    const [post] = await db.insert(blogPostsTable).values(data as any).returning();
+    return post;
+  }
+
+  async updateBlogPost(id: string, data: Partial<BlogPost>): Promise<BlogPost | undefined> {
+    const [post] = await db.update(blogPostsTable)
+      .set({ ...data, updatedAt: new Date() } as any)
+      .where(eq(blogPostsTable.id, id))
+      .returning();
+    return post;
+  }
+
+  async deleteBlogPost(id: string): Promise<void> {
+    await db.delete(blogPostsTable).where(eq(blogPostsTable.id, id));
   }
 
   async createSpinReward(userId: string, prizeName: string, prizeType: string, prizeValue: number): Promise<SpinReward> {

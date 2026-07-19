@@ -260,6 +260,22 @@ export const adClaims = pgTable("ad_claims", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const blogPosts = pgTable("blog_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  category: varchar("category").notNull().default("Childhood Stories"),
+  coverColor: varchar("cover_color").notNull().default("#00D9FF"),
+  readTimeMinutes: integer("read_time_minutes").notNull().default(6),
+  titleEn: text("title_en").notNull(),
+  excerptEn: text("excerpt_en").notNull(),
+  bodyEn: text("body_en").notNull(),
+  titleHi: text("title_hi"),
+  excerptHi: text("excerpt_hi"),
+  bodyHi: text("body_hi"),
+  isPublished: boolean("is_published").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -287,3 +303,4 @@ export type DailyUserStats = typeof dailyUserStats.$inferSelect;
 export type AppSetting = typeof appSettings.$inferSelect;
 export type SpinReward = typeof spinRewards.$inferSelect;
 export type AdClaim = typeof adClaims.$inferSelect;
+export type BlogPost = typeof blogPosts.$inferSelect;
