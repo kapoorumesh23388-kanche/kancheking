@@ -225,18 +225,6 @@ export default function Home() {
             </Button>
           </Link>
         </div>
-
-        <div className="flex justify-center mt-4 md:mt-6">
-          <Link href="/blog">
-            <Button
-              variant="outline"
-              className="border-[#00D9FF]/40 text-[#00D9FF] hover:bg-[#00D9FF]/10 rounded-full px-5 py-2 text-sm md:text-base flex items-center gap-2"
-              data-testid="button-blog-home"
-            >
-              <span>📖</span> Kanche Stories — Read Now
-            </Button>
-          </Link>
-        </div>
       </div>
 
       {/* Footer */}
@@ -280,7 +268,7 @@ export default function Home() {
                 About Us
               </Link>
               <Link href="/blog" className="text-[#00D9FF] hover:text-[#E91E8C] transition-colors" data-testid="link-blog">
-                Kanche Stories
+                Blogs
               </Link>
               <Link href="/terms" className="text-[#00D9FF] hover:text-[#E91E8C] transition-colors" data-testid="link-terms">
                 Terms & Conditions

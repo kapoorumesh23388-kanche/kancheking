@@ -1502,11 +1502,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateAdminPhone(adminId, phoneNumber);
       }
 
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      await storage.saveOTP(adminId, otp);
-
-      const { sendOTPSMS } = await import('./twilioClient');
-      const sent = await sendOTPSMS(phoneNumber, otp);
+      // Twilio Verify manages its own OTP internally — we don't generate
+      // or store one ourselves. sendOTPViaTwilio triggers Twilio to text
+      // the code directly; verification later checks with Twilio too.
+      const { sendOTPViaTwilio } = await import('./twilioClient');
+      const sent = await sendOTPViaTwilio(phoneNumber);
 
       if (!sent) {
         return res.status(500).json({ error: "Failed to send OTP" });
@@ -1531,7 +1531,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Admin ID and OTP required" });
       }
 
-      const isValid = await storage.verifyOTP(adminId, otp);
+      let phoneNumber = await storage.getAdminPhone(adminId);
+      if (!phoneNumber) {
+        return res.status(400).json({ error: "No phone on file for this admin" });
+      }
+
+      // Verify against Twilio directly — this is the same service that
+      // actually generated and sent the code, so it's the only source
+      // of truth for whether this code is correct.
+      const { verifyOTPViaTwilio } = await import('./twilioClient');
+      const isValid = await verifyOTPViaTwilio(phoneNumber, otp);
       if (!isValid) {
         return res.status(401).json({ error: "Invalid OTP" });
       }
