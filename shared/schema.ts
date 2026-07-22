@@ -271,9 +271,21 @@ export const blogPosts = pgTable("blog_posts", {
   titleHi: text("title_hi"),
   excerptHi: text("excerpt_hi"),
   bodyHi: text("body_hi"),
+  submittedByName: varchar("submitted_by_name"),
+  submittedByEmail: varchar("submitted_by_email"),
+  likesCount: integer("likes_count").notNull().default(0),
+  dislikesCount: integer("dislikes_count").notNull().default(0),
   isPublished: boolean("is_published").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const blogReactions = pgTable("blog_reactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  reaction: varchar("reaction").notNull(), // "like" | "dislike"
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -304,3 +316,4 @@ export type AppSetting = typeof appSettings.$inferSelect;
 export type SpinReward = typeof spinRewards.$inferSelect;
 export type AdClaim = typeof adClaims.$inferSelect;
 export type BlogPost = typeof blogPosts.$inferSelect;
+export type BlogReaction = typeof blogReactions.$inferSelect;

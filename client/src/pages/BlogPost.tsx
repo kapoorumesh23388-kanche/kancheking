@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ThumbsUp, ThumbsDown } from "lucide-react";
 
 interface BlogPostFull {
   id: string;
@@ -13,6 +13,9 @@ interface BlogPostFull {
   title: string;
   body: string;
   isTranslated: boolean;
+  likesCount: number;
+  dislikesCount: number;
+  userReaction: "like" | "dislike" | null;
 }
 
 export default function BlogPost() {
@@ -22,21 +25,49 @@ export default function BlogPost() {
   });
   const [post, setPost] = useState<BlogPostFull | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isReacting, setIsReacting] = useState(false);
 
   useEffect(() => {
     localStorage.setItem("blogLanguage", blogLang);
   }, [blogLang]);
 
-  useEffect(() => {
+  const loadPost = () => {
     setIsLoading(true);
-    fetch(`/api/blog/${id}?lang=${blogLang}`)
+    const userId = localStorage.getItem("userId") || "";
+    fetch(`/api/blog/${id}?lang=${blogLang}&userId=${userId}`)
       .then((res) => res.json())
       .then((data) => {
         setPost(data.post || null);
         setIsLoading(false);
       })
       .catch(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    loadPost();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, blogLang]);
+
+  const handleReact = async (reaction: "like" | "dislike") => {
+    const userId = localStorage.getItem("userId");
+    if (!userId || !post || isReacting) return;
+    setIsReacting(true);
+    try {
+      const res = await fetch(`/api/blog/${post.id}/react`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, reaction }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPost({ ...post, likesCount: data.likesCount, dislikesCount: data.dislikesCount, userReaction: data.userReaction });
+      }
+    } catch {
+      // silently ignore — not critical
+    } finally {
+      setIsReacting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen pt-20 pb-16 bg-gradient-to-b from-black via-blue-950 to-black">
@@ -96,6 +127,30 @@ export default function BlogPost() {
                   </p>
                 ))}
               </div>
+
+              <div className="flex items-center justify-center gap-4 mt-8 pt-6 border-t border-white/10">
+                <Button
+                  variant="outline"
+                  onClick={() => handleReact("like")}
+                  disabled={isReacting}
+                  className={`flex items-center gap-2 ${post.userReaction === "like" ? "bg-[#00FF88]/20 border-[#00FF88] text-[#00FF88]" : "border-white/20"}`}
+                  data-testid="button-like-story"
+                >
+                  <ThumbsUp className="w-4 h-4" /> {post.likesCount}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleReact("dislike")}
+                  disabled={isReacting}
+                  className={`flex items-center gap-2 ${post.userReaction === "dislike" ? "bg-[#E91E8C]/20 border-[#E91E8C] text-[#E91E8C]" : "border-white/20"}`}
+                  data-testid="button-dislike-story"
+                >
+                  <ThumbsDown className="w-4 h-4" /> {post.dislikesCount}
+                </Button>
+              </div>
+              {!localStorage.getItem("userId") && (
+                <p className="text-center text-xs text-muted-foreground mt-3">Log in to like or dislike this story.</p>
+              )}
             </CardContent>
           </Card>
         )}

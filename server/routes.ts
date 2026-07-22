@@ -2174,6 +2174,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           title: useHindi ? p.titleHi : p.titleEn,
           excerpt: useHindi ? p.excerptHi : p.excerptEn,
           isTranslated: lang === "en" ? true : hasHindi,
+          likesCount: p.likesCount || 0,
+          dislikesCount: p.dislikesCount || 0,
         };
       });
       res.json({ success: true, posts: summaries });
@@ -2186,11 +2188,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/blog/:id", async (req, res) => {
     try {
       const lang = (req.query.lang as string) === "hi" ? "hi" : "en";
+      const viewerId = req.query.userId as string | undefined;
       const p = await storage.getBlogPost(req.params.id);
       if (!p || !p.isPublished) return res.status(404).json({ error: "Story not found" });
 
       const hasHindi = !!(p.titleHi && p.bodyHi);
       const useHindi = lang === "hi" && hasHindi;
+
+      let userReaction: string | null = null;
+      if (viewerId) {
+        const existing = await storage.getUserBlogReaction(p.id, viewerId);
+        userReaction = existing?.reaction || null;
+      }
+
       res.json({
         success: true,
         post: {
@@ -2202,11 +2212,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           title: useHindi ? p.titleHi : p.titleEn,
           body: useHindi ? p.bodyHi : p.bodyEn,
           isTranslated: lang === "en" ? true : hasHindi,
+          likesCount: p.likesCount || 0,
+          dislikesCount: p.dislikesCount || 0,
+          userReaction,
         },
       });
     } catch (error) {
       console.error("Blog detail error:", error);
       res.status(500).json({ error: "Failed to fetch story" });
+    }
+  });
+
+  app.post("/api/blog/:id/react", async (req, res) => {
+    try {
+      const { userId, reaction } = req.body;
+      if (!userId || (reaction !== "like" && reaction !== "dislike")) {
+        return res.status(400).json({ error: "Invalid request" });
+      }
+      const updated = await storage.setBlogReaction(req.params.id, userId, reaction);
+      if (!updated) return res.status(404).json({ error: "Story not found" });
+
+      const current = await storage.getUserBlogReaction(req.params.id, userId);
+      res.json({
+        success: true,
+        likesCount: updated.likesCount,
+        dislikesCount: updated.dislikesCount,
+        userReaction: current?.reaction || null,
+      });
+    } catch (error) {
+      console.error("Blog reaction error:", error);
+      res.status(500).json({ error: "Failed to update reaction" });
     }
   });
 
@@ -2218,6 +2253,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         category: p.category,
         coverColor: p.coverColor,
         readTimeMinutes: p.readTimeMinutes,
+        submittedByName: p.submittedByName || "",
+        submittedByEmail: p.submittedByEmail || "",
+        likesCount: p.likesCount || 0,
+        dislikesCount: p.dislikesCount || 0,
         languages: [
           ...(p.titleEn ? ["en"] : []),
           ...(p.titleHi ? ["hi"] : []),
@@ -2236,7 +2275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/blog", async (req, res) => {
     try {
-      const { adminId, category, coverColor, readTimeMinutes, content } = req.body;
+      const { adminId, category, coverColor, readTimeMinutes, content, submittedByName, submittedByEmail } = req.body;
       if (!(await isAdminUser(adminId))) return res.status(403).json({ error: "Admin access required" });
       if (!content?.en?.title || !content?.en?.body) {
         return res.status(400).json({ error: "English title and story are required" });
@@ -2252,6 +2291,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         titleHi: content.hi?.title || null,
         excerptHi: content.hi?.excerpt || null,
         bodyHi: content.hi?.body || null,
+        submittedByName: submittedByName || null,
+        submittedByEmail: submittedByEmail || null,
         isPublished: true,
       });
       res.json({ success: true, post });
@@ -2263,7 +2304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/blog/:id", async (req, res) => {
     try {
-      const { adminId, category, coverColor, readTimeMinutes, content } = req.body;
+      const { adminId, category, coverColor, readTimeMinutes, content, submittedByName, submittedByEmail } = req.body;
       if (!(await isAdminUser(adminId))) return res.status(403).json({ error: "Admin access required" });
 
       const post = await storage.updateBlogPost(req.params.id, {
@@ -2276,6 +2317,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         titleHi: content?.hi?.title || null,
         excerptHi: content?.hi?.excerpt || null,
         bodyHi: content?.hi?.body || null,
+        submittedByName: submittedByName || null,
+        submittedByEmail: submittedByEmail || null,
       });
       if (!post) return res.status(404).json({ error: "Story not found" });
       res.json({ success: true, post });

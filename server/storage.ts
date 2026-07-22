@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type TournamentParticipant, type TournamentMatch, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, type AdClaim, type BlogPost, catalogItems, users as usersTable, spinRewards as spinRewardsTable, adClaims as adClaimsTable, blogPosts as blogPostsTable, tournamentWindows as tournamentWindowsTable, tournamentParticipants as tournamentParticipantsTable, tournamentMatches as tournamentMatchesTable } from "@shared/schema";
+import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type TournamentParticipant, type TournamentMatch, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, type AdClaim, type BlogPost, type BlogReaction, catalogItems, users as usersTable, spinRewards as spinRewardsTable, adClaims as adClaimsTable, blogPosts as blogPostsTable, blogReactions as blogReactionsTable, tournamentWindows as tournamentWindowsTable, tournamentParticipants as tournamentParticipantsTable, tournamentMatches as tournamentMatchesTable } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -29,6 +29,8 @@ export interface IStorage {
   createBlogPost(data: Partial<BlogPost>): Promise<BlogPost>;
   updateBlogPost(id: string, data: Partial<BlogPost>): Promise<BlogPost | undefined>;
   deleteBlogPost(id: string): Promise<void>;
+  getUserBlogReaction(postId: string, userId: string): Promise<BlogReaction | undefined>;
+  setBlogReaction(postId: string, userId: string, reaction: "like" | "dislike"): Promise<BlogPost | undefined>;
   getPendingSpinRewards(userId: string): Promise<SpinReward[]>;
   claimSpinReward(rewardId: string, userId: string): Promise<{ reward: SpinReward; user: User } | null>;
   updateEarnedMarbles(userId: string, earnedMarbles: number): Promise<User | undefined>;
@@ -409,6 +411,48 @@ export class MemStorage implements IStorage {
 
   async deleteBlogPost(id: string): Promise<void> {
     await db.delete(blogPostsTable).where(eq(blogPostsTable.id, id));
+  }
+
+  async getUserBlogReaction(postId: string, userId: string): Promise<BlogReaction | undefined> {
+    const [existing] = await db.select().from(blogReactionsTable)
+      .where(and(eq(blogReactionsTable.postId, postId), eq(blogReactionsTable.userId, userId)));
+    return existing;
+  }
+
+  // Sets/switches/removes a user's like or dislike on a post, keeping the
+  // denormalized likesCount/dislikesCount on blog_posts in sync. Clicking
+  // the same reaction again removes it (toggle off).
+  async setBlogReaction(postId: string, userId: string, reaction: "like" | "dislike"): Promise<BlogPost | undefined> {
+    const existing = await this.getUserBlogReaction(postId, userId);
+    const post = await this.getBlogPost(postId);
+    if (!post) return undefined;
+
+    let likesDelta = 0;
+    let dislikesDelta = 0;
+
+    if (!existing) {
+      // No prior reaction — add new one
+      await db.insert(blogReactionsTable).values({ postId, userId, reaction });
+      if (reaction === "like") likesDelta = 1; else dislikesDelta = 1;
+    } else if (existing.reaction === reaction) {
+      // Same reaction clicked again — remove it (toggle off)
+      await db.delete(blogReactionsTable).where(eq(blogReactionsTable.id, existing.id));
+      if (reaction === "like") likesDelta = -1; else dislikesDelta = -1;
+    } else {
+      // Switching from like<->dislike
+      await db.update(blogReactionsTable).set({ reaction }).where(eq(blogReactionsTable.id, existing.id));
+      if (reaction === "like") { likesDelta = 1; dislikesDelta = -1; }
+      else { likesDelta = -1; dislikesDelta = 1; }
+    }
+
+    const [updated] = await db.update(blogPostsTable)
+      .set({
+        likesCount: Math.max(0, (post.likesCount || 0) + likesDelta),
+        dislikesCount: Math.max(0, (post.dislikesCount || 0) + dislikesDelta),
+      })
+      .where(eq(blogPostsTable.id, postId))
+      .returning();
+    return updated;
   }
 
   async createSpinReward(userId: string, prizeName: string, prizeType: string, prizeValue: number): Promise<SpinReward> {
@@ -793,21 +837,21 @@ export class MemStorage implements IStorage {
     this.otpStore.set(adminId, { otp, timestamp: Date.now() });
   }
 
-  async verifyOTP(adminId: string, otp: string): Promise<boolean> {
+  async verifyOTP(adminId: string, otp: string): Promise<{ valid: boolean; reason?: "expired" | "wrong" | "none" }> {
     const stored = this.otpStore.get(adminId);
-    if (!stored) return false;
+    if (!stored) return { valid: false, reason: "none" };
 
-    const isExpired = Date.now() - stored.timestamp > 5 * 60 * 1000; // 5 min expiry
+    const isExpired = Date.now() - stored.timestamp > 10 * 60 * 1000; // 10 min expiry
     if (isExpired) {
       this.otpStore.delete(adminId);
-      return false;
+      return { valid: false, reason: "expired" };
     }
 
     if (stored.otp === otp) {
       this.otpStore.delete(adminId);
-      return true;
+      return { valid: true };
     }
-    return false;
+    return { valid: false, reason: "wrong" };
   }
 
   async updateUserStripeInfo(userId: string, stripeInfo: { stripeCustomerId?: string; stripeSubscriptionId?: string }): Promise<User | undefined> {

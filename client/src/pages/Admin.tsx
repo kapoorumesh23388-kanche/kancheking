@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Trash2, Loader2, LogOut, Settings, Pencil, Users, TrendingUp, BarChart3, Clock, Eye, DollarSign } from "lucide-react";
+import { Plus, Trash2, Loader2, LogOut, Settings, Pencil, Users, TrendingUp, BarChart3, Clock, Eye, DollarSign, Newspaper } from "lucide-react";
+import BlogManagementSection from "@/components/BlogManagementSection";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -71,6 +72,7 @@ export default function Admin() {
   const [pointsCost, setPointsCost] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [showPasswordSettings, setShowPasswordSettings] = useState(false);
+  const [showBlogManagement, setShowBlogManagement] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -245,6 +247,14 @@ export default function Admin() {
               <Settings className="w-4 h-4" /> Settings
             </Button>
             <Button
+              variant="outline"
+              onClick={() => setShowBlogManagement(!showBlogManagement)}
+              className="gap-2"
+              data-testid="button-blog-management"
+            >
+              <Newspaper className="w-4 h-4" /> Blog
+            </Button>
+            <Button
               variant="destructive"
               onClick={handleLogout}
               className="gap-2"
@@ -301,6 +311,21 @@ export default function Admin() {
                   "Update Password"
                 )}
               </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Blog Management */}
+        {showBlogManagement && (
+          <Card className="mb-8 bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Newspaper className="w-5 h-5" /> Blog Management
+              </CardTitle>
+              <CardDescription>Add, edit, or remove Kanche Stories — English and Hindi</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BlogManagementSection />
             </CardContent>
           </Card>
         )}

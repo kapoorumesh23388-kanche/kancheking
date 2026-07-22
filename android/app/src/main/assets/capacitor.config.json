@@ -1,0 +1,9 @@
+{
+	"appId": "com.kancheking.app",
+	"appName": "Kanche King",
+	"webDir": "dist/public",
+	"server": {
+		"url": "https://kancheking.com",
+		"cleartext": true
+	}
+}
