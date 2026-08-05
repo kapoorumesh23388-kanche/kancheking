@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -334,6 +334,26 @@ export default function OnboardingProfile() {
 
         </CardContent>
       </Card>
+
+      {/* Footer — same public links as the logged-in Home page footer.
+          These work without OTP because App.tsx whitelists these paths
+          (see PUBLIC_PATHS) so the onboarding wall doesn't block them. */}
+      <footer className="w-full max-w-md mx-5 mt-6">
+        <div className="flex flex-wrap justify-center gap-4 text-sm">
+          <Link href="/about" className="text-[#00D9FF] hover:text-[#E91E8C] transition-colors" data-testid="link-about">
+            About Us
+          </Link>
+          <Link href="/blog" className="text-[#00D9FF] hover:text-[#E91E8C] transition-colors" data-testid="link-blog">
+            Blogs
+          </Link>
+          <Link href="/terms" className="text-[#00D9FF] hover:text-[#E91E8C] transition-colors" data-testid="link-terms">
+            Terms & Conditions
+          </Link>
+          <Link href="/privacy" className="text-[#00D9FF] hover:text-[#E91E8C] transition-colors" data-testid="link-privacy-policy">
+            Privacy Policy
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 }

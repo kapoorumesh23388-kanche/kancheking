@@ -32,9 +32,22 @@ import BlogPage from "@/pages/BlogPage";
 import BlogPost from "@/pages/BlogPost";
 import NotFound from "@/pages/not-found";
 
+// Paths that must be reachable WITHOUT the email-OTP onboarding wall.
+// Google's AdSense reviewer/crawler visits these as a logged-out visitor —
+// if they hit the onboarding screen instead of real content, AdSense
+// rejects the site. Keep this list in sync with what AdSense needs to see.
+const PUBLIC_PATHS = ["/about", "/blog", "/terms", "/privacy"];
+
+function isPublicPath(path: string): boolean {
+  // exact match ("/blog") or nested match ("/blog/some-post-id")
+  return PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
+}
+
 function Router({ needsOnboarding }: { needsOnboarding: boolean }) {
-  // Redirect to onboarding if needed (except for specific pages)
-  if (needsOnboarding) {
+  const [location] = useLocation();
+
+  // Redirect to onboarding if needed (except for public/whitelisted pages)
+  if (needsOnboarding && !isPublicPath(location)) {
     return <OnboardingProfile />;
   }
 
@@ -72,10 +85,15 @@ function Router({ needsOnboarding }: { needsOnboarding: boolean }) {
 
 function AppContent({ needsOnboarding }: { needsOnboarding: boolean }) {
   const { pendingChallenge, respondToChallenge } = usePresence();
-  
+  const [location] = useLocation();
+
+  // Show the header even for logged-out visitors, as long as they're on
+  // a public path — otherwise a crawler landing on /blog sees a bare page.
+  const showHeader = !needsOnboarding || isPublicPath(location);
+
   return (
     <>
-      {!needsOnboarding && <GameHeader />}
+      {showHeader && <GameHeader />}
       <Toaster />
       <Router needsOnboarding={needsOnboarding} />
       <ChallengePopup
