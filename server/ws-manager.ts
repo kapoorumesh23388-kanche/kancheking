@@ -730,7 +730,23 @@ export function handleNewConnection(ws: WebSocket) {
   ws.on("close", () => {
     if (currentPlayerId) {
       onlinePlayers.delete(currentPlayerId);
-      connectedPlayers.delete(currentPlayerId);
+
+      // IMPORTANT: a player can have TWO simultaneous WebSocket connections
+      // at once — the game connection (MultiplayerGame.tsx) AND a separate,
+      // always-on "presence" connection (usePresence, which runs globally
+      // on every page, including during an active match, and reconnects
+      // every few seconds on a flaky network). Both share this same
+      // playerId. This used to unconditionally delete from the SHARED
+      // connectedPlayers map on ANY close — so a routine presence
+      // reconnect blip would wipe out the ACTIVE game connection's entry
+      // mid-match, breaking game logic that reads connectedPlayers (e.g.
+      // the guess-resolution fallback at "guesser player lookup"). That
+      // silent corruption is what was showing up as a random disconnect
+      // after a round or two. Only remove the entry if it's still THIS
+      // connection's — i.e. nothing newer has taken it over.
+      if (connectedPlayers.get(currentPlayerId)?.ws === ws) {
+        connectedPlayers.delete(currentPlayerId);
+      }
       
       // Handle room disconnection with grace period for reconnection
       const room = rooms.get(currentRoomCode);
