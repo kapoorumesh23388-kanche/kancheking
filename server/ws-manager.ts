@@ -736,7 +736,15 @@ export function handleNewConnection(ws: WebSocket) {
       const room = rooms.get(currentRoomCode);
       if (room) {
         // Give player 5 seconds to reconnect (e.g., during page navigation)
-        const RECONNECT_GRACE_PERIOD = 5000;
+        // 5 seconds was too tight — a real mobile network blip (client's
+        // own auto-reconnect already waits 2s before even trying, plus
+        // handshake time) could easily exceed it, causing the server to
+        // wrongly declare the player gone and broadcast "player_left" to
+        // their opponent mid-match — which is what was showing up as the
+        // opponent's screen getting stuck on "Waiting for Opponent" after
+        // round 1. 20s gives real reconnects enough room without leaving
+        // truly-abandoned rooms open too long.
+        const RECONNECT_GRACE_PERIOD = 20000;
         
         // Clear any existing pending disconnect
         if (room.pendingDisconnects.has(currentPlayerId)) {
