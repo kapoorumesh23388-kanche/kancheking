@@ -272,8 +272,9 @@ export function handleNewConnection(ws: WebSocket) {
               
               console.log(`[ROOM] ${playerInfo.playerName} joined room ${currentRoomCode}`);
               
-              // If 2 players, room is ready
-              if (room.players.size >= 2) {
+              // If 2 players, room is ready — only announce once (see the
+              // matching guard in the "join" handler for why).
+              if (room.players.size >= 2 && room.gameState.phase === "waiting") {
                 broadcastToRoom(currentRoomCode, {
                   type: "room_ready",
                   roomCode: currentRoomCode,
@@ -385,8 +386,14 @@ export function handleNewConnection(ws: WebSocket) {
             },
           });
           
-          // If 2 players connected, start game
-          if (room.players.size >= 2) {
+          // If 2 players connected, start game — but only the FIRST time.
+          // This used to fire on every "join" once size>=2, so any later
+          // reconnect (e.g. our own room_not_found recovery, a network
+          // blip, periodic sync racing a stale ref) re-broadcast
+          // "game_start" and reset an already-in-progress match back to
+          // "selecting" — which looked exactly like a disconnect right
+          // after room creation.
+          if (room.players.size >= 2 && room.gameState.phase === "waiting") {
             room.gameState.phase = "selecting";
             broadcastToRoom(currentRoomCode, {
               type: "game_start",
@@ -403,6 +410,26 @@ export function handleNewConnection(ws: WebSocket) {
                 currentHider: room.gameState.currentHider,
               }
             });
+          } else if (room.players.size >= 2) {
+            // Game already in progress — this was a reconnect, not a
+            // fresh match start. Just resync this player quietly instead
+            // of resetting anything.
+            ws.send(JSON.stringify({
+              type: "game_sync",
+              roomCode: currentRoomCode,
+              playerId: currentPlayerId,
+              data: {
+                phase: room.gameState.phase,
+                currentHider: room.gameState.currentHider,
+                hiddenMarbles: room.gameState.hiddenMarbles,
+                players: allPlayersInRoom.map(p => ({
+                  id: p.playerId,
+                  name: p.playerName,
+                  marbles: p.marbles,
+                  profileImage: p.profileImage,
+                })),
+              }
+            }));
           }
         }
 
