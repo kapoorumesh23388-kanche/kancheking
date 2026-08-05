@@ -172,8 +172,8 @@ export default function MultiplayerGame() {
     if (!roomCode) return;
     
     let reconnectAttempts = 0;
-    const MAX_RECONNECT_ATTEMPTS = 5;
-    const RECONNECT_DELAY = 2000;
+    const MAX_RECONNECT_ATTEMPTS = 8;
+    const RECONNECT_DELAY = 1000;
     let reconnectTimeout: NodeJS.Timeout | null = null;
     let isUnmounting = false;
     
