@@ -438,8 +438,17 @@ export default function MultiplayerGame() {
           });
         }, 1000);
         
-        // CLIENT-SIDE AUTO-RESTART: Always transition after 3.5 seconds
-        // This is the primary mechanism - don't rely on server's new_round
+        // CLIENT-SIDE AUTO-RESTART (SAFETY NET ONLY): the server broadcasts
+        // its own "new_round" ~3s after a result and that's the primary,
+        // authoritative transition (see "new_round" case below, which
+        // cancels this timeout the moment it arrives). This timer used to
+        // fire at 3.5s — racing the server's 3s broadcast by a margin too
+        // thin on a slow connection — which could leave the room's
+        // game_state.currentHider a round ahead of what the client
+        // rendered, and the next game_action would then hit a room whose
+        // server-side phase didn't match. Firing later (6.5s) means this
+        // only ever kicks in when the server's message genuinely never
+        // arrived.
         fallbackTimeoutRef.current = setTimeout(() => {
           const nextHider = nextHiderRef.current;
           console.log(`[AUTO-RESTART CLIENT] Starting new round, nextHider: ${nextHider}, playerId: ${playerId}`);
@@ -462,7 +471,7 @@ export default function MultiplayerGame() {
           } else {
             console.log(`[AUTO-RESTART CLIENT] No nextHider found, staying in result phase`);
           }
-        }, 3500); // 3.5 seconds - just after countdown ends
+        }, 6500); // safety net only — server's new_round normally arrives ~3s in
         break;
         
       case "new_round":
@@ -529,6 +538,22 @@ export default function MultiplayerGame() {
         }
         break;
         
+      case "room_not_found":
+        // Server lost track of our room (e.g. a stale WebSocket ref after
+        // a reconnect race). Re-send join on the same socket to re-register
+        // ourselves — this is what used to require a manual page refresh
+        // and looked like "the game disconnected after one round".
+        console.log("[ROOM_NOT_FOUND] Re-joining room to recover:", roomCode);
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({
+            type: "join",
+            roomCode,
+            playerId,
+            data: { playerName, marbles: myMarbles, profileImage }
+          }));
+        }
+        break;
+
       case "game_sync":
         // Sync game state on (re)connection - critical for round transitions
         console.log(`[GAME_SYNC] Syncing state: phase=${message.data.phase}, hider=${message.data.currentHider}, current phase=${phase}`);
@@ -565,7 +590,7 @@ export default function MultiplayerGame() {
         }
         break;
     }
-  }, [playerId, toast, phase]);
+  }, [playerId, toast, phase, roomCode, myMarbles, playerName, profileImage]);
 
   const sendGameAction = useCallback((action: string, data: any) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {

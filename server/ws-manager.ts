@@ -415,6 +415,14 @@ export function handleNewConnection(ws: WebSocket) {
           currentRoomCode = message.roomCode;
         }
         const syncRoom = rooms.get(syncRoomCode);
+        if (!syncRoom) {
+          ws.send(JSON.stringify({
+            type: "room_not_found",
+            roomCode: syncRoomCode,
+            playerId: currentPlayerId,
+            data: {},
+          }));
+        }
         if (syncRoom) {
           // CRITICAL: Update WebSocket reference for this player
           if (syncRoom.players.has(currentPlayerId)) {
@@ -452,6 +460,16 @@ export function handleNewConnection(ws: WebSocket) {
         const room = rooms.get(roomCode);
         if (!room) {
           console.log(`[GAME_ACTION] Room ${roomCode} not found`);
+          // Previously this just silently dropped the message — the client
+          // would sit frozen waiting for a response that never came, which
+          // looked exactly like a random disconnect. Tell the client so it
+          // can recover instead.
+          ws.send(JSON.stringify({
+            type: "room_not_found",
+            roomCode,
+            playerId: currentPlayerId,
+            data: {},
+          }));
           return;
         }
         
