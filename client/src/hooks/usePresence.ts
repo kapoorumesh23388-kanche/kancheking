@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { getTotalMarbles } from "@/lib/marbleStorage";
 
 interface OnlinePlayer {
   id: string;
@@ -37,13 +38,14 @@ export function usePresence(): UsePresenceResult {
   const playerId = localStorage.getItem("playerId") || `player_${Date.now()}`;
   const playerName = localStorage.getItem("playerDisplayName") || `Player_${playerId.slice(-6)}`;
   
-  // Get total marbles from all buckets
+  // Use the SAME server-synced total that Home/Profile/GameHeader use
+  // (marbleStorage.ts's getTotalMarbles), instead of manually re-summing
+  // individual localStorage buckets. That manual sum was missing the
+  // "adsMarbles" bucket entirely and could drift out of sync with the
+  // DB-synced cache — which is why an opponent's device would show a
+  // different, stale marble count for you than your own device showed.
   const getPlayerMarbles = () => {
-    const free = parseInt(localStorage.getItem("freeMarbles") || "150");
-    const purchased = parseInt(localStorage.getItem("purchasedMarbles") || "0");
-    const pvp = parseInt(localStorage.getItem("pvpWinMarbles") || "0");
-    const ai = parseInt(localStorage.getItem("aiWinMarbles") || "0");
-    return free + purchased + pvp + ai;
+    return getTotalMarbles();
   };
   
   const playerMarbles = getPlayerMarbles();

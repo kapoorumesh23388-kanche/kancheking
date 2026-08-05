@@ -750,7 +750,19 @@ export function handleNewConnection(ws: WebSocket) {
       
       // Handle room disconnection with grace period for reconnection
       const room = rooms.get(currentRoomCode);
-      if (room) {
+      // CRITICAL: only treat this as a real disconnect if THIS connection
+      // is still the one on record for the player in the room. A mobile
+      // network reconnect can leave the OLD socket's close event delayed
+      // (arriving after the player has already reconnected on a NEW
+      // socket). Without this check, that late close event would still
+      // schedule a fresh grace-period timer for an already-reconnected,
+      // actively-playing player — and ~20s later (roughly 3-4 rounds in)
+      // it would fire and wrongly evict them, telling the opponent
+      // "player_left" even though the match was working fine. This was
+      // the real cause of "disconnect after a few rounds".
+      if (room && room.players.get(currentPlayerId)?.ws !== ws) {
+        console.log(`[CLOSE] Stale/superseded connection closed for ${currentPlayerId} in room ${currentRoomCode} — already reconnected elsewhere, ignoring.`);
+      } else if (room) {
         // Give player 5 seconds to reconnect (e.g., during page navigation)
         // 5 seconds was too tight — a real mobile network blip (client's
         // own auto-reconnect already waits 2s before even trying, plus
@@ -770,6 +782,13 @@ export function handleNewConnection(ws: WebSocket) {
         // Set up delayed disconnect
         const disconnectTimeout = setTimeout(() => {
           const roomCheck = rooms.get(currentRoomCode);
+          // Final safety check: if this player already has a different,
+          // live connection registered (a reconnect that snuck in right as
+          // this timer was about to fire), don't evict them.
+          if (roomCheck && roomCheck.players.get(currentPlayerId)?.ws !== ws) {
+            console.log(`[DISCONNECT] Skipping eviction for ${currentPlayerId} — reconnected just in time.`);
+            return;
+          }
           if (roomCheck) {
             roomCheck.players.delete(currentPlayerId);
             roomCheck.pendingDisconnects.delete(currentPlayerId);
