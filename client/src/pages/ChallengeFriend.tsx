@@ -18,6 +18,9 @@ export default function ChallengeFriend() {
   const [isCreating, setIsCreating] = useState(false);
   const [waitingForOpponent, setWaitingForOpponent] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const hasNavigatedRef = useRef(false);
   
   const playerId = localStorage.getItem("playerId") || `player_${Date.now()}`;
   const playerName = localStorage.getItem("playerDisplayName") || `Player_${playerId.slice(-6)}`;
@@ -26,16 +29,23 @@ export default function ChallengeFriend() {
 
   // Connect to WebSocket when room is created
   useEffect(() => {
-    if (roomCode && waitingForOpponent) {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
-      
+    if (!(roomCode && waitingForOpponent)) return;
+
+    hasNavigatedRef.current = false;
+    reconnectAttemptsRef.current = 0;
+    const MAX_RECONNECT_ATTEMPTS = 8;
+    const RECONNECT_DELAY = 1000;
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+    function connect() {
       try {
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
-        
+
         ws.onopen = () => {
           console.log("Room creator connected to WebSocket");
+          reconnectAttemptsRef.current = 0;
           // Join the room as creator
           ws.send(JSON.stringify({
             type: "join_room",
@@ -49,18 +59,19 @@ export default function ChallengeFriend() {
             }
           }));
         };
-        
+
         ws.onmessage = (event) => {
           try {
             const message = JSON.parse(event.data);
             console.log("Creator received:", message);
-            
+
             if (message.type === "player_joined") {
               // Opponent joined - close this socket and navigate to game
               toast({
                 title: "Opponent Connected!",
                 description: `${message.data.playerName} has joined the game`,
               });
+              hasNavigatedRef.current = true;
               // Close lobby socket before navigating to prevent duplicate connections
               if (wsRef.current) {
                 wsRef.current.close();
@@ -69,6 +80,7 @@ export default function ChallengeFriend() {
               setLocation(`/multiplayer-game/${roomCode}`);
             } else if (message.type === "room_ready") {
               // Both players ready - close socket and navigate to game
+              hasNavigatedRef.current = true;
               if (wsRef.current) {
                 wsRef.current.close();
                 wsRef.current = null;
@@ -79,11 +91,28 @@ export default function ChallengeFriend() {
             console.error("Parse error:", e);
           }
         };
-        
+
         ws.onclose = () => {
           console.log("WebSocket disconnected");
+          // If we've already handed off to the game page, this is expected
+          // — do nothing. Otherwise this was a genuine drop (network blip)
+          // while the creator was still on the "Waiting for opponent"
+          // screen — previously this just logged and gave up, leaving the
+          // creator stuck forever even if the friend successfully joined
+          // moments later. Reconnect and re-register as creator instead.
+          if (hasNavigatedRef.current) return;
+          if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+            toast({
+              title: "Connection Lost",
+              description: "Couldn't reconnect to the room. Please cancel and create a new room.",
+              variant: "destructive",
+            });
+            return;
+          }
+          reconnectAttemptsRef.current++;
+          reconnectTimeoutRef.current = setTimeout(connect, RECONNECT_DELAY);
         };
-        
+
         ws.onerror = (err) => {
           console.error("WebSocket error:", err);
         };
@@ -91,8 +120,14 @@ export default function ChallengeFriend() {
         console.error("Failed to connect:", error);
       }
     }
-    
+
+    connect();
+
     return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;
