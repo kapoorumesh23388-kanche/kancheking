@@ -40,6 +40,7 @@ export const adminUsers = pgTable("admin_users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   adminId: varchar("admin_id").notNull().unique(),
   password: text("password").notNull(),
+  phoneNumber: varchar("phone_number"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

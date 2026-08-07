@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type TournamentParticipant, type TournamentMatch, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, type AdClaim, type BlogPost, type BlogReaction, catalogItems, users as usersTable, spinRewards as spinRewardsTable, adClaims as adClaimsTable, blogPosts as blogPostsTable, blogReactions as blogReactionsTable, tournamentWindows as tournamentWindowsTable, tournamentParticipants as tournamentParticipantsTable, tournamentMatches as tournamentMatchesTable } from "@shared/schema";
+import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type TournamentParticipant, type TournamentMatch, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, type AdClaim, type BlogPost, type BlogReaction, catalogItems, users as usersTable, spinRewards as spinRewardsTable, adClaims as adClaimsTable, blogPosts as blogPostsTable, blogReactions as blogReactionsTable, tournamentWindows as tournamentWindowsTable, tournamentParticipants as tournamentParticipantsTable, tournamentMatches as tournamentMatchesTable, adminUsers as adminUsersTable } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -106,7 +106,6 @@ export class MemStorage implements IStorage {
   private gameRooms: Map<string, GameRoom>;
   private matchQueue: Map<string, { userId: string; username: string; marbles: number }>;
   private feedbackSubmissions: FeedbackSubmission[];
-  private adminUsers: Map<string, AdminUser>;
 
   constructor() {
     this.users = new Map();
@@ -116,15 +115,6 @@ export class MemStorage implements IStorage {
     this.gameRooms = new Map();
     this.matchQueue = new Map();
     this.feedbackSubmissions = [];
-    this.adminUsers = new Map();
-    
-    // Initialize default admin account
-    this.adminUsers.set("admin", {
-      id: randomUUID(),
-      adminId: "admin",
-      password: "admin123",
-      createdAt: new Date(),
-    });
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -793,19 +783,29 @@ export class MemStorage implements IStorage {
     return this.feedbackSubmissions;
   }
 
+  // Admin credentials are DB-backed (admin_users table) so a changed
+  // password survives server restarts/redeploys. Previously these lived
+  // only in an in-memory Map that reset to the hardcoded default
+  // ("admin"/"admin123") on every deploy — any password change made
+  // through the admin panel was silently lost the next time Render
+  // redeployed, which is why login kept failing with "Invalid credentials".
   async createOrUpdateAdmin(adminId: string, password: string): Promise<AdminUser> {
-    const admin: AdminUser = {
-      id: randomUUID(),
-      adminId,
-      password,
-      createdAt: new Date(),
-    };
-    this.adminUsers.set(adminId, admin);
-    return admin;
+    const [existing] = await db.select().from(adminUsersTable).where(eq(adminUsersTable.adminId, adminId));
+    if (existing) {
+      const [updated] = await db.update(adminUsersTable)
+        .set({ password })
+        .where(eq(adminUsersTable.adminId, adminId))
+        .returning();
+      return updated;
+    }
+    const [created] = await db.insert(adminUsersTable)
+      .values({ adminId, password })
+      .returning();
+    return created;
   }
 
   async getAdminByIdAndPassword(adminId: string, password: string): Promise<AdminUser | undefined> {
-    const admin = this.adminUsers.get(adminId);
+    const [admin] = await db.select().from(adminUsersTable).where(eq(adminUsersTable.adminId, adminId));
     if (admin && admin.password === password) {
       return admin;
     }
@@ -813,24 +813,27 @@ export class MemStorage implements IStorage {
   }
 
   async updateAdminPassword(adminId: string, oldPassword: string, newPassword: string): Promise<boolean> {
-    const admin = this.adminUsers.get(adminId);
+    const [admin] = await db.select().from(adminUsersTable).where(eq(adminUsersTable.adminId, adminId));
     if (admin && admin.password === oldPassword) {
-      admin.password = newPassword;
-      this.adminUsers.set(adminId, admin);
+      await db.update(adminUsersTable)
+        .set({ password: newPassword })
+        .where(eq(adminUsersTable.adminId, adminId));
       return true;
     }
     return false;
   }
 
-  private adminPhones: Map<string, string> = new Map([["admin", "9211979518"]]);
   private otpStore: Map<string, { otp: string; timestamp: number }> = new Map();
 
   async updateAdminPhone(adminId: string, phoneNumber: string): Promise<void> {
-    this.adminPhones.set(adminId, phoneNumber);
+    await db.update(adminUsersTable)
+      .set({ phoneNumber })
+      .where(eq(adminUsersTable.adminId, adminId));
   }
 
   async getAdminPhone(adminId: string): Promise<string | undefined> {
-    return this.adminPhones.get(adminId);
+    const [admin] = await db.select().from(adminUsersTable).where(eq(adminUsersTable.adminId, adminId));
+    return admin?.phoneNumber ?? undefined;
   }
 
   async saveOTP(adminId: string, otp: string): Promise<void> {
