@@ -9,21 +9,30 @@ interface SplashScreenProps {
   minDurationMs?: number;
 }
 
-export default function SplashScreen({ onComplete, minDurationMs = 2200 }: SplashScreenProps) {
+export default function SplashScreen({ onComplete, minDurationMs = 9000 }: SplashScreenProps) {
   useEffect(() => {
     const timer = setTimeout(onComplete, minDurationMs);
     return () => clearTimeout(timer);
   }, [onComplete, minDurationMs]);
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black" data-testid="screen-splash">
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden"
+      style={{ background: "linear-gradient(180deg, #120a2e 0%, #1c1240 50%, #2a1a4a 100%)" }}
+      data-testid="screen-splash"
+    >
+      {/* Illustration is authored for a portrait phone canvas. On a wide
+          desktop/laptop screen we don't stretch or crop it edge-to-edge
+          (that squashed the marbles and cut off the title) — instead it
+          stays centered as a phone-shaped panel, at a width capped
+          relative to the viewport height, with the same gradient behind
+          it so the edges blend in seamlessly instead of looking cut off. */}
       <svg
-        width="100%"
-        height="100%"
         viewBox="0 0 300 650"
-        preserveAspectRatio="xMidYMid slice"
+        preserveAspectRatio="xMidYMid meet"
         role="img"
-        className="block"
+        className="block h-full w-auto max-w-full"
+        style={{ aspectRatio: "300 / 650" }}
       >
         <title>Kanche King</title>
         <desc>Dark starry night background with glowing floating marbles and the app title</desc>
