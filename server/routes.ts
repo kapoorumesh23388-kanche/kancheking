@@ -1490,7 +1490,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Admin ID and password required" });
       }
 
+      // TEMPORARY DEBUG — remove once login is confirmed working.
+      console.log(`[ADMIN_DEBUG] Received adminId=${JSON.stringify(adminId)} passwordLen=${password.length}`);
+      console.log(`[ADMIN_DEBUG] DB host in use: ${process.env.DATABASE_URL?.split('@')[1]?.split('/')[0]}`);
+
       const admin = await storage.getAdminByIdAndPassword(adminId, password);
+      console.log(`[ADMIN_DEBUG] Lookup result: ${admin ? `FOUND (adminId=${admin.adminId})` : "NOT FOUND"}`);
+
       if (!admin) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
