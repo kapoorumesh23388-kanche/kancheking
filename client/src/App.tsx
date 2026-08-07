@@ -31,6 +31,7 @@ import About from "@/pages/About";
 import BlogPage from "@/pages/BlogPage";
 import BlogPost from "@/pages/BlogPost";
 import NotFound from "@/pages/not-found";
+import SplashScreen from "@/components/SplashScreen";
 
 // Paths that must be reachable WITHOUT the email-OTP onboarding wall.
 // Google's AdSense reviewer/crawler visits these as a logged-out visitor —
@@ -107,6 +108,7 @@ function AppContent({ needsOnboarding }: { needsOnboarding: boolean }) {
 
 function App() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     const userId = localStorage.getItem("userId");
@@ -138,7 +140,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
         <TooltipProvider>
-          <AppContent needsOnboarding={needsOnboarding} />
+          {showSplash ? (
+            <SplashScreen onComplete={() => setShowSplash(false)} />
+          ) : (
+            <AppContent needsOnboarding={needsOnboarding} />
+          )}
         </TooltipProvider>
       </LanguageProvider>
     </QueryClientProvider>
