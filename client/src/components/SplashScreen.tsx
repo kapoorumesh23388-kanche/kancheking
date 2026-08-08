@@ -1,19 +1,40 @@
 // Full-screen splash/loading screen shown when the app first opens
 // (e.g. right when the Play Store APK launches). Purely decorative —
-// it auto-dismisses itself after `minDurationMs` by calling onComplete.
+// but it no longer dismisses on a fixed timer alone. It waits for BOTH:
+//   1. `minDurationMs` to elapse (keeps the branded splash pacing/feel)
+//   2. `isAppReady` to become true (the app has actually finished its
+//      startup checks and the window has fully loaded — images/fonts etc.)
+// Whichever finishes later is what determines when onComplete() fires.
+// This avoids the splash disappearing early on a slow connection and
+// dropping the player onto a half-loaded screen.
 // See App.tsx for how it's wired in before the normal onboarding/home flow.
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface SplashScreenProps {
   onComplete: () => void;
+  isAppReady: boolean;
   minDurationMs?: number;
 }
 
-export default function SplashScreen({ onComplete, minDurationMs = 9000 }: SplashScreenProps) {
+export default function SplashScreen({ onComplete, isAppReady, minDurationMs = 9000 }: SplashScreenProps) {
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+
+  // Minimum-duration timer — guarantees the branded splash is visible for
+  // at least this long even on a fast connection, same as before.
   useEffect(() => {
-    const timer = setTimeout(onComplete, minDurationMs);
+    const timer = setTimeout(() => setMinTimeElapsed(true), minDurationMs);
     return () => clearTimeout(timer);
-  }, [onComplete, minDurationMs]);
+  }, [minDurationMs]);
+
+  // Only calls onComplete once BOTH the minimum time has passed AND the
+  // app has reported itself ready. If the app is still loading (slow
+  // network, etc.) the splash simply stays up past minDurationMs instead
+  // of dropping the player onto an unfinished screen.
+  useEffect(() => {
+    if (minTimeElapsed && isAppReady) {
+      onComplete();
+    }
+  }, [minTimeElapsed, isAppReady, onComplete]);
 
   return (
     <div

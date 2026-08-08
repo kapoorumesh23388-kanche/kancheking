@@ -109,6 +109,22 @@ function AppContent({ needsOnboarding }: { needsOnboarding: boolean }) {
 function App() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
+  // App is only "ready" once (a) the onboarding/session check below has run
+  // AND (b) the browser has fully finished loading (images, fonts, etc).
+  // SplashScreen uses this instead of relying purely on a fixed timer, so
+  // players on slow connections don't get dropped onto a half-loaded app.
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [windowLoaded, setWindowLoaded] = useState(
+    typeof document !== "undefined" && document.readyState === "complete"
+  );
+  const appReady = onboardingChecked && windowLoaded;
+
+  useEffect(() => {
+    if (windowLoaded) return;
+    const handleLoad = () => setWindowLoaded(true);
+    window.addEventListener("load", handleLoad);
+    return () => window.removeEventListener("load", handleLoad);
+  }, [windowLoaded]);
 
   useEffect(() => {
     const userId = localStorage.getItem("userId");
@@ -127,6 +143,7 @@ function App() {
     } else {
       setNeedsOnboarding(false);
     }
+    setOnboardingChecked(true);
 
     const handleProfileUpdated = () => {
       setNeedsOnboarding(false);
@@ -141,7 +158,10 @@ function App() {
       <LanguageProvider>
         <TooltipProvider>
           {showSplash ? (
-            <SplashScreen onComplete={() => setShowSplash(false)} />
+            <SplashScreen
+              onComplete={() => setShowSplash(false)}
+              isAppReady={appReady}
+            />
           ) : (
             <AppContent needsOnboarding={needsOnboarding} />
           )}
