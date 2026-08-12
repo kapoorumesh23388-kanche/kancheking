@@ -117,6 +117,57 @@ export function verifyRedeemOTP(email: string, otp: string): boolean {
 // should never stop the actual feedback/redemption from succeeding.
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || "kancheking.kalijhota@gmail.com";
 
+// Sends the player their redeemed brand voucher (a time-limited tracked
+// link) by email, as a backup to the in-app claim popup — so they still
+// get it even if they close the app before opening the link.
+export async function sendVoucherEmail(
+  email: string,
+  brandName: string,
+  discountLabel: string,
+  trackedLink: string,
+  claimWindowSeconds: number
+): Promise<boolean> {
+  const minutes = Math.max(1, Math.round(claimWindowSeconds / 60));
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "Kanche King <rewards@kancheking.com>",
+        to: [email],
+        subject: `Kanche King — Your ${brandName} Voucher is Ready!`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #1a0a2e; color: #fff; padding: 30px; border-radius: 12px;">
+            <h2 style="color: #a855f7; text-align: center;">🎁 Kanche King</h2>
+            <p>Your voucher is ready:</p>
+            <div style="background: #2d1b69; border: 2px solid #a855f7; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+              <h1 style="color: #f0abfc; font-size: 24px; margin: 0 0 8px 0;">${brandName}</h1>
+              <p style="color: #ffb547; font-size: 18px; margin: 0;">${discountLabel}</p>
+            </div>
+            <div style="text-align: center; margin: 24px 0;">
+              <a href="${trackedLink}" style="background: #a855f7; color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">Open My Voucher</a>
+            </div>
+            <p style="color: #aaa;">This link works right away — no need to rush, but the in-app popup countdown (${minutes} minute${minutes === 1 ? "" : "s"}) is just to keep your session active.</p>
+            <p style="color: #aaa; font-size: 12px;">This is a special offer link — pricing/discount is set by the brand and may change.</p>
+          </div>
+        `,
+      }),
+    });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("[sendVoucherEmail] Resend API error:", response.status, errorBody);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[sendVoucherEmail] Error:", err);
+    return false;
+  }
+}
+
 export async function sendAdminNotificationEmail(subject: string, htmlBody: string): Promise<boolean> {
   try {
     const response = await fetch("https://api.resend.com/emails", {

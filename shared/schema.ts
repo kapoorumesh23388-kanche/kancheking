@@ -289,6 +289,39 @@ export const blogReactions = pgTable("blog_reactions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// --- Brand Vouchers ---
+// A voucherOffer is an admin-curated deal (e.g. "Myntra — up to 80% off")
+// that players can redeem with Reward Points. Redeeming converts the
+// offer's targetUrl into a Cuelinks tracked affiliate link — the "voucher"
+// is that time-limited link, not a prepaid gift-card code.
+export const voucherOffers = pgTable("voucher_offers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  brandName: varchar("brand_name").notNull(),
+  discountLabel: varchar("discount_label").notNull(),
+  description: text("description"),
+  pointsCost: integer("points_cost").notNull(),
+  targetUrl: text("target_url").notNull(),
+  logoColor: varchar("logo_color").notNull().default("#00D9FF"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const voucherClaims = pgTable("voucher_claims", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  offerId: varchar("offer_id").notNull(),
+  brandName: varchar("brand_name").notNull(),
+  discountLabel: varchar("discount_label").notNull(),
+  pointsSpent: integer("points_spent").notNull(),
+  trackedLink: text("tracked_link").notNull(),
+  deliveredToEmail: varchar("delivered_to_email"),
+  status: varchar("status").notNull().default("pending"), // pending | claimed | expired
+  claimWindowSeconds: integer("claim_window_seconds").notNull().default(180),
+  expiresAt: timestamp("expires_at").notNull(),
+  claimedAt: timestamp("claimed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -318,3 +351,5 @@ export type SpinReward = typeof spinRewards.$inferSelect;
 export type AdClaim = typeof adClaims.$inferSelect;
 export type BlogPost = typeof blogPosts.$inferSelect;
 export type BlogReaction = typeof blogReactions.$inferSelect;
+export type VoucherOffer = typeof voucherOffers.$inferSelect;
+export type VoucherClaim = typeof voucherClaims.$inferSelect;

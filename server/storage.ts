@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type TournamentParticipant, type TournamentMatch, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, type AdClaim, type BlogPost, type BlogReaction, catalogItems, users as usersTable, spinRewards as spinRewardsTable, adClaims as adClaimsTable, blogPosts as blogPostsTable, blogReactions as blogReactionsTable, tournamentWindows as tournamentWindowsTable, tournamentParticipants as tournamentParticipantsTable, tournamentMatches as tournamentMatchesTable, adminUsers as adminUsersTable } from "@shared/schema";
+import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type TournamentParticipant, type TournamentMatch, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, type AdClaim, type BlogPost, type BlogReaction, type VoucherOffer, type VoucherClaim, catalogItems, users as usersTable, spinRewards as spinRewardsTable, adClaims as adClaimsTable, blogPosts as blogPostsTable, blogReactions as blogReactionsTable, tournamentWindows as tournamentWindowsTable, tournamentParticipants as tournamentParticipantsTable, tournamentMatches as tournamentMatchesTable, adminUsers as adminUsersTable, voucherOffers as voucherOffersTable, voucherClaims as voucherClaimsTable } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -87,6 +87,19 @@ export interface IStorage {
   updateDailyUserStats(userId: string, date: string, stats: Partial<{ totalPlaytimeSeconds: number; gamesPlayed: number; gamesWon: number; adsViewed: number; adsClicked: number; adRevenueGenerated: number; marblesEarned: number; marblesSpent: number }>): Promise<void>;
   getEngagementAnalytics(): Promise<{ dailyStats: any[]; topUsers: any[]; adStats: any[] }>;
   
+  // Brand Vouchers
+  getActiveVoucherOffers(): Promise<VoucherOffer[]>;
+  getAllVoucherOffersAdmin(): Promise<VoucherOffer[]>;
+  getVoucherOffer(id: string): Promise<VoucherOffer | undefined>;
+  createVoucherOffer(data: Omit<VoucherOffer, 'id' | 'createdAt'>): Promise<VoucherOffer>;
+  updateVoucherOffer(id: string, data: Partial<VoucherOffer>): Promise<VoucherOffer | undefined>;
+  deleteVoucherOffer(id: string): Promise<void>;
+  createVoucherClaim(data: Omit<VoucherClaim, 'id' | 'createdAt'>): Promise<VoucherClaim>;
+  getVoucherClaim(id: string): Promise<VoucherClaim | undefined>;
+  getUserVoucherClaims(userId: string): Promise<VoucherClaim[]>;
+  markVoucherClaimStatus(id: string, status: string, claimedAt?: Date): Promise<VoucherClaim | undefined>;
+  expireStaleVoucherClaims(userId: string): Promise<void>;
+
   // Tournament Bracket Methods
   getTournamentParticipants(tournamentId: string): Promise<TournamentParticipant[]>;
   addTournamentParticipant(participant: Omit<TournamentParticipant, 'id' | 'createdAt'>): Promise<TournamentParticipant>;
@@ -1083,6 +1096,68 @@ export class MemStorage implements IStorage {
     const adStats = Object.values(adTypeStats);
 
     return { dailyStats, topUsers, adStats };
+  }
+
+  // --- Brand Vouchers ---
+  async getActiveVoucherOffers(): Promise<VoucherOffer[]> {
+    const offers = await db.select().from(voucherOffersTable).orderBy(desc(voucherOffersTable.createdAt));
+    return offers.filter(o => o.isActive);
+  }
+
+  async getAllVoucherOffersAdmin(): Promise<VoucherOffer[]> {
+    return await db.select().from(voucherOffersTable).orderBy(desc(voucherOffersTable.createdAt));
+  }
+
+  async getVoucherOffer(id: string): Promise<VoucherOffer | undefined> {
+    const [offer] = await db.select().from(voucherOffersTable).where(eq(voucherOffersTable.id, id));
+    return offer;
+  }
+
+  async createVoucherOffer(data: Omit<VoucherOffer, 'id' | 'createdAt'>): Promise<VoucherOffer> {
+    const [offer] = await db.insert(voucherOffersTable).values(data as any).returning();
+    return offer;
+  }
+
+  async updateVoucherOffer(id: string, data: Partial<VoucherOffer>): Promise<VoucherOffer | undefined> {
+    const [offer] = await db.update(voucherOffersTable).set(data as any).where(eq(voucherOffersTable.id, id)).returning();
+    return offer;
+  }
+
+  async deleteVoucherOffer(id: string): Promise<void> {
+    await db.delete(voucherOffersTable).where(eq(voucherOffersTable.id, id));
+  }
+
+  async createVoucherClaim(data: Omit<VoucherClaim, 'id' | 'createdAt'>): Promise<VoucherClaim> {
+    const [claim] = await db.insert(voucherClaimsTable).values(data as any).returning();
+    return claim;
+  }
+
+  async getVoucherClaim(id: string): Promise<VoucherClaim | undefined> {
+    const [claim] = await db.select().from(voucherClaimsTable).where(eq(voucherClaimsTable.id, id));
+    return claim;
+  }
+
+  async getUserVoucherClaims(userId: string): Promise<VoucherClaim[]> {
+    return await db.select().from(voucherClaimsTable)
+      .where(eq(voucherClaimsTable.userId, userId))
+      .orderBy(desc(voucherClaimsTable.createdAt));
+  }
+
+  async markVoucherClaimStatus(id: string, status: string, claimedAt?: Date): Promise<VoucherClaim | undefined> {
+    const updateData: any = { status };
+    if (claimedAt) updateData.claimedAt = claimedAt;
+    const [claim] = await db.update(voucherClaimsTable).set(updateData).where(eq(voucherClaimsTable.id, id)).returning();
+    return claim;
+  }
+
+  async expireStaleVoucherClaims(userId: string): Promise<void> {
+    const claims = await this.getUserVoucherClaims(userId);
+    const now = new Date();
+    for (const claim of claims) {
+      if (claim.status === "pending" && new Date(claim.expiresAt) < now) {
+        await this.markVoucherClaimStatus(claim.id, "expired");
+      }
+    }
   }
 
   // Tournament Bracket Methods — all persisted to the real database now,

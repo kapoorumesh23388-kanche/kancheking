@@ -2,7 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
 import { storage } from "./storage";
-import { generateOTP, sendLoginOTPEmail, verifyLoginOTP, sendAdminNotificationEmail, sendRedeemOTPEmail, verifyRedeemOTP } from "./emailService";
+import { generateOTP, sendLoginOTPEmail, verifyLoginOTP, sendAdminNotificationEmail, sendRedeemOTPEmail, verifyRedeemOTP, sendVoucherEmail } from "./emailService";
+import { convertToTrackedLink } from "./cuelinksClient";
 import { handleNewConnection } from "./ws-manager";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -2344,6 +2345,170 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Delete blog post error:", error);
       res.status(500).json({ error: "Failed to delete story" });
+    }
+  });
+
+  // --- Brand Vouchers ---
+  // Public: list active offers players can redeem Reward Points for
+  app.get("/api/vouchers/offers", async (req, res) => {
+    try {
+      const offers = await storage.getActiveVoucherOffers();
+      res.json({ success: true, offers });
+    } catch (error) {
+      console.error("Get voucher offers error:", error);
+      res.status(500).json({ error: "Failed to fetch voucher offers" });
+    }
+  });
+
+  // Redeem points for a voucher — converts the offer's target URL into a
+  // Cuelinks tracked link, deducts points, records the claim with a short
+  // claim window, and emails the link to the player as a backup.
+  app.post("/api/vouchers/redeem", async (req, res) => {
+    try {
+      const { userId, offerId, email } = req.body;
+      if (!userId || !offerId || !email || !email.includes("@")) {
+        return res.status(400).json({ error: "userId, offerId and a valid email are required" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      const offer = await storage.getVoucherOffer(offerId);
+      if (!offer || !offer.isActive) {
+        return res.status(404).json({ error: "Offer not found or no longer available" });
+      }
+
+      if ((user.points || 0) < offer.pointsCost) {
+        return res.status(400).json({ error: "Insufficient points" });
+      }
+
+      const { trackedLink } = await convertToTrackedLink(offer.targetUrl, userId);
+
+      const newPoints = user.points - offer.pointsCost;
+      await storage.updateUserPoints(userId, newPoints);
+
+      const claimWindowSeconds = 180; // 3 minutes
+      const expiresAt = new Date(Date.now() + claimWindowSeconds * 1000);
+
+      const claim = await storage.createVoucherClaim({
+        userId,
+        offerId: offer.id,
+        brandName: offer.brandName,
+        discountLabel: offer.discountLabel,
+        pointsSpent: offer.pointsCost,
+        trackedLink,
+        deliveredToEmail: email.trim().toLowerCase(),
+        status: "pending",
+        claimWindowSeconds,
+        expiresAt,
+        claimedAt: null,
+      } as any);
+
+      await storage.recordTransaction({
+        userId,
+        amount: -offer.pointsCost,
+        type: "voucher_redemption",
+        description: `Redeemed voucher: ${offer.brandName} (${offer.discountLabel})`,
+        transactionId: claim.id,
+      });
+
+      // Email is a backup delivery method — don't block the response on it
+      sendVoucherEmail(email.trim().toLowerCase(), offer.brandName, offer.discountLabel, trackedLink, claimWindowSeconds).catch(() => {});
+
+      res.json({ success: true, claim, points: newPoints });
+    } catch (error) {
+      console.error("Voucher redeem error:", error);
+      res.status(500).json({ error: "Failed to redeem voucher" });
+    }
+  });
+
+  // Player actually opened/used the link within the claim window
+  app.post("/api/vouchers/claim/:claimId", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      const claim = await storage.getVoucherClaim(req.params.claimId);
+      if (!claim || claim.userId !== userId) {
+        return res.status(404).json({ error: "Voucher claim not found" });
+      }
+      if (claim.status !== "pending") {
+        return res.json({ success: true, claim }); // already claimed/expired — idempotent
+      }
+      if (new Date(claim.expiresAt) < new Date()) {
+        const expired = await storage.markVoucherClaimStatus(claim.id, "expired");
+        return res.status(400).json({ error: "Voucher window expired", claim: expired });
+      }
+      const updated = await storage.markVoucherClaimStatus(claim.id, "claimed", new Date());
+      res.json({ success: true, claim: updated });
+    } catch (error) {
+      console.error("Voucher claim error:", error);
+      res.status(500).json({ error: "Failed to mark voucher as claimed" });
+    }
+  });
+
+  // Player's voucher history (active + past) for the Profile page
+  app.get("/api/vouchers/my/:userId", async (req, res) => {
+    try {
+      await storage.expireStaleVoucherClaims(req.params.userId);
+      const claims = await storage.getUserVoucherClaims(req.params.userId);
+      res.json({ success: true, claims });
+    } catch (error) {
+      console.error("Get my vouchers error:", error);
+      res.status(500).json({ error: "Failed to fetch your vouchers" });
+    }
+  });
+
+  // --- Admin: manage voucher offers ---
+  app.get("/api/admin/vouchers/offers", async (req, res) => {
+    try {
+      const offers = await storage.getAllVoucherOffersAdmin();
+      res.json({ success: true, offers });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch offers" });
+    }
+  });
+
+  app.post("/api/admin/vouchers/offers", async (req, res) => {
+    try {
+      const { adminId, brandName, discountLabel, description, pointsCost, targetUrl, logoColor, isActive } = req.body;
+      if (!(await isAdminUser(adminId))) return res.status(403).json({ error: "Admin access required" });
+      if (!brandName || !discountLabel || !pointsCost || !targetUrl) {
+        return res.status(400).json({ error: "brandName, discountLabel, pointsCost and targetUrl are required" });
+      }
+      const offer = await storage.createVoucherOffer({
+        brandName, discountLabel, description: description || null,
+        pointsCost, targetUrl, logoColor: logoColor || "#00D9FF",
+        isActive: isActive !== undefined ? isActive : true,
+      } as any);
+      res.json({ success: true, offer });
+    } catch (error) {
+      console.error("Create voucher offer error:", error);
+      res.status(500).json({ error: "Failed to create offer" });
+    }
+  });
+
+  app.put("/api/admin/vouchers/offers/:id", async (req, res) => {
+    try {
+      const { adminId, brandName, discountLabel, description, pointsCost, targetUrl, logoColor, isActive } = req.body;
+      if (!(await isAdminUser(adminId))) return res.status(403).json({ error: "Admin access required" });
+      const offer = await storage.updateVoucherOffer(req.params.id, {
+        brandName, discountLabel, description, pointsCost, targetUrl, logoColor, isActive,
+      } as any);
+      if (!offer) return res.status(404).json({ error: "Offer not found" });
+      res.json({ success: true, offer });
+    } catch (error) {
+      console.error("Update voucher offer error:", error);
+      res.status(500).json({ error: "Failed to update offer" });
+    }
+  });
+
+  app.delete("/api/admin/vouchers/offers/:id", async (req, res) => {
+    try {
+      const { adminId } = req.body;
+      if (!(await isAdminUser(adminId))) return res.status(403).json({ error: "Admin access required" });
+      await storage.deleteVoucherOffer(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete offer" });
     }
   });
 
