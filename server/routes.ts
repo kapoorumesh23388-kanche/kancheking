@@ -3,10 +3,54 @@ import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
 import { storage } from "./storage";
 import { generateOTP, sendLoginOTPEmail, verifyLoginOTP, sendAdminNotificationEmail, sendRedeemOTPEmail, verifyRedeemOTP, sendVoucherEmail } from "./emailService";
-import { convertToTrackedLink } from "./cuelinksClient";
+import { convertToTrackedLink, pickRandomCampaign } from "./cuelinksClient";
 import { handleNewConnection } from "./ws-manager";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // --- Brand Vouchers: shared helper ---
+  // Called whenever a player earns a voucher (AI win streak, Challenge
+  // Friend win, Random Player win, or Tournament win). Picks a live
+  // Cuelinks campaign, converts it to a tracked link, records the claim
+  // with a short claim window, and emails it to the player as a backup.
+  // Never throws — a voucher-granting failure should never break the
+  // underlying game-win response.
+  async function grantVoucher(userId: string, triggerType: string): Promise<any | null> {
+    try {
+      const user = await storage.getUser(userId);
+      if (!user || !user.email) {
+        console.error(`[grantVoucher] Skipped for ${userId} (${triggerType}) — no email on file`);
+        return null;
+      }
+
+      const campaign = await pickRandomCampaign();
+      const { trackedLink } = await convertToTrackedLink(campaign.url, userId);
+
+      const claimWindowSeconds = 180; // 3 minutes
+      const expiresAt = new Date(Date.now() + claimWindowSeconds * 1000);
+      const discountLabel = "Exclusive deal — tap to view";
+
+      const claim = await storage.createVoucherClaim({
+        userId,
+        triggerType,
+        brandName: campaign.name,
+        discountLabel,
+        trackedLink,
+        deliveredToEmail: user.email,
+        status: "pending",
+        claimWindowSeconds,
+        expiresAt,
+        claimedAt: null,
+      } as any);
+
+      sendVoucherEmail(user.email, campaign.name, discountLabel, trackedLink, claimWindowSeconds).catch(() => {});
+
+      return claim;
+    } catch (err) {
+      console.error(`[grantVoucher] error for ${userId} (${triggerType}):`, err);
+      return null;
+    }
+  }
+
   app.get("/api/catalog", async (req, res) => {
     try {
       const items = await storage.getCatalogItems();
@@ -209,11 +253,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUserStats(userId, { gamesWon: newGamesWon, gamesPlayed: newGamesPlayed });
 
       // If player won against friend or random player, add earned marbles
+      let voucherClaim = null;
       if (won && opponentType && opponentType !== "ai") {
         // Add marbles to earned marbles for tournament eligibility
         await storage.addEarnedMarbles(userId, 10);
         // Add to dedicated PvP win marbles counter (used ONLY for leaderboard ranking)
         await storage.addPvpWinMarbles(userId, 10);
+
+        // Brand voucher: every Challenge Friend / Random Player win earns one
+        if (opponentType === "friend") {
+          voucherClaim = await grantVoucher(userId, "challenge_friend_win");
+        } else if (opponentType === "random") {
+          voucherClaim = await grantVoucher(userId, "random_player_win");
+        } else {
+          console.error(`[game-points] Unrecognized opponentType "${opponentType}" — no voucher trigger matched`);
+        }
       }
 
       await storage.addGamePoints({
@@ -229,6 +283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         points: finalUser?.points ?? 0,
         marbles: finalUser?.marbles ?? 0,
         success: true,
+        voucherClaim,
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to record game points" });
@@ -410,12 +465,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transactionId: null,
       });
 
+      // Brand voucher: every tournament win earns one
+      const voucherClaim = await grantVoucher(userId, "tournament_win");
+
       res.json({ 
         success: true, 
         marbles: updatedUser?.marbles ?? 0,
         points: updatedUser?.points ?? 0,
         marblesAwarded: prizePoolMarbles,
         pointsAwarded: WINNER_POINTS_BONUS,
+        voucherClaim,
         message: `🏆 Tournament Win! ${prizePoolMarbles} marbles + ${WINNER_POINTS_BONUS} points awarded.`
       });
     } catch (error) {
@@ -1354,7 +1413,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) return res.status(400).json({ error: "userId required" });
 
       const newAiLevel = await storage.increaseAiOpponentLevel(userId);
-      res.json({ success: true, newAiLevel });
+
+      // Brand voucher: every 5 CONSECUTIVE AI wins earns one; the streak
+      // resets to 0 on a loss (see /api/ai-opponent/carry-over below) and
+      // also resets here after granting, so it takes another 5 to earn again.
+      const newStreak = await storage.incrementAiWinStreak(userId);
+      let voucherClaim = null;
+      if (newStreak >= 5) {
+        voucherClaim = await grantVoucher(userId, "ai_streak");
+        await storage.resetAiWinStreak(userId);
+      }
+
+      res.json({ success: true, newAiLevel, aiWinStreak: newStreak >= 5 ? 0 : newStreak, voucherClaim });
     } catch (error) {
       console.error("AI level-up error:", error);
       res.status(500).json({ error: "Failed to level up AI opponent" });
@@ -1373,6 +1443,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const newAiLevel = await storage.setAiOpponentLevel(userId, aiEndingMarbles);
+      // AI beat the player — their consecutive-win streak breaks.
+      await storage.resetAiWinStreak(userId);
       res.json({ success: true, newAiLevel });
     } catch (error) {
       console.error("AI carry-over error:", error);
@@ -1967,6 +2039,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+  // ─── Auth: Mobile — Send Login/Register OTP via Twilio Verify ──────────────
+  // Reuses the same Twilio Verify service already wired for admin login —
+  // Twilio manages the OTP itself, we just trigger send/verify.
+  app.post("/api/auth/mobile/send-otp", async (req, res) => {
+    try {
+      const { phone } = req.body;
+      const phoneDigits = (phone || "").replace(/\D/g, "");
+      if (!phoneDigits || phoneDigits.length < 10) {
+        return res.status(400).json({ error: "Valid mobile number required" });
+      }
+      const { sendOTPViaTwilio } = await import('./twilioClient');
+      const sent = await sendOTPViaTwilio(phoneDigits);
+      if (!sent) return res.status(500).json({ error: "Failed to send OTP" });
+      res.json({ success: true, message: "OTP sent to your mobile" });
+    } catch (error) {
+      console.error("Mobile send OTP error:", error);
+      res.status(500).json({ error: "Failed to send OTP" });
+    }
+  });
+
+  // ─── Auth: Mobile — Verify OTP and Login/Register ───────────────────────────
+  app.post("/api/auth/mobile/verify-otp", async (req, res) => {
+    try {
+      const { phone, otp } = req.body;
+      const phoneDigits = (phone || "").replace(/\D/g, "");
+      if (!phoneDigits || !otp) {
+        return res.status(400).json({ error: "Mobile number and OTP required" });
+      }
+
+      const { verifyOTPViaTwilio } = await import('./twilioClient');
+      const isValid = await verifyOTPViaTwilio(phoneDigits, otp);
+      if (!isValid) {
+        return res.status(400).json({ error: "Invalid or expired OTP" });
+      }
+
+      const user = await storage.getUserByPhone(phoneDigits);
+      if (user) {
+        res.json({
+          success: true,
+          isNewUser: false,
+          userId: user.id,
+          displayName: user.displayName || user.username,
+          message: "Login successful"
+        });
+      } else {
+        // New user — do NOT create the DB record yet, same pattern as
+        // email signup: account is only created once the profile step
+        // (display name + DOB) is submitted.
+        res.json({
+          success: true,
+          isNewUser: true,
+          phone: phoneDigits,
+          message: "OTP verified — please complete your profile"
+        });
+      }
+    } catch (error) {
+      console.error("Mobile verify OTP error:", error);
+      res.status(500).json({ error: "Failed to verify OTP" });
+    }
+  });
+
+  // Complete signup for a brand-new player logging in via mobile number.
+  // Mirrors /api/auth/complete-signup but keyed on phone instead of email.
+  app.post("/api/auth/mobile/complete-signup", async (req, res) => {
+    try {
+      const { phone, displayName, gender, dateOfBirth } = req.body;
+      const phoneDigits = (phone || "").replace(/\D/g, "");
+      if (!phoneDigits) {
+        return res.status(400).json({ error: "Mobile number required" });
+      }
+      if (!displayName || !displayName.trim()) {
+        return res.status(400).json({ error: "Display name required" });
+      }
+      if (!dateOfBirth) {
+        return res.status(400).json({ error: "Date of birth required" });
+      }
+
+      const MIN_AGE = 18;
+      const birthDate = new Date(dateOfBirth);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
+
+      if (isNaN(age) || age < MIN_AGE) {
+        return res.status(403).json({
+          error: `Kanche King is only available to players aged ${MIN_AGE} and above. We're not able to create an account for you.`
+        });
+      }
+
+      const existing = await storage.getUserByPhone(phoneDigits);
+      if (existing) {
+        return res.json({
+          success: true,
+          isNewUser: false,
+          userId: existing.id,
+          displayName: existing.displayName || existing.username,
+          message: "Account already exists — logged in"
+        });
+      }
+
+      const newUserId = `player-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const isAgeVerified = true; // guaranteed true here — under-18 already rejected above
+
+      await storage.createUser(
+        { username: newUserId, password: "guest" },
+        undefined,
+        newUserId
+      );
+
+      await storage.updateUserProfile(newUserId, {
+        phone: phoneDigits,
+        displayName: displayName.trim(),
+        gender: gender || "boy",
+      });
+
+      if (dateOfBirth) {
+        await storage.updateUserOnboarding(newUserId, {
+          displayName: displayName.trim(),
+          dateOfBirth,
+          isAgeVerified,
+        });
+      }
+
+      res.json({
+        success: true,
+        isNewUser: true,
+        userId: newUserId,
+        displayName: displayName.trim(),
+        message: "Account created"
+      });
+    } catch (error) {
+      console.error("Mobile complete signup error:", error);
+      res.status(500).json({ error: "Failed to create account" });
+    }
+  });
+
   // ─── Auth: Send Login/Register OTP ──────────────────────────────────────────
   app.post("/api/auth/send-otp", async (req, res) => {
     try {
@@ -2348,80 +2557,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // --- Brand Vouchers ---
-  // Public: list active offers players can redeem Reward Points for
-  app.get("/api/vouchers/offers", async (req, res) => {
-    try {
-      const offers = await storage.getActiveVoucherOffers();
-      res.json({ success: true, offers });
-    } catch (error) {
-      console.error("Get voucher offers error:", error);
-      res.status(500).json({ error: "Failed to fetch voucher offers" });
-    }
-  });
-
-  // Redeem points for a voucher — converts the offer's target URL into a
-  // Cuelinks tracked link, deducts points, records the claim with a short
-  // claim window, and emails the link to the player as a backup.
-  app.post("/api/vouchers/redeem", async (req, res) => {
-    try {
-      const { userId, offerId, email } = req.body;
-      if (!userId || !offerId || !email || !email.includes("@")) {
-        return res.status(400).json({ error: "userId, offerId and a valid email are required" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user) return res.status(404).json({ error: "User not found" });
-
-      const offer = await storage.getVoucherOffer(offerId);
-      if (!offer || !offer.isActive) {
-        return res.status(404).json({ error: "Offer not found or no longer available" });
-      }
-
-      if ((user.points || 0) < offer.pointsCost) {
-        return res.status(400).json({ error: "Insufficient points" });
-      }
-
-      const { trackedLink } = await convertToTrackedLink(offer.targetUrl, userId);
-
-      const newPoints = user.points - offer.pointsCost;
-      await storage.updateUserPoints(userId, newPoints);
-
-      const claimWindowSeconds = 180; // 3 minutes
-      const expiresAt = new Date(Date.now() + claimWindowSeconds * 1000);
-
-      const claim = await storage.createVoucherClaim({
-        userId,
-        offerId: offer.id,
-        brandName: offer.brandName,
-        discountLabel: offer.discountLabel,
-        pointsSpent: offer.pointsCost,
-        trackedLink,
-        deliveredToEmail: email.trim().toLowerCase(),
-        status: "pending",
-        claimWindowSeconds,
-        expiresAt,
-        claimedAt: null,
-      } as any);
-
-      await storage.recordTransaction({
-        userId,
-        amount: -offer.pointsCost,
-        type: "voucher_redemption",
-        description: `Redeemed voucher: ${offer.brandName} (${offer.discountLabel})`,
-        transactionId: claim.id,
-      });
-
-      // Email is a backup delivery method — don't block the response on it
-      sendVoucherEmail(email.trim().toLowerCase(), offer.brandName, offer.discountLabel, trackedLink, claimWindowSeconds).catch(() => {});
-
-      res.json({ success: true, claim, points: newPoints });
-    } catch (error) {
-      console.error("Voucher redeem error:", error);
-      res.status(500).json({ error: "Failed to redeem voucher" });
-    }
-  });
-
+  // --- Brand Vouchers: player-facing endpoints ---
   // Player actually opened/used the link within the claim window
   app.post("/api/vouchers/claim/:claimId", async (req, res) => {
     try {
@@ -2454,61 +2590,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get my vouchers error:", error);
       res.status(500).json({ error: "Failed to fetch your vouchers" });
-    }
-  });
-
-  // --- Admin: manage voucher offers ---
-  app.get("/api/admin/vouchers/offers", async (req, res) => {
-    try {
-      const offers = await storage.getAllVoucherOffersAdmin();
-      res.json({ success: true, offers });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch offers" });
-    }
-  });
-
-  app.post("/api/admin/vouchers/offers", async (req, res) => {
-    try {
-      const { adminId, brandName, discountLabel, description, pointsCost, targetUrl, logoColor, isActive } = req.body;
-      if (!(await isAdminUser(adminId))) return res.status(403).json({ error: "Admin access required" });
-      if (!brandName || !discountLabel || !pointsCost || !targetUrl) {
-        return res.status(400).json({ error: "brandName, discountLabel, pointsCost and targetUrl are required" });
-      }
-      const offer = await storage.createVoucherOffer({
-        brandName, discountLabel, description: description || null,
-        pointsCost, targetUrl, logoColor: logoColor || "#00D9FF",
-        isActive: isActive !== undefined ? isActive : true,
-      } as any);
-      res.json({ success: true, offer });
-    } catch (error) {
-      console.error("Create voucher offer error:", error);
-      res.status(500).json({ error: "Failed to create offer" });
-    }
-  });
-
-  app.put("/api/admin/vouchers/offers/:id", async (req, res) => {
-    try {
-      const { adminId, brandName, discountLabel, description, pointsCost, targetUrl, logoColor, isActive } = req.body;
-      if (!(await isAdminUser(adminId))) return res.status(403).json({ error: "Admin access required" });
-      const offer = await storage.updateVoucherOffer(req.params.id, {
-        brandName, discountLabel, description, pointsCost, targetUrl, logoColor, isActive,
-      } as any);
-      if (!offer) return res.status(404).json({ error: "Offer not found" });
-      res.json({ success: true, offer });
-    } catch (error) {
-      console.error("Update voucher offer error:", error);
-      res.status(500).json({ error: "Failed to update offer" });
-    }
-  });
-
-  app.delete("/api/admin/vouchers/offers/:id", async (req, res) => {
-    try {
-      const { adminId } = req.body;
-      if (!(await isAdminUser(adminId))) return res.status(403).json({ error: "Admin access required" });
-      await storage.deleteVoucherOffer(req.params.id);
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to delete offer" });
     }
   });
 

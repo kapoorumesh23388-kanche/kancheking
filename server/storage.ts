@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type TournamentParticipant, type TournamentMatch, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, type AdClaim, type BlogPost, type BlogReaction, type VoucherOffer, type VoucherClaim, catalogItems, users as usersTable, spinRewards as spinRewardsTable, adClaims as adClaimsTable, blogPosts as blogPostsTable, blogReactions as blogReactionsTable, tournamentWindows as tournamentWindowsTable, tournamentParticipants as tournamentParticipantsTable, tournamentMatches as tournamentMatchesTable, adminUsers as adminUsersTable, voucherOffers as voucherOffersTable, voucherClaims as voucherClaimsTable } from "@shared/schema";
+import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type TournamentParticipant, type TournamentMatch, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, type AdClaim, type BlogPost, type BlogReaction, type VoucherClaim, catalogItems, users as usersTable, spinRewards as spinRewardsTable, adClaims as adClaimsTable, blogPosts as blogPostsTable, blogReactions as blogReactionsTable, tournamentWindows as tournamentWindowsTable, tournamentParticipants as tournamentParticipantsTable, tournamentMatches as tournamentMatchesTable, adminUsers as adminUsersTable, voucherClaims as voucherClaimsTable } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -12,7 +12,7 @@ export interface IStorage {
   updateUserMarbles(userId: string, marbles: number): Promise<User | undefined>;
   updateUserPoints(userId: string, points: number): Promise<User | undefined>;
   updateUserStats(userId: string, stats: { gamesWon?: number; gamesPlayed?: number }): Promise<User | undefined>;
-  updateUserProfile(userId: string, profile: { displayName?: string; profileImage?: string; gender?: string; email?: string }): Promise<User | undefined>;
+  updateUserProfile(userId: string, profile: { displayName?: string; profileImage?: string; gender?: string; email?: string; phone?: string }): Promise<User | undefined>;
   updateUserOnboarding(userId: string, data: { displayName?: string; dateOfBirth?: string; adPreferences?: string[]; isAgeVerified?: boolean }): Promise<User | undefined>;
   incrementAiWins(userId: string): Promise<User | undefined>;
   addEarnedMarbles(userId: string, amount: number): Promise<User | undefined>;
@@ -87,13 +87,9 @@ export interface IStorage {
   updateDailyUserStats(userId: string, date: string, stats: Partial<{ totalPlaytimeSeconds: number; gamesPlayed: number; gamesWon: number; adsViewed: number; adsClicked: number; adRevenueGenerated: number; marblesEarned: number; marblesSpent: number }>): Promise<void>;
   getEngagementAnalytics(): Promise<{ dailyStats: any[]; topUsers: any[]; adStats: any[] }>;
   
-  // Brand Vouchers
-  getActiveVoucherOffers(): Promise<VoucherOffer[]>;
-  getAllVoucherOffersAdmin(): Promise<VoucherOffer[]>;
-  getVoucherOffer(id: string): Promise<VoucherOffer | undefined>;
-  createVoucherOffer(data: Omit<VoucherOffer, 'id' | 'createdAt'>): Promise<VoucherOffer>;
-  updateVoucherOffer(id: string, data: Partial<VoucherOffer>): Promise<VoucherOffer | undefined>;
-  deleteVoucherOffer(id: string): Promise<void>;
+  // Brand Vouchers — earned by winning, not bought with points
+  incrementAiWinStreak(userId: string): Promise<number>;
+  resetAiWinStreak(userId: string): Promise<void>;
   createVoucherClaim(data: Omit<VoucherClaim, 'id' | 'createdAt'>): Promise<VoucherClaim>;
   getVoucherClaim(id: string): Promise<VoucherClaim | undefined>;
   getUserVoucherClaims(userId: string): Promise<VoucherClaim[]>;
@@ -146,6 +142,14 @@ export class MemStorage implements IStorage {
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
       const [user] = await db.select().from(usersTable).where(eq((usersTable as any).email, email));
+      if (user) this.users.set(user.id, user);
+      return user;
+    } catch { return undefined; }
+  }
+
+  async getUserByPhone(phone: string): Promise<User | undefined> {
+    try {
+      const [user] = await db.select().from(usersTable).where(eq((usersTable as any).phone, phone));
       if (user) this.users.set(user.id, user);
       return user;
     } catch { return undefined; }
@@ -267,13 +271,14 @@ export class MemStorage implements IStorage {
     }
   }
 
-  async updateUserProfile(userId: string, profile: { displayName?: string; profileImage?: string; gender?: string; email?: string }): Promise<User | undefined> {
+  async updateUserProfile(userId: string, profile: { displayName?: string; profileImage?: string; gender?: string; email?: string; phone?: string }): Promise<User | undefined> {
     try {
       const updateData: any = {};
       if (profile.displayName !== undefined) updateData.displayName = profile.displayName;
       if (profile.profileImage !== undefined) updateData.profileImage = profile.profileImage;
       if (profile.gender !== undefined) updateData.gender = profile.gender;
       if (profile.email !== undefined) (updateData as any).email = profile.email;
+      if (profile.phone !== undefined) (updateData as any).phone = profile.phone;
       const [updated] = await db.update(usersTable).set(updateData).where(eq(usersTable.id, userId)).returning();
       if (updated) this.users.set(userId, updated);
       return updated;
@@ -1099,32 +1104,27 @@ export class MemStorage implements IStorage {
   }
 
   // --- Brand Vouchers ---
-  async getActiveVoucherOffers(): Promise<VoucherOffer[]> {
-    const offers = await db.select().from(voucherOffersTable).orderBy(desc(voucherOffersTable.createdAt));
-    return offers.filter(o => o.isActive);
+  async incrementAiWinStreak(userId: string): Promise<number> {
+    try {
+      const current = await this.getUser(userId);
+      if (!current) return 0;
+      const newStreak = ((current as any).aiWinStreak || 0) + 1;
+      const [updated] = await db.update(usersTable).set({ aiWinStreak: newStreak } as any).where(eq(usersTable.id, userId)).returning();
+      if (updated) this.users.set(userId, updated);
+      return newStreak;
+    } catch (err) {
+      console.error("incrementAiWinStreak error:", err);
+      return 0;
+    }
   }
 
-  async getAllVoucherOffersAdmin(): Promise<VoucherOffer[]> {
-    return await db.select().from(voucherOffersTable).orderBy(desc(voucherOffersTable.createdAt));
-  }
-
-  async getVoucherOffer(id: string): Promise<VoucherOffer | undefined> {
-    const [offer] = await db.select().from(voucherOffersTable).where(eq(voucherOffersTable.id, id));
-    return offer;
-  }
-
-  async createVoucherOffer(data: Omit<VoucherOffer, 'id' | 'createdAt'>): Promise<VoucherOffer> {
-    const [offer] = await db.insert(voucherOffersTable).values(data as any).returning();
-    return offer;
-  }
-
-  async updateVoucherOffer(id: string, data: Partial<VoucherOffer>): Promise<VoucherOffer | undefined> {
-    const [offer] = await db.update(voucherOffersTable).set(data as any).where(eq(voucherOffersTable.id, id)).returning();
-    return offer;
-  }
-
-  async deleteVoucherOffer(id: string): Promise<void> {
-    await db.delete(voucherOffersTable).where(eq(voucherOffersTable.id, id));
+  async resetAiWinStreak(userId: string): Promise<void> {
+    try {
+      const [updated] = await db.update(usersTable).set({ aiWinStreak: 0 } as any).where(eq(usersTable.id, userId)).returning();
+      if (updated) this.users.set(userId, updated);
+    } catch (err) {
+      console.error("resetAiWinStreak error:", err);
+    }
   }
 
   async createVoucherClaim(data: Omit<VoucherClaim, 'id' | 'createdAt'>): Promise<VoucherClaim> {

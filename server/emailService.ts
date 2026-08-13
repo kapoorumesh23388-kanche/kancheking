@@ -117,7 +117,7 @@ export function verifyRedeemOTP(email: string, otp: string): boolean {
 // should never stop the actual feedback/redemption from succeeding.
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || "kancheking.kalijhota@gmail.com";
 
-// Sends the player their redeemed brand voucher (a time-limited tracked
+// Sends the player their earned brand voucher (a time-limited tracked
 // link) by email, as a backup to the in-app claim popup — so they still
 // get it even if they close the app before opening the link.
 export async function sendVoucherEmail(
@@ -138,11 +138,11 @@ export async function sendVoucherEmail(
       body: JSON.stringify({
         from: "Kanche King <rewards@kancheking.com>",
         to: [email],
-        subject: `Kanche King — Your ${brandName} Voucher is Ready!`,
+        subject: `Kanche King — You Earned a ${brandName} Voucher!`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #1a0a2e; color: #fff; padding: 30px; border-radius: 12px;">
             <h2 style="color: #a855f7; text-align: center;">🎁 Kanche King</h2>
-            <p>Your voucher is ready:</p>
+            <p>Nice win! You just earned a voucher:</p>
             <div style="background: #2d1b69; border: 2px solid #a855f7; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
               <h1 style="color: #f0abfc; font-size: 24px; margin: 0 0 8px 0;">${brandName}</h1>
               <p style="color: #ffb547; font-size: 18px; margin: 0;">${discountLabel}</p>

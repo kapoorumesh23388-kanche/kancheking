@@ -27,10 +27,8 @@ export default function Profile() {
   const [pendingRewards, setPendingRewards] = useState<any[]>([]);
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
-  // --- Brand Vouchers ---
-  const [voucherOffers, setVoucherOffers] = useState<any[]>([]);
+  // --- Brand Vouchers (earned automatically by winning) ---
   const [myVouchers, setMyVouchers] = useState<any[]>([]);
-  const [redeemingOfferId, setRedeemingOfferId] = useState<string | null>(null);
   const [activeClaim, setActiveClaim] = useState<any>(null);
   const [claimSecondsLeft, setClaimSecondsLeft] = useState<number>(0);
   const [openingVoucher, setOpeningVoucher] = useState(false);
@@ -70,16 +68,6 @@ export default function Profile() {
     }
   };
 
-  const loadVoucherOffers = async () => {
-    try {
-      const res = await fetch("/api/vouchers/offers");
-      const data = await res.json();
-      setVoucherOffers(data.offers || []);
-    } catch (err) {
-      console.error("Failed to load voucher offers:", err);
-    }
-  };
-
   const loadMyVouchers = async (userId: string) => {
     try {
       const res = await fetch(`/api/vouchers/my/${userId}`);
@@ -87,40 +75,6 @@ export default function Profile() {
       setMyVouchers(data.claims || []);
     } catch (err) {
       console.error("Failed to load my vouchers:", err);
-    }
-  };
-
-  const handleRedeemVoucher = async (offer: any) => {
-    const userId = localStorage.getItem("userId");
-    if (!userId || !user) return;
-    if (!user.email) {
-      toast({ title: "Email required", description: "Your account needs an email on file to receive vouchers.", variant: "destructive" });
-      return;
-    }
-    if ((user.points || 0) < offer.pointsCost) {
-      toast({ title: "Not enough points", description: `You need ${offer.pointsCost} points for this voucher.`, variant: "destructive" });
-      return;
-    }
-    setRedeemingOfferId(offer.id);
-    try {
-      const res = await fetch("/api/vouchers/redeem", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, offerId: offer.id, email: user.email }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setUser((prev: any) => ({ ...prev, points: data.points }));
-        setActiveClaim(data.claim);
-        loadMyVouchers(userId);
-        toast({ title: "Voucher ready!", description: "Also sent to your email as a backup." });
-      } else {
-        toast({ title: "Error", description: data.error || "Could not redeem voucher", variant: "destructive" });
-      }
-    } catch (err) {
-      toast({ title: "Error", description: "Network error while redeeming", variant: "destructive" });
-    } finally {
-      setRedeemingOfferId(null);
     }
   };
 
@@ -195,7 +149,6 @@ export default function Profile() {
 
     loadUserData(userId);
     loadPendingRewards(userId);
-    loadVoucherOffers();
     loadMyVouchers(userId);
   }, [navigate]);
 
@@ -307,8 +260,7 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/80 p-4">
-      {/* Voucher claim popup — shown right after redeeming, or when
-          reopening an active voucher from "My Vouchers" */}
+      {/* Voucher claim popup — shown when reopening an earned voucher */}
       {activeClaim && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <Card className="max-w-sm w-full p-6 bg-card border-primary/30 text-center space-y-4">
@@ -317,7 +269,7 @@ export default function Profile() {
             <p className="text-sm text-secondary">
               {claimSecondsLeft > 0
                 ? `Open within ${Math.floor(claimSecondsLeft / 60)}:${String(claimSecondsLeft % 60).padStart(2, "0")}`
-                : "This claim window has ended — check My Vouchers or your email."}
+                : "This claim window has ended — check your email for the link."}
             </p>
             <div className="flex gap-3">
               <Button
@@ -513,69 +465,34 @@ export default function Profile() {
               </div>
             )}
 
-            {/* Brand Vouchers — redeem Reward Points for a time-limited branded deal link */}
-            {voucherOffers.length > 0 && (
-              <div className="bg-background/50 p-4 rounded-md border border-primary/10 space-y-3">
-                <p className="text-sm font-bold text-primary">🎁 Brand Vouchers</p>
-                <p className="text-xs text-secondary">
-                  Redeem points for a limited-time deal link from a partner brand.
-                </p>
-                <div className="grid grid-cols-1 gap-3">
-                  {voucherOffers.map((offer) => (
-                    <div
-                      key={offer.id}
-                      className="flex items-center justify-between p-3 rounded-md border"
-                      style={{ borderColor: `${offer.logoColor}55`, background: `${offer.logoColor}11` }}
-                    >
-                      <div>
-                        <p className="font-semibold text-sm">{offer.brandName}</p>
-                        <p className="text-xs" style={{ color: offer.logoColor }}>{offer.discountLabel}</p>
-                        <p className="text-xs text-secondary mt-1">{offer.pointsCost} points</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={() => handleRedeemVoucher(offer)}
-                        disabled={redeemingOfferId === offer.id || (user.points || 0) < offer.pointsCost}
-                        data-testid={`button-redeem-voucher-${offer.id}`}
-                      >
-                        {redeemingOfferId === offer.id ? "Redeeming..." : "Redeem"}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Brand Vouchers — earned automatically by winning, not bought */}
+            <div className="bg-background/50 p-4 rounded-md border border-primary/10 space-y-3">
+              <p className="text-sm font-bold text-primary">🎁 Brand Vouchers</p>
+              <p className="text-xs text-secondary">
+                Earned automatically — win 5 AI matches in a row, any Challenge Friend match, any Random Player match, or a Tournament.
+              </p>
 
-            {/* My Vouchers — active (pending, still within claim window) + history */}
-            {myVouchers.length > 0 && (
-              <div className="bg-background/50 p-4 rounded-md border border-primary/10 space-y-3">
-                <p className="text-sm font-bold text-primary">🎟️ My Vouchers</p>
-                {myVouchers.map((v) => (
+              {myVouchers.length === 0 ? (
+                <p className="text-xs text-secondary italic">No vouchers yet — go win some games!</p>
+              ) : (
+                myVouchers.map((v) => (
                   <div
                     key={v.id}
                     className="flex items-center justify-between p-3 rounded-md border border-primary/10 bg-card/50"
                   >
                     <div>
-                      <p className="text-sm font-medium">{v.brandName} — {v.discountLabel}</p>
-                      <p className="text-xs text-secondary capitalize">
-                        {v.status} · {v.pointsSpent} points spent
-                      </p>
+                      <p className="text-sm font-medium">{v.brandName}</p>
+                      <p className="text-xs text-secondary capitalize">{v.status.replace("_", " ")}</p>
                     </div>
                     {v.status === "pending" && new Date(v.expiresAt).getTime() > Date.now() && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setActiveClaim(v);
-                        }}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => setActiveClaim(v)}>
                         Open
                       </Button>
                     )}
                   </div>
-                ))}
-              </div>
-            )}
+                ))
+              )}
+            </div>
 
             {/* Ads Preference */}
             <AdsPreferenceCard

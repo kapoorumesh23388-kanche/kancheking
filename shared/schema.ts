@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   earnedMarbles: integer("earned_marbles").notNull().default(0),
   pvpWinMarbles: integer("pvp_win_marbles").notNull().default(0),
   aiOpponentMarbles: integer("ai_opponent_marbles").notNull().default(150),
+  aiWinStreak: integer("ai_win_streak").notNull().default(0),
   purchasedMarbles: integer("purchased_marbles").notNull().default(0),
   tournamentWinnings: integer("tournament_winnings").notNull().default(0),
   points: integer("points").notNull().default(0),
@@ -290,29 +291,17 @@ export const blogReactions = pgTable("blog_reactions", {
 });
 
 // --- Brand Vouchers ---
-// A voucherOffer is an admin-curated deal (e.g. "Myntra — up to 80% off")
-// that players can redeem with Reward Points. Redeeming converts the
-// offer's targetUrl into a Cuelinks tracked affiliate link — the "voucher"
-// is that time-limited link, not a prepaid gift-card code.
-export const voucherOffers = pgTable("voucher_offers", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  brandName: varchar("brand_name").notNull(),
-  discountLabel: varchar("discount_label").notNull(),
-  description: text("description"),
-  pointsCost: integer("points_cost").notNull(),
-  targetUrl: text("target_url").notNull(),
-  logoColor: varchar("logo_color").notNull().default("#00D9FF"),
-  isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
+// Vouchers are earned automatically by winning games — NOT bought with
+// points. Triggers: 5 consecutive AI wins (streak resets on a loss),
+// every Challenge Friend win, every Random Player win, every Tournament
+// win. Each trigger converts a live Cuelinks affiliate campaign into a
+// tracked link for that player — no manually-curated offer list.
 export const voucherClaims = pgTable("voucher_claims", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
-  offerId: varchar("offer_id").notNull(),
+  triggerType: varchar("trigger_type").notNull(), // ai_streak | challenge_friend_win | random_player_win | tournament_win
   brandName: varchar("brand_name").notNull(),
   discountLabel: varchar("discount_label").notNull(),
-  pointsSpent: integer("points_spent").notNull(),
   trackedLink: text("tracked_link").notNull(),
   deliveredToEmail: varchar("delivered_to_email"),
   status: varchar("status").notNull().default("pending"), // pending | claimed | expired
@@ -351,5 +340,4 @@ export type SpinReward = typeof spinRewards.$inferSelect;
 export type AdClaim = typeof adClaims.$inferSelect;
 export type BlogPost = typeof blogPosts.$inferSelect;
 export type BlogReaction = typeof blogReactions.$inferSelect;
-export type VoucherOffer = typeof voucherOffers.$inferSelect;
 export type VoucherClaim = typeof voucherClaims.$inferSelect;

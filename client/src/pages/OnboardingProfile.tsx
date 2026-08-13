@@ -19,7 +19,9 @@ export default function OnboardingProfile() {
   const [step, setStep] = useState<Step>("contact");
 
   // Contact step
+  const [loginMethod, setLoginMethod] = useState<"email" | "mobile">("email");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [isNewUser, setIsNewUser] = useState(false);
   const [existingUserId, setExistingUserId] = useState("");
@@ -61,22 +63,37 @@ export default function OnboardingProfile() {
 
   // Step 1: Send OTP
   const handleSendOTP = async () => {
-    if (!email.trim() || !email.includes("@")) {
-      toast({ title: "Error", description: "Please enter a valid email", variant: "destructive" });
-      return;
+    if (loginMethod === "email") {
+      if (!email.trim() || !email.includes("@")) {
+        toast({ title: "Error", description: "Please enter a valid email", variant: "destructive" });
+        return;
+      }
+    } else {
+      const digits = phone.replace(/\D/g, "");
+      if (digits.length < 10) {
+        toast({ title: "Error", description: "Please enter a valid mobile number", variant: "destructive" });
+        return;
+      }
     }
     setIsLoading(true);
     try {
-      const res = await fetch("/api/auth/send-otp", {
+      const url = loginMethod === "email" ? "/api/auth/send-otp" : "/api/auth/mobile/send-otp";
+      const body = loginMethod === "email"
+        ? { email: email.trim().toLowerCase() }
+        : { phone: phone.replace(/\D/g, "") };
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send OTP");
       setOtpSent(true);
       setStep("otp");
-      toast({ title: "OTP Sent!", description: `Check your email ${email}` });
+      toast({
+        title: "OTP Sent!",
+        description: loginMethod === "email" ? `Check your email ${email}` : `Check your mobile ${phone}`,
+      });
     } catch (error) {
       toast({ title: "Error", description: error instanceof Error ? error.message : "Failed", variant: "destructive" });
     } finally {
@@ -92,10 +109,14 @@ export default function OnboardingProfile() {
     }
     setIsLoading(true);
     try {
-      const res = await fetch("/api/auth/verify-otp", {
+      const url = loginMethod === "email" ? "/api/auth/verify-otp" : "/api/auth/mobile/verify-otp";
+      const body = loginMethod === "email"
+        ? { email: email.trim().toLowerCase(), otp }
+        : { phone: phone.replace(/\D/g, ""), otp };
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), otp }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Invalid OTP");
@@ -150,16 +171,14 @@ export default function OnboardingProfile() {
 
     setIsLoading(true);
     try {
-      const res = await fetch("/api/auth/complete-signup", {
+      const url = loginMethod === "email" ? "/api/auth/complete-signup" : "/api/auth/mobile/complete-signup";
+      const body = loginMethod === "email"
+        ? { email: email.trim().toLowerCase(), displayName: displayName.trim(), gender, dateOfBirth, age }
+        : { phone: phone.replace(/\D/g, ""), displayName: displayName.trim(), gender, dateOfBirth, age };
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          displayName: displayName.trim(),
-          gender,
-          dateOfBirth,
-          age,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create account");
@@ -204,28 +223,66 @@ export default function OnboardingProfile() {
             {step === "contact" ? "Welcome to Kanche King!" : step === "otp" ? "Enter OTP" : "Create Profile"}
           </CardTitle>
           <p className="text-muted-foreground text-sm">
-            {step === "contact" ? "Login or create account with your email" : step === "otp" ? `OTP sent to ${email}` : "Set up your player profile"}
+            {step === "contact" ? "Login or create account with email or mobile" : step === "otp" ? `OTP sent to ${loginMethod === "email" ? email : phone}` : "Set up your player profile"}
           </p>
         </CardHeader>
 
         <CardContent className="space-y-5">
 
-          {/* STEP 1: Email */}
+          {/* STEP 1: Email or Mobile */}
           {step === "contact" && (
             <>
-              <div>
-                <Label className="text-primary font-semibold mb-2 block">
-                  <Mail className="w-4 h-4 inline mr-1" /> Email Address
-                </Label>
-                <Input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-primary/10 border-primary/30 text-white placeholder:text-muted-foreground"
-                  onKeyDown={(e) => e.key === "Enter" && handleSendOTP()}
-                />
+              <div className="flex gap-2 mb-2">
+                <Button
+                  type="button"
+                  variant={loginMethod === "email" ? "default" : "outline"}
+                  className="flex-1"
+                  onClick={() => setLoginMethod("email")}
+                  data-testid="button-login-method-email"
+                >
+                  <Mail className="w-4 h-4 mr-1" /> Email
+                </Button>
+                <Button
+                  type="button"
+                  variant={loginMethod === "mobile" ? "default" : "outline"}
+                  className="flex-1"
+                  onClick={() => setLoginMethod("mobile")}
+                  data-testid="button-login-method-mobile"
+                >
+                  📱 Mobile
+                </Button>
               </div>
+
+              {loginMethod === "email" ? (
+                <div>
+                  <Label className="text-primary font-semibold mb-2 block">
+                    <Mail className="w-4 h-4 inline mr-1" /> Email Address
+                  </Label>
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="bg-primary/10 border-primary/30 text-white placeholder:text-muted-foreground"
+                    onKeyDown={(e) => e.key === "Enter" && handleSendOTP()}
+                  />
+                </div>
+              ) : (
+                <div>
+                  <Label className="text-primary font-semibold mb-2 block">
+                    📱 Mobile Number
+                  </Label>
+                  <Input
+                    type="tel"
+                    placeholder="Enter your 10-digit mobile number"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/[^\d]/g, "").slice(0, 10))}
+                    className="bg-primary/10 border-primary/30 text-white placeholder:text-muted-foreground"
+                    onKeyDown={(e) => e.key === "Enter" && handleSendOTP()}
+                  />
+                </div>
+              )}
+
               <Button
                 onClick={handleSendOTP}
                 disabled={isLoading}
@@ -261,7 +318,7 @@ export default function OnboardingProfile() {
                 {isLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verifying...</> : "Verify OTP"}
               </Button>
               <Button variant="ghost" onClick={() => setStep("contact")} className="w-full text-muted-foreground">
-                ← Change Email
+                ← Change {loginMethod === "email" ? "Email" : "Mobile Number"}
               </Button>
               <p className="text-center text-xs text-muted-foreground">
                 Didn't receive? <span className="text-primary cursor-pointer" onClick={handleSendOTP}>Resend OTP</span>
