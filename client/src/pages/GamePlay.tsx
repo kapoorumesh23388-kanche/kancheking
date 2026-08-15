@@ -247,6 +247,12 @@ export default function GamePlay() {
           .then((res) => res.json())
           .then((data) => {
             if (typeof data.newAiLevel === "number") setNextAiLevel(data.newAiLevel);
+            if (data.voucherClaim) {
+              toast({
+                title: "🎁 You won a voucher!",
+                description: `${data.voucherClaim.brandName} — check Shop > Redeem Voucher to claim it.`,
+              });
+            }
           })
           .catch(() => {});
       }

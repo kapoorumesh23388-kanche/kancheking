@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Check, Share2, Link, MessageCircle, Users, Tv, Gift, ShoppingBag, History, Clock } from "lucide-react";
+import { Copy, Check, Share2, Link, MessageCircle, Users, Tv, Gift, ShoppingBag, History, Clock, Ticket } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -67,7 +67,7 @@ export default function Shop() {
   const [copiedLink, setCopiedLink] = useState(false);
   const [marbleCount, setMarbleCount] = useState(0);
   const [pointCount, setPointCount] = useState(0);
-  const [activeTab, setActiveTab] = useState<"ads" | "points" | "referral" | "catalog" | "history">("ads");
+  const [activeTab, setActiveTab] = useState<"ads" | "points" | "referral" | "catalog" | "history" | "vouchers">("ads");
   const [adWatchState, setAdWatchState] = useState<{
     packId: string | null;
     adsWatched: number;
@@ -88,6 +88,12 @@ export default function Shop() {
   const [otpLoading, setOtpLoading] = useState(false);
   const [redemptionHistory, setRedemptionHistory] = useState<RedemptionHistoryEntry[]>([]);
 
+  // Brand Vouchers — earned automatically by winning games (AI streak,
+  // Challenge Friend, Random Player, Tournament). Sit here until the
+  // player wants to open one, no rush/countdown.
+  const [myVouchers, setMyVouchers] = useState<any[]>([]);
+  const [openingVoucherId, setOpeningVoucherId] = useState<string | null>(null);
+
   const [referralCode] = useState(() => {
     const storedCode = localStorage.getItem("playerReferralCode");
     if (storedCode) return storedCode;
@@ -106,6 +112,40 @@ export default function Shop() {
     const userId = localStorage.getItem("userId");
     if (userId) syncWalletFromServer(userId);
   }, []);
+
+  const loadMyVouchers = useCallback(() => {
+    const userId = localStorage.getItem("userId");
+    if (!userId) return;
+    fetch(`/api/vouchers/my/${userId}`)
+      .then((res) => res.json())
+      .then((data) => setMyVouchers(data.claims || []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    loadMyVouchers();
+    const interval = setInterval(loadMyVouchers, 10000);
+    return () => clearInterval(interval);
+  }, [loadMyVouchers]);
+
+  const handleOpenVoucher = async (claim: any) => {
+    const userId = localStorage.getItem("userId");
+    if (!userId) return;
+    setOpeningVoucherId(claim.id);
+    try {
+      await fetch(`/api/vouchers/claim/${claim.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      window.open(claim.trackedLink, "_blank", "noopener,noreferrer");
+      loadMyVouchers();
+    } catch (err) {
+      toast({ title: "Error", description: "Could not open voucher, try again.", variant: "destructive" });
+    } finally {
+      setOpeningVoucherId(null);
+    }
+  };
 
   const updateStats = useCallback(() => {
     setMarbleCount(getTotalMarbles());
@@ -351,9 +391,12 @@ export default function Shop() {
     }
   };
 
+  const pendingVoucherCount = myVouchers.filter((v) => v.status === "pending").length;
+
   const tabs = [
     { id: "ads", label: "Watch Ads", icon: <Tv className="w-4 h-4" /> },
     { id: "points", label: "Redeem Points", icon: <Gift className="w-4 h-4" /> },
+    { id: "vouchers", label: "Redeem Voucher", icon: <Ticket className="w-4 h-4" /> },
     { id: "catalog", label: "Catalog", icon: <ShoppingBag className="w-4 h-4" /> },
     { id: "referral", label: "Referral", icon: <Users className="w-4 h-4" /> },
     { id: "history", label: "History", icon: <History className="w-4 h-4" /> },
@@ -452,6 +495,11 @@ export default function Shop() {
               }`}
             >
               {tab.icon} {tab.label}
+              {tab.id === "vouchers" && pendingVoucherCount > 0 && (
+                <span className="ml-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {pendingVoucherCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -512,6 +560,51 @@ export default function Shop() {
                 </Card>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Redeem Voucher Tab */}
+        {activeTab === "vouchers" && (
+          <div className="space-y-4">
+            <div className="text-center mb-2">
+              <p className="text-muted-foreground text-sm">
+                Vouchers are earned by winning — 5 AI wins in a row, any Challenge Friend win, any Random Player win, or a Tournament win. Open them here whenever you like.
+              </p>
+            </div>
+
+            {myVouchers.length === 0 ? (
+              <Card className="border-pink-500/30">
+                <CardContent className="py-10 text-center text-muted-foreground">
+                  No vouchers yet — go win some games! 🏆
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {myVouchers.map((v) => (
+                  <Card key={v.id} className="border-pink-500/30">
+                    <CardContent className="flex items-center justify-between py-4">
+                      <div>
+                        <p className="font-bold text-pink-400">{v.brandName}</p>
+                        <p className="text-sm text-muted-foreground">{v.discountLabel}</p>
+                        <p className="text-xs text-muted-foreground/70 capitalize mt-1">{v.status.replace("_", " ")}</p>
+                      </div>
+                      {v.status === "pending" ? (
+                        <Button
+                          onClick={() => handleOpenVoucher(v)}
+                          disabled={openingVoucherId === v.id}
+                          className="bg-gradient-to-r from-pink-600 to-purple-600 font-bold"
+                          data-testid={`button-open-voucher-${v.id}`}
+                        >
+                          {openingVoucherId === v.id ? "Opening..." : "Open"}
+                        </Button>
+                      ) : (
+                        <Badge variant="secondary" className="capitalize">{v.status}</Badge>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

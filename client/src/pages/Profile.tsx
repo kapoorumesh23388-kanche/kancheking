@@ -27,12 +27,6 @@ export default function Profile() {
   const [pendingRewards, setPendingRewards] = useState<any[]>([]);
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
-  // --- Brand Vouchers (earned automatically by winning) ---
-  const [myVouchers, setMyVouchers] = useState<any[]>([]);
-  const [activeClaim, setActiveClaim] = useState<any>(null);
-  const [claimSecondsLeft, setClaimSecondsLeft] = useState<number>(0);
-  const [openingVoucher, setOpeningVoucher] = useState(false);
-
   const loadPendingRewards = async (userId: string) => {
     try {
       const res = await fetch(`/api/spin/pending/${userId}`);
@@ -67,46 +61,6 @@ export default function Profile() {
       setClaimingId(null);
     }
   };
-
-  const loadMyVouchers = async (userId: string) => {
-    try {
-      const res = await fetch(`/api/vouchers/my/${userId}`);
-      const data = await res.json();
-      setMyVouchers(data.claims || []);
-    } catch (err) {
-      console.error("Failed to load my vouchers:", err);
-    }
-  };
-
-  const handleOpenVoucher = async () => {
-    if (!activeClaim) return;
-    const userId = localStorage.getItem("userId");
-    window.open(activeClaim.trackedLink, "_blank", "noopener,noreferrer");
-    setOpeningVoucher(true);
-    try {
-      await fetch(`/api/vouchers/claim/${activeClaim.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      });
-    } catch (err) {
-      console.error("Failed to mark voucher claimed:", err);
-    } finally {
-      setOpeningVoucher(false);
-      setActiveClaim(null);
-      if (userId) loadMyVouchers(userId);
-    }
-  };
-
-  // Countdown for the active claim popup
-  useEffect(() => {
-    if (!activeClaim) return;
-    setClaimSecondsLeft(activeClaim.claimWindowSeconds || 180);
-    const timer = setInterval(() => {
-      setClaimSecondsLeft((s) => (s <= 1 ? 0 : s - 1));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [activeClaim?.id]);
 
   // Function to load user data
   const loadUserData = async (userId: string) => {
@@ -149,7 +103,6 @@ export default function Profile() {
 
     loadUserData(userId);
     loadPendingRewards(userId);
-    loadMyVouchers(userId);
   }, [navigate]);
 
   // Listen for game completion and stats update events
@@ -260,34 +213,6 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/80 p-4">
-      {/* Voucher claim popup — shown when reopening an earned voucher */}
-      {activeClaim && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <Card className="max-w-sm w-full p-6 bg-card border-primary/30 text-center space-y-4">
-            <p className="text-lg font-bold text-primary">🎁 {activeClaim.brandName}</p>
-            <p className="text-accent font-semibold">{activeClaim.discountLabel}</p>
-            <p className="text-sm text-secondary">
-              {claimSecondsLeft > 0
-                ? `Open within ${Math.floor(claimSecondsLeft / 60)}:${String(claimSecondsLeft % 60).padStart(2, "0")}`
-                : "This claim window has ended — check your email for the link."}
-            </p>
-            <div className="flex gap-3">
-              <Button
-                className="flex-1"
-                onClick={handleOpenVoucher}
-                disabled={openingVoucher || claimSecondsLeft <= 0}
-              >
-                {openingVoucher ? "Opening..." : "Open My Voucher"}
-              </Button>
-              <Button variant="outline" onClick={() => setActiveClaim(null)}>
-                Close
-              </Button>
-            </div>
-            <p className="text-xs text-secondary">Also sent to your email as a backup link.</p>
-          </Card>
-        </div>
-      )}
-
       <div className="max-w-2xl mx-auto">
         <h1 className="text-4xl font-bold mb-8 text-center">My Profile</h1>
 
@@ -464,35 +389,6 @@ export default function Profile() {
                 ))}
               </div>
             )}
-
-            {/* Brand Vouchers — earned automatically by winning, not bought */}
-            <div className="bg-background/50 p-4 rounded-md border border-primary/10 space-y-3">
-              <p className="text-sm font-bold text-primary">🎁 Brand Vouchers</p>
-              <p className="text-xs text-secondary">
-                Earned automatically — win 5 AI matches in a row, any Challenge Friend match, any Random Player match, or a Tournament.
-              </p>
-
-              {myVouchers.length === 0 ? (
-                <p className="text-xs text-secondary italic">No vouchers yet — go win some games!</p>
-              ) : (
-                myVouchers.map((v) => (
-                  <div
-                    key={v.id}
-                    className="flex items-center justify-between p-3 rounded-md border border-primary/10 bg-card/50"
-                  >
-                    <div>
-                      <p className="text-sm font-medium">{v.brandName}</p>
-                      <p className="text-xs text-secondary capitalize">{v.status.replace("_", " ")}</p>
-                    </div>
-                    {v.status === "pending" && new Date(v.expiresAt).getTime() > Date.now() && (
-                      <Button size="sm" variant="outline" onClick={() => setActiveClaim(v)}>
-                        Open
-                      </Button>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
 
             {/* Ads Preference */}
             <AdsPreferenceCard

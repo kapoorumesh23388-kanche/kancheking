@@ -25,7 +25,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const campaign = await pickRandomCampaign();
       const { trackedLink } = await convertToTrackedLink(campaign.url, userId);
 
-      const claimWindowSeconds = 180; // 3 minutes
+      // No urgency window anymore — the voucher sits in Shop > Redeem
+      // Voucher until the player wants it, so give it a generous 7-day
+      // shelf life rather than a short countdown.
+      const claimWindowSeconds = 7 * 24 * 60 * 60; // 7 days
       const expiresAt = new Date(Date.now() + claimWindowSeconds * 1000);
       const discountLabel = "Exclusive deal — tap to view";
 
@@ -255,18 +258,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If player won against friend or random player, add earned marbles
       let voucherClaim = null;
       if (won && opponentType && opponentType !== "ai") {
+        // Fix: previously this always added a flat 10 regardless of how
+        // many marbles were actually won in the match, which made the
+        // PvP Win Marbles counter (used for tournament eligibility AND
+        // the leaderboard) drift completely out of sync with reality.
+        // Now it reflects the real marblesDelta from this match.
+        const wonAmount = Math.max(0, delta);
         // Add marbles to earned marbles for tournament eligibility
-        await storage.addEarnedMarbles(userId, 10);
+        await storage.addEarnedMarbles(userId, wonAmount);
         // Add to dedicated PvP win marbles counter (used ONLY for leaderboard ranking)
-        await storage.addPvpWinMarbles(userId, 10);
+        await storage.addPvpWinMarbles(userId, wonAmount);
 
-        // Brand voucher: every Challenge Friend / Random Player win earns one
-        if (opponentType === "friend") {
+        // Fully defeating a player opponent unlocks one spin-wheel try —
+        // gated server-side so it can't be replayed for the same win.
+        await storage.setSpinAvailable(userId, true);
+
+        // Brand voucher: every Challenge Friend / Random Player win earns
+        // one. NOTE: opponentType is always "player" for PvP matches —
+        // MultiplayerGame.tsx doesn't distinguish friend vs random there.
+        // The friend/random distinction actually comes through in
+        // `gameType`, set client-side from the URL path.
+        if (gameType === "friend") {
           voucherClaim = await grantVoucher(userId, "challenge_friend_win");
-        } else if (opponentType === "random") {
+        } else if (gameType === "random") {
           voucherClaim = await grantVoucher(userId, "random_player_win");
         } else {
-          console.error(`[game-points] Unrecognized opponentType "${opponentType}" — no voucher trigger matched`);
+          console.error(`[game-points] Unrecognized gameType "${gameType}" for a PvP win — no voucher trigger matched`);
         }
       }
 
@@ -1414,6 +1431,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const newAiLevel = await storage.increaseAiOpponentLevel(userId);
 
+      // Fully defeating the AI unlocks one spin-wheel try too.
+      await storage.setSpinAvailable(userId, true);
+
       // Brand voucher: every 5 CONSECUTIVE AI wins earns one; the streak
       // resets to 0 on a loss (see /api/ai-opponent/carry-over below) and
       // also resets here after granting, so it takes another 5 to earn again.
@@ -2320,6 +2340,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Spin Wheel: check (without consuming) whether a spin is currently available
+  app.get("/api/spin/available/:userId", async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+      res.json({ success: true, available: !!(user as any).hasSpinAvailable });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to check spin availability" });
+    }
+  });
+
   // Spin Wheel: record a won prize as PENDING (not yet credited)
   app.post("/api/spin/win", async (req, res) => {
     try {
@@ -2327,6 +2358,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId || !prizeName || !prizeType || prizeValue === undefined) {
         return res.status(400).json({ error: "Missing fields" });
       }
+
+      // Server-side gate — a spin is only allowed once per genuine
+      // "fully defeated an opponent" event (set by /api/ai-opponent/level-up
+      // or a Challenge Friend / Random Player win in /api/game-points).
+      // This atomically checks-and-clears the flag, so refreshing the
+      // wheel screen or replaying this call can't award repeat spins.
+      const canSpin = await storage.consumeSpinAvailable(userId);
+      if (!canSpin) {
+        return res.status(403).json({ error: "No spin available — fully defeat an opponent (AI or player) to earn a spin." });
+      }
+
       if (prizeType !== "marbles" && prizeType !== "points") {
         // "Better luck next time" or any non-creditable prize — nothing to store
         return res.json({ success: true, reward: null });

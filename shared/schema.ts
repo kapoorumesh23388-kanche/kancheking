@@ -15,6 +15,7 @@ export const users = pgTable("users", {
   pvpWinMarbles: integer("pvp_win_marbles").notNull().default(0),
   aiOpponentMarbles: integer("ai_opponent_marbles").notNull().default(150),
   aiWinStreak: integer("ai_win_streak").notNull().default(0),
+  hasSpinAvailable: boolean("has_spin_available").notNull().default(false),
   purchasedMarbles: integer("purchased_marbles").notNull().default(0),
   tournamentWinnings: integer("tournament_winnings").notNull().default(0),
   points: integer("points").notNull().default(0),

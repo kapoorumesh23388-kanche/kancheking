@@ -373,6 +373,12 @@ export default function MultiplayerGame() {
               setMyMarbles(data.marbles);
               setCachedTotals(data.marbles, data.points);
             }
+            if (data.voucherClaim) {
+              toast({
+                title: "🎁 You won a voucher!",
+                description: `${data.voucherClaim.brandName} — check Shop > Redeem Voucher to claim it.`,
+              });
+            }
           })
           .catch((err: any) => console.error("Failed to record game points:", err));
         

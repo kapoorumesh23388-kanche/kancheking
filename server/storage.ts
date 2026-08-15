@@ -96,6 +96,11 @@ export interface IStorage {
   markVoucherClaimStatus(id: string, status: string, claimedAt?: Date): Promise<VoucherClaim | undefined>;
   expireStaleVoucherClaims(userId: string): Promise<void>;
 
+  // Spin Wheel — gated server-side so a spin can only be redeemed once
+  // per genuine "fully defeated an opponent" event, not repeatedly.
+  setSpinAvailable(userId: string, available: boolean): Promise<void>;
+  consumeSpinAvailable(userId: string): Promise<boolean>;
+
   // Tournament Bracket Methods
   getTournamentParticipants(tournamentId: string): Promise<TournamentParticipant[]>;
   addTournamentParticipant(participant: Omit<TournamentParticipant, 'id' | 'createdAt'>): Promise<TournamentParticipant>;
@@ -1157,6 +1162,34 @@ export class MemStorage implements IStorage {
       if (claim.status === "pending" && new Date(claim.expiresAt) < now) {
         await this.markVoucherClaimStatus(claim.id, "expired");
       }
+    }
+  }
+
+  // --- Spin Wheel gating ---
+  async setSpinAvailable(userId: string, available: boolean): Promise<void> {
+    try {
+      const [updated] = await db.update(usersTable).set({ hasSpinAvailable: available } as any).where(eq(usersTable.id, userId)).returning();
+      if (updated) this.users.set(userId, updated);
+    } catch (err) {
+      console.error("setSpinAvailable error:", err);
+    }
+  }
+
+  // Atomically checks-and-clears the flag in a single conditional UPDATE —
+  // this is the actual anti-abuse gate. If two spin requests race each
+  // other, only the one that lands first will find hasSpinAvailable still
+  // true and get a row back; the second gets nothing and is rejected.
+  async consumeSpinAvailable(userId: string): Promise<boolean> {
+    try {
+      const [updated] = await db.update(usersTable)
+        .set({ hasSpinAvailable: false } as any)
+        .where(and(eq(usersTable.id, userId), eq((usersTable as any).hasSpinAvailable, true)))
+        .returning();
+      if (updated) this.users.set(userId, updated);
+      return !!updated;
+    } catch (err) {
+      console.error("consumeSpinAvailable error:", err);
+      return false;
     }
   }
 
