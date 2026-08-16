@@ -1,8 +1,8 @@
 // Thin wrapper around the Cuelinks V3 API. Used by the Brand Voucher
 // system — when a player earns a voucher (by winning), we pick a LIVE
-// campaign from Cuelinks (no manually-curated brand list) and convert its
-// URL into a tracked affiliate link. When the player shops through it,
-// Kanche King earns a commission from Cuelinks.
+// coupon/offer from Cuelinks (real brand, discount %, coupon code where
+// one exists) and convert its landing URL into a tracked affiliate link.
+// When the player shops through it, Kanche King earns a commission.
 // Docs: https://developers.cuelinks.com/docs
 const CUELINKS_API_BASE = "https://developers.cuelinks.com/pub_api/v3";
 
@@ -40,8 +40,6 @@ export async function convertToTrackedLink(targetUrl: string, subId: string): Pr
     }
 
     const data: any = await response.json();
-    // Field name has appeared as both tracking_url and short_url in
-    // different Cuelinks docs/examples — check both defensively.
     const trackedLink = data.tracking_url || data.short_url || data.url || targetUrl;
     return { success: true, trackedLink };
   } catch (err) {
@@ -50,57 +48,74 @@ export async function convertToTrackedLink(targetUrl: string, subId: string): Pr
   }
 }
 
-interface Campaign {
-  name: string;
+export interface VoucherOffer {
+  brandName: string;
+  title: string;           // human-readable, e.g. "Flat 25% off on fashion"
+  code: string | null;     // coupon code, null if the discount auto-applies via the link
+  discountPercent: number | null;
+  minSpend: number | null; // in ₹
   url: string;
 }
 
-// Fetches a batch of live, high-performing campaigns from Cuelinks
-// (sorted by 7-day EPC — earnings per click). Field names are checked
-// defensively since the exact response shape isn't fully documented
-// publicly; if Cuelinks changes field names, this degrades gracefully to
-// an empty list rather than throwing.
-async function getTopCampaigns(limit = 10): Promise<Campaign[]> {
+// Fetches a batch of live coupons/offers from Cuelinks for Indian
+// merchants. Field names are checked defensively since the exact response
+// shape isn't fully documented publicly — if Cuelinks changes field
+// names, this degrades gracefully to an empty list rather than throwing.
+async function getLiveOffers(limit = 20): Promise<VoucherOffer[]> {
   const apiKey = process.env.CUELINKS_API_KEY;
   if (!apiKey) return [];
 
   try {
-    const response = await fetch(`${CUELINKS_API_BASE}/campaigns?sort=epc_7d&per_page=${limit}`, {
+    const response = await fetch(`${CUELINKS_API_BASE}/offers?country=IN&per_page=${limit}`, {
       headers: { "Authorization": `Token ${apiKey}` },
     });
     if (!response.ok) {
-      console.error("[cuelinksClient] campaigns fetch error:", response.status);
+      console.error("[cuelinksClient] offers fetch error:", response.status);
       return [];
     }
     const data: any = await response.json();
-    const list: any[] = data.campaigns || data.data || data.results || [];
+    const list: any[] = data.offers || data.data || data.results || [];
     return list
-      .map((c: any) => ({
-        name: c.name || c.campaign_name || c.brand_name || "Partner Brand",
-        url: c.landing_url || c.url || c.website || c.tracking_url,
+      .map((o: any): VoucherOffer => ({
+        brandName: o.brand_name || o.campaign_name || o.merchant_name || o.brand || "Partner Brand",
+        title: o.title || o.description || o.offer_title || "Exclusive deal",
+        code: o.code || o.coupon_code || o.voucher_code || null,
+        discountPercent: parseDiscountPercent(o.discount_percentage ?? o.discount ?? o.discount_percent),
+        minSpend: o.min_order_value ?? o.min_purchase ?? o.minimum_spend ?? null,
+        url: o.landing_url || o.url || o.link || o.website,
       }))
-      .filter((c: Campaign) => !!c.url);
+      .filter((o) => !!o.url);
   } catch (err) {
-    console.error("[cuelinksClient] getTopCampaigns exception:", err);
+    console.error("[cuelinksClient] getLiveOffers exception:", err);
     return [];
   }
 }
 
-// Small built-in safety net — only used if the live Cuelinks campaign
-// list can't be fetched for some reason, so a voucher is never silently
-// dropped when a player has earned one.
-const FALLBACK_BRANDS: Campaign[] = [
-  { name: "Amazon", url: "https://www.amazon.in" },
-  { name: "Flipkart", url: "https://www.flipkart.com" },
-  { name: "Myntra", url: "https://www.myntra.com" },
+function parseDiscountPercent(value: any): number | null {
+  if (value === null || value === undefined) return null;
+  const num = typeof value === "string" ? parseFloat(value.replace(/[^\d.]/g, "")) : Number(value);
+  return isNaN(num) ? null : Math.round(num);
+}
+
+// Small built-in safety net — used only if the live Cuelinks offers list
+// can't be fetched, so a voucher is never silently dropped when a player
+// has earned one. Modeled on real, common Indian online-shopping deals.
+const FALLBACK_OFFERS: VoucherOffer[] = [
+  { brandName: "Myntra", title: "Flat 20% off on Fashion", code: "MYNTRA20", discountPercent: 20, minSpend: 999, url: "https://www.myntra.com" },
+  { brandName: "Ajio", title: "Up to 50% off Sitewide", code: "AJIO50", discountPercent: 50, minSpend: null, url: "https://www.ajio.com" },
+  { brandName: "Flipkart", title: "10% off on Electronics", code: "FLIP10", discountPercent: 10, minSpend: 1500, url: "https://www.flipkart.com" },
+  { brandName: "Amazon India", title: "Flat 15% off Storewide", code: "AMZ15", discountPercent: 15, minSpend: 500, url: "https://www.amazon.in" },
+  { brandName: "Nykaa", title: "25% off on Beauty", code: "NYKAA25", discountPercent: 25, minSpend: 799, url: "https://www.nykaa.com" },
+  { brandName: "BigBasket", title: "Flat ₹100 off + 10% cashback", code: "BB10", discountPercent: 10, minSpend: 999, url: "https://www.bigbasket.com" },
 ];
 
-// Picks one live campaign at random from the top-performing batch, for
-// variety across different players/vouchers.
-export async function pickRandomCampaign(): Promise<Campaign> {
-  const campaigns = await getTopCampaigns(10);
-  if (campaigns.length > 0) {
-    return campaigns[Math.floor(Math.random() * campaigns.length)];
+// Picks one live offer at random from the top-performing batch, for
+// variety across different players/vouchers. Falls back to a built-in
+// set of realistic Indian deals if the live fetch is unavailable.
+export async function pickRandomOffer(): Promise<VoucherOffer> {
+  const offers = await getLiveOffers(20);
+  if (offers.length > 0) {
+    return offers[Math.floor(Math.random() * offers.length)];
   }
-  return FALLBACK_BRANDS[Math.floor(Math.random() * FALLBACK_BRANDS.length)];
+  return FALLBACK_OFFERS[Math.floor(Math.random() * FALLBACK_OFFERS.length)];
 }

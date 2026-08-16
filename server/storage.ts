@@ -1,7 +1,7 @@
 import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type TournamentParticipant, type TournamentMatch, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, type AdClaim, type BlogPost, type BlogReaction, type VoucherClaim, catalogItems, users as usersTable, spinRewards as spinRewardsTable, adClaims as adClaimsTable, blogPosts as blogPostsTable, blogReactions as blogReactionsTable, tournamentWindows as tournamentWindowsTable, tournamentParticipants as tournamentParticipantsTable, tournamentMatches as tournamentMatchesTable, adminUsers as adminUsersTable, voucherClaims as voucherClaimsTable } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, lt } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -93,8 +93,8 @@ export interface IStorage {
   createVoucherClaim(data: Omit<VoucherClaim, 'id' | 'createdAt'>): Promise<VoucherClaim>;
   getVoucherClaim(id: string): Promise<VoucherClaim | undefined>;
   getUserVoucherClaims(userId: string): Promise<VoucherClaim[]>;
-  markVoucherClaimStatus(id: string, status: string, claimedAt?: Date): Promise<VoucherClaim | undefined>;
-  expireStaleVoucherClaims(userId: string): Promise<void>;
+  activateVoucherClaim(id: string, expiresAt: Date): Promise<VoucherClaim | undefined>;
+  deleteExpiredVoucherClaims(userId: string): Promise<void>;
 
   // Spin Wheel — gated server-side so a spin can only be redeemed once
   // per genuine "fully defeated an opponent" event, not repeatedly.
@@ -1148,20 +1148,30 @@ export class MemStorage implements IStorage {
       .orderBy(desc(voucherClaimsTable.createdAt));
   }
 
-  async markVoucherClaimStatus(id: string, status: string, claimedAt?: Date): Promise<VoucherClaim | undefined> {
-    const updateData: any = { status };
-    if (claimedAt) updateData.claimedAt = claimedAt;
-    const [claim] = await db.update(voucherClaimsTable).set(updateData).where(eq(voucherClaimsTable.id, id)).returning();
+  // Player tapped "Redeem" — moves unclaimed -> active and starts the
+  // 7-day countdown from this exact moment.
+  async activateVoucherClaim(id: string, expiresAt: Date): Promise<VoucherClaim | undefined> {
+    const [claim] = await db.update(voucherClaimsTable)
+      .set({ status: "active", expiresAt, claimedAt: new Date() } as any)
+      .where(eq(voucherClaimsTable.id, id))
+      .returning();
     return claim;
   }
 
-  async expireStaleVoucherClaims(userId: string): Promise<void> {
-    const claims = await this.getUserVoucherClaims(userId);
-    const now = new Date();
-    for (const claim of claims) {
-      if (claim.status === "pending" && new Date(claim.expiresAt) < now) {
-        await this.markVoucherClaimStatus(claim.id, "expired");
-      }
+  // Any "active" voucher whose 7-day window has passed gets deleted
+  // outright — per the design, an unused voucher should simply vanish
+  // from the player's list rather than linger as a visible "expired" row.
+  async deleteExpiredVoucherClaims(userId: string): Promise<void> {
+    try {
+      await db.delete(voucherClaimsTable).where(
+        and(
+          eq(voucherClaimsTable.userId, userId),
+          eq((voucherClaimsTable as any).status, "active"),
+          lt((voucherClaimsTable as any).expiresAt, new Date())
+        )
+      );
+    } catch (err) {
+      console.error("deleteExpiredVoucherClaims error:", err);
     }
   }
 

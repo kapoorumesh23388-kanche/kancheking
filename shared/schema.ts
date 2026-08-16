@@ -295,20 +295,29 @@ export const blogReactions = pgTable("blog_reactions", {
 // Vouchers are earned automatically by winning games — NOT bought with
 // points. Triggers: 5 consecutive AI wins (streak resets on a loss),
 // every Challenge Friend win, every Random Player win, every Tournament
-// win. Each trigger converts a live Cuelinks affiliate campaign into a
-// tracked link for that player — no manually-curated offer list.
+// win. Each one is a real Cuelinks coupon/offer (brand, discount %,
+// coupon code) for an Indian online-shopping site.
+//
+// Lifecycle: "unclaimed" (sits in Shop > Redeem Voucher indefinitely,
+// no time pressure) → player taps Redeem → "active" (code + link
+// revealed, 7-day countdown starts from THIS moment) → after 7 days,
+// automatically flips to "expired" and disappears from the active list
+// (the row stays in the database either way, for records).
 export const voucherClaims = pgTable("voucher_claims", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
   triggerType: varchar("trigger_type").notNull(), // ai_streak | challenge_friend_win | random_player_win | tournament_win
   brandName: varchar("brand_name").notNull(),
-  discountLabel: varchar("discount_label").notNull(),
+  discountLabel: varchar("discount_label").notNull(), // human-readable, e.g. "Flat 25% off"
+  discountPercent: integer("discount_percent"),
+  minSpend: integer("min_spend"), // in ₹, null if no minimum
+  voucherCode: varchar("voucher_code"), // coupon code, null if the deal is link-only (auto-applied)
   trackedLink: text("tracked_link").notNull(),
   deliveredToEmail: varchar("delivered_to_email"),
-  status: varchar("status").notNull().default("pending"), // pending | claimed | expired
-  claimWindowSeconds: integer("claim_window_seconds").notNull().default(180),
-  expiresAt: timestamp("expires_at").notNull(),
-  claimedAt: timestamp("claimed_at"),
+  status: varchar("status").notNull().default("unclaimed"), // unclaimed | active | expired
+  claimWindowSeconds: integer("claim_window_seconds").notNull().default(604800), // 7 days, counted from redemption
+  expiresAt: timestamp("expires_at"), // set only once redeemed
+  claimedAt: timestamp("claimed_at"), // when the player tapped Redeem
   createdAt: timestamp("created_at").defaultNow(),
 });
 

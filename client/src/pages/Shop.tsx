@@ -128,23 +128,47 @@ export default function Shop() {
     return () => clearInterval(interval);
   }, [loadMyVouchers]);
 
-  const handleOpenVoucher = async (claim: any) => {
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  // Player tapped "Redeem" — this is what actually starts the 7-day
+  // countdown server-side and reveals the code/link.
+  const handleRedeemVoucher = async (claim: any) => {
     const userId = localStorage.getItem("userId");
     if (!userId) return;
     setOpeningVoucherId(claim.id);
     try {
-      await fetch(`/api/vouchers/claim/${claim.id}`, {
+      const res = await fetch(`/api/vouchers/claim/${claim.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),
       });
-      window.open(claim.trackedLink, "_blank", "noopener,noreferrer");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to redeem");
       loadMyVouchers();
+      toast({ title: "Voucher redeemed!", description: "Use it within 7 days." });
     } catch (err) {
-      toast({ title: "Error", description: "Could not open voucher, try again.", variant: "destructive" });
+      toast({ title: "Error", description: "Could not redeem voucher, try again.", variant: "destructive" });
     } finally {
       setOpeningVoucherId(null);
     }
+  };
+
+  // Already active — just take them to the brand's site via the tracked
+  // link. No API call needed, the countdown is already running.
+  const handleShopNow = (claim: any) => {
+    window.open(claim.trackedLink, "_blank", "noopener,noreferrer");
+  };
+
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
+    });
+  };
+
+  const daysLeft = (expiresAt: string) => {
+    const ms = new Date(expiresAt).getTime() - Date.now();
+    return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
   };
 
   const updateStats = useCallback(() => {
@@ -568,7 +592,7 @@ export default function Shop() {
           <div className="space-y-4">
             <div className="text-center mb-2">
               <p className="text-muted-foreground text-sm">
-                Vouchers are earned by winning — 5 AI wins in a row, any Challenge Friend win, any Random Player win, or a Tournament win. Open them here whenever you like.
+                Vouchers are earned by winning — 5 AI wins in a row, any Challenge Friend win, any Random Player win, or a Tournament win. Tap Redeem to reveal the code — you'll then have 7 days to use it before it's removed.
               </p>
             </div>
 
@@ -582,23 +606,54 @@ export default function Shop() {
               <div className="space-y-3">
                 {myVouchers.map((v) => (
                   <Card key={v.id} className="border-pink-500/30">
-                    <CardContent className="flex items-center justify-between py-4">
-                      <div>
-                        <p className="font-bold text-pink-400">{v.brandName}</p>
-                        <p className="text-sm text-muted-foreground">{v.discountLabel}</p>
-                        <p className="text-xs text-muted-foreground/70 capitalize mt-1">{v.status.replace("_", " ")}</p>
+                    <CardContent className="py-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-pink-400">{v.brandName}</p>
+                          <p className="text-sm text-muted-foreground">{v.discountLabel}</p>
+                          {v.minSpend && (
+                            <p className="text-xs text-muted-foreground/70">Min. order ₹{v.minSpend}</p>
+                          )}
+                        </div>
+
+                        {v.status === "unclaimed" && (
+                          <Button
+                            onClick={() => handleRedeemVoucher(v)}
+                            disabled={openingVoucherId === v.id}
+                            className="bg-gradient-to-r from-pink-600 to-purple-600 font-bold"
+                            data-testid={`button-redeem-voucher-${v.id}`}
+                          >
+                            {openingVoucherId === v.id ? "Redeeming..." : "Redeem"}
+                          </Button>
+                        )}
                       </div>
-                      {v.status === "pending" ? (
-                        <Button
-                          onClick={() => handleOpenVoucher(v)}
-                          disabled={openingVoucherId === v.id}
-                          className="bg-gradient-to-r from-pink-600 to-purple-600 font-bold"
-                          data-testid={`button-open-voucher-${v.id}`}
-                        >
-                          {openingVoucherId === v.id ? "Opening..." : "Open"}
-                        </Button>
-                      ) : (
-                        <Badge variant="secondary" className="capitalize">{v.status}</Badge>
+
+                      {v.status === "active" && (
+                        <div className="border-t border-pink-500/20 pt-3 space-y-2">
+                          {v.voucherCode && (
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 bg-black/30 border border-pink-500/30 rounded px-3 py-2 text-pink-300 font-mono text-sm tracking-wider">
+                                {v.voucherCode}
+                              </code>
+                              <Button size="sm" variant="outline" onClick={() => handleCopyCode(v.voucherCode)}>
+                                {copiedCode === v.voucherCode ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                              </Button>
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground">
+                              {v.expiresAt ? `${daysLeft(v.expiresAt)} day${daysLeft(v.expiresAt) === 1 ? "" : "s"} left to use` : ""}
+                            </p>
+                            <Button
+                              size="sm"
+                              onClick={() => handleShopNow(v)}
+                              className="bg-gradient-to-r from-pink-600 to-purple-600 font-bold"
+                              data-testid={`button-shop-now-${v.id}`}
+                            >
+                              Shop Now
+                            </Button>
+                          </div>
+                        </div>
                       )}
                     </CardContent>
                   </Card>

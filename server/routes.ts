@@ -3,17 +3,19 @@ import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
 import { storage } from "./storage";
 import { generateOTP, sendLoginOTPEmail, verifyLoginOTP, sendAdminNotificationEmail, sendRedeemOTPEmail, verifyRedeemOTP, sendVoucherEmail } from "./emailService";
-import { convertToTrackedLink, pickRandomCampaign } from "./cuelinksClient";
+import { convertToTrackedLink, pickRandomOffer } from "./cuelinksClient";
 import { handleNewConnection } from "./ws-manager";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // --- Brand Vouchers: shared helper ---
   // Called whenever a player earns a voucher (AI win streak, Challenge
   // Friend win, Random Player win, or Tournament win). Picks a live
-  // Cuelinks campaign, converts it to a tracked link, records the claim
-  // with a short claim window, and emails it to the player as a backup.
-  // Never throws — a voucher-granting failure should never break the
-  // underlying game-win response.
+  // Cuelinks coupon/offer for an Indian merchant, converts its landing
+  // URL into a tracked affiliate link, and stores it as "unclaimed" — it
+  // just sits in Shop > Redeem Voucher until the player taps Redeem,
+  // which is what actually starts the 7-day countdown. Never throws — a
+  // voucher-granting failure should never break the underlying game-win
+  // response.
   async function grantVoucher(userId: string, triggerType: string): Promise<any | null> {
     try {
       const user = await storage.getUser(userId);
@@ -22,35 +24,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return null;
       }
 
-      const campaign = await pickRandomCampaign();
-      const { trackedLink } = await convertToTrackedLink(campaign.url, userId);
-
-      // No urgency window anymore — the voucher sits in Shop > Redeem
-      // Voucher until the player wants it, so give it a generous 7-day
-      // shelf life rather than a short countdown.
-      const claimWindowSeconds = 7 * 24 * 60 * 60; // 7 days
-      const expiresAt = new Date(Date.now() + claimWindowSeconds * 1000);
-      const discountLabel = "Exclusive deal — tap to view";
+      const offer = await pickRandomOffer();
+      const { trackedLink } = await convertToTrackedLink(offer.url, userId);
 
       const claim = await storage.createVoucherClaim({
         userId,
         triggerType,
-        brandName: campaign.name,
-        discountLabel,
+        brandName: offer.brandName,
+        discountLabel: offer.title,
+        voucherCode: offer.code,
+        discountPercent: offer.discountPercent,
+        minSpend: offer.minSpend,
         trackedLink,
         deliveredToEmail: user.email || null,
-        status: "pending",
-        claimWindowSeconds,
-        expiresAt,
+        status: "unclaimed",
+        claimWindowSeconds: 7 * 24 * 60 * 60, // 7 days, counted from redemption not creation
+        expiresAt: null,
         claimedAt: null,
       } as any);
-
-      // Email is just a backup delivery method — mobile-login players
-      // won't have one on file, and that's fine, the voucher still shows
-      // up in Shop > Redeem Voucher either way.
-      if (user.email) {
-        sendVoucherEmail(user.email, campaign.name, discountLabel, trackedLink, claimWindowSeconds).catch(() => {});
-      }
 
       return claim;
     } catch (err) {
@@ -58,6 +49,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return null;
     }
   }
+
 
   app.get("/api/catalog", async (req, res) => {
     try {
@@ -2606,7 +2598,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // --- Brand Vouchers: player-facing endpoints ---
-  // Player actually opened/used the link within the claim window
+  // Player taps "Redeem" in Shop > Redeem Voucher — this is what actually
+  // starts the 7-day countdown and reveals the code/link. Idempotent: if
+  // it's already active, just return it as-is (e.g. reopening later).
   app.post("/api/vouchers/claim/:claimId", async (req, res) => {
     try {
       const { userId } = req.body;
@@ -2614,25 +2608,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!claim || claim.userId !== userId) {
         return res.status(404).json({ error: "Voucher claim not found" });
       }
-      if (claim.status !== "pending") {
-        return res.json({ success: true, claim }); // already claimed/expired — idempotent
+      if (claim.status === "active") {
+        return res.json({ success: true, claim }); // already redeemed — idempotent
       }
-      if (new Date(claim.expiresAt) < new Date()) {
-        const expired = await storage.markVoucherClaimStatus(claim.id, "expired");
-        return res.status(400).json({ error: "Voucher window expired", claim: expired });
+
+      const expiresAt = new Date(Date.now() + (claim.claimWindowSeconds || 604800) * 1000);
+      const updated = await storage.activateVoucherClaim(claim.id, expiresAt);
+
+      const user = await storage.getUser(userId);
+      if (user?.email && updated) {
+        sendVoucherEmail(user.email, updated.brandName, updated.discountLabel, updated.trackedLink, updated.claimWindowSeconds).catch(() => {});
       }
-      const updated = await storage.markVoucherClaimStatus(claim.id, "claimed", new Date());
+
       res.json({ success: true, claim: updated });
     } catch (error) {
       console.error("Voucher claim error:", error);
-      res.status(500).json({ error: "Failed to mark voucher as claimed" });
+      res.status(500).json({ error: "Failed to redeem voucher" });
     }
   });
 
-  // Player's voucher history (active + past) for the Profile page
+  // Player's voucher list for Shop > Redeem Voucher. Any "active" voucher
+  // whose 7-day window has passed is deleted first, so it simply
+  // disappears from the list rather than lingering as "expired".
   app.get("/api/vouchers/my/:userId", async (req, res) => {
     try {
-      await storage.expireStaleVoucherClaims(req.params.userId);
+      await storage.deleteExpiredVoucherClaims(req.params.userId);
       const claims = await storage.getUserVoucherClaims(req.params.userId);
       res.json({ success: true, claims });
     } catch (error) {
