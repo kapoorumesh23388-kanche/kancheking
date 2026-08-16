@@ -17,8 +17,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   async function grantVoucher(userId: string, triggerType: string): Promise<any | null> {
     try {
       const user = await storage.getUser(userId);
-      if (!user || !user.email) {
-        console.error(`[grantVoucher] Skipped for ${userId} (${triggerType}) — no email on file`);
+      if (!user) {
+        console.error(`[grantVoucher] Skipped for ${userId} (${triggerType}) — user not found`);
         return null;
       }
 
@@ -38,14 +38,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         brandName: campaign.name,
         discountLabel,
         trackedLink,
-        deliveredToEmail: user.email,
+        deliveredToEmail: user.email || null,
         status: "pending",
         claimWindowSeconds,
         expiresAt,
         claimedAt: null,
       } as any);
 
-      sendVoucherEmail(user.email, campaign.name, discountLabel, trackedLink, claimWindowSeconds).catch(() => {});
+      // Email is just a backup delivery method — mobile-login players
+      // won't have one on file, and that's fine, the voucher still shows
+      // up in Shop > Redeem Voucher either way.
+      if (user.email) {
+        sendVoucherEmail(user.email, campaign.name, discountLabel, trackedLink, claimWindowSeconds).catch(() => {});
+      }
 
       return claim;
     } catch (err) {
@@ -258,6 +263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If player won against friend or random player, add earned marbles
       let voucherClaim = null;
       if (won && opponentType && opponentType !== "ai") {
+        console.log(`[game-points] PvP win — userId=${userId} gameType=${gameType} opponentType=${opponentType} delta=${delta}`);
         // Fix: previously this always added a flat 10 regardless of how
         // many marbles were actually won in the match, which made the
         // PvP Win Marbles counter (used for tournament eligibility AND
