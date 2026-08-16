@@ -128,7 +128,7 @@ export default function Shop() {
     return () => clearInterval(interval);
   }, [loadMyVouchers]);
 
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [copiedVoucherCode, setCopiedVoucherCode] = useState<string | null>(null);
 
   // Player tapped "Redeem" — this is what actually starts the 7-day
   // countdown server-side and reveals the code/link.
@@ -161,8 +161,8 @@ export default function Shop() {
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code).then(() => {
-      setCopiedCode(code);
-      setTimeout(() => setCopiedCode(null), 2000);
+      setCopiedVoucherCode(code);
+      setTimeout(() => setCopiedVoucherCode(null), 2000);
     });
   };
 
@@ -636,7 +636,7 @@ export default function Shop() {
                                 {v.voucherCode}
                               </code>
                               <Button size="sm" variant="outline" onClick={() => handleCopyCode(v.voucherCode)}>
-                                {copiedCode === v.voucherCode ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                {copiedVoucherCode === v.voucherCode ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                               </Button>
                             </div>
                           )}
