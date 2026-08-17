@@ -164,6 +164,20 @@ export default function MultiplayerGame() {
   useEffect(() => {
     if (opponentMarbles <= 0 && opponentConnected && !showCelebration) {
       setShowCelebration(true);
+
+      // If this room is a tournament bracket match (roomCode format
+      // "TOUR_<tournamentId>_R<round>_M<matchNum>"), this is the exact
+      // moment the match is actually decided — record it so the bracket
+      // advances to the next round. Without this call, the tournament
+      // would never progress past this match.
+      if (roomCode?.startsWith("TOUR_")) {
+        apiRequest("POST", `/api/tournament/match/by-room/${roomCode}/result`, {
+          winnerId: playerId,
+          winnerName: playerName,
+          player1Score: myMarbles,
+          player2Score: opponentMarbles,
+        }).catch((err: any) => console.error("Failed to record tournament match result:", err));
+      }
     }
   }, [opponentMarbles, opponentConnected, showCelebration]);
 

@@ -106,6 +106,7 @@ export interface IStorage {
   addTournamentParticipant(participant: Omit<TournamentParticipant, 'id' | 'createdAt'>): Promise<TournamentParticipant>;
   getTournamentMatches(tournamentId: string): Promise<TournamentMatch[]>;
   getTournamentMatch(matchId: string): Promise<TournamentMatch | undefined>;
+  getTournamentMatchByRoomCode(roomCode: string): Promise<TournamentMatch | undefined>;
   createTournamentMatch(match: Omit<TournamentMatch, 'id' | 'createdAt'>): Promise<TournamentMatch>;
   updateTournamentMatch(matchId: string, updates: Partial<TournamentMatch>): Promise<TournamentMatch | undefined>;
   updateTournamentStatus(tournamentId: string, status: string): Promise<void>;
@@ -662,11 +663,12 @@ export class MemStorage implements IStorage {
     if (active) return active;
 
     // No open window exists yet — create the first one automatically.
+    // maxPlayers: 10 matches the Tournament page's "/ 10" label.
     return await this.addTournamentWindow({
       windowNumber: windows.length + 1,
       playerCount: 0,
       status: "waiting",
-      maxPlayers: 100,
+      maxPlayers: 10,
       entryFee: 250,
       prizePool: 0,
       winnerId: null,
@@ -699,7 +701,7 @@ export class MemStorage implements IStorage {
         windowNumber: window.windowNumber + 1,
         playerCount: 0,
         status: "waiting",
-        maxPlayers: 100,
+        maxPlayers: 10, // keep consistent with the first window / "/ 10" label
         entryFee: 250,
         prizePool: 0,
         winnerId: null,
@@ -1223,6 +1225,14 @@ export class MemStorage implements IStorage {
 
   async getTournamentMatch(matchId: string): Promise<TournamentMatch | undefined> {
     const [match] = await db.select().from(tournamentMatchesTable).where(eq(tournamentMatchesTable.id, matchId));
+    return match;
+  }
+
+  // Used to connect a live multiplayer game room back to its tournament
+  // bracket match — MultiplayerGame.tsx only knows the roomCode it was
+  // given, not the underlying tournament_matches row id.
+  async getTournamentMatchByRoomCode(roomCode: string): Promise<TournamentMatch | undefined> {
+    const [match] = await db.select().from(tournamentMatchesTable).where(eq((tournamentMatchesTable as any).roomCode, roomCode));
     return match;
   }
 

@@ -381,6 +381,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // --- Tournament: shared helper ---
+  // Shuffles all registered participants and creates round-1 matches.
+  // Called both from the manual /start endpoint and automatically from
+  // /api/tournament/join once a window fills up to its player cap.
+  async function startTournamentBracket(tournamentId: string): Promise<void> {
+    const participants = await storage.getTournamentParticipants(tournamentId);
+    if (participants.length < 2) return;
+
+    const shuffled = [...participants].sort(() => Math.random() - 0.5);
+    for (let i = 0; i < shuffled.length; i += 2) {
+      const player1 = shuffled[i];
+      const player2 = shuffled[i + 1];
+      const roomCode = `TOUR_${tournamentId}_R1_M${Math.floor(i / 2) + 1}`;
+      await storage.createTournamentMatch({
+        tournamentId,
+        roundNumber: 1,
+        matchNumber: Math.floor(i / 2) + 1,
+        player1Id: player1.playerId,
+        player1Name: player1.playerName,
+        player2Id: player2?.playerId || null,
+        player2Name: player2?.playerName || null,
+        roomCode,
+        status: player2 ? "ready" : "bye",
+      });
+    }
+    await storage.updateTournamentStatus(tournamentId, "in_progress");
+  }
+
+  // Pays out the tournament winner: full accumulated prize pool as
+  // marbles, a flat 2500-point bonus, and a brand voucher. Shared by both
+  // the manual /api/tournament/winner endpoint and automatic bracket
+  // completion in /api/tournament/match/:matchId/result, so a winner gets
+  // paid no matter which path declared them the champion.
+  async function payoutTournamentWinner(windowId: string, userId: string): Promise<void> {
+    const WINNER_POINTS_BONUS = 2500;
+    const windows = await storage.getTournamentWindows();
+    const window = windows.find(w => w.id === windowId);
+    const prizePoolMarbles = window?.prizePool || 0;
+
+    await storage.adjustWallet(userId, prizePoolMarbles, WINNER_POINTS_BONUS);
+    if (window) {
+      await storage.setTournamentWinnerReward(window.id, userId, prizePoolMarbles);
+    }
+    await storage.recordTransaction({
+      userId,
+      amount: prizePoolMarbles,
+      type: "tournament_winning_marbles",
+      description: `Tournament Win - ${prizePoolMarbles} marbles (prize pool) + ${WINNER_POINTS_BONUS} points`,
+      transactionId: null,
+    });
+    await grantVoucher(userId, "tournament_win");
+  }
+
   app.get("/api/tournament/windows", async (req, res) => {
     try {
       // Guarantee at least one open window exists before listing — this
@@ -457,6 +510,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.updateTournamentPlayerCount(window.id, window.playerCount + 1);
       await storage.addToPrizePool(window.id, ENTRY_FEE);
+
+      // Register this player as a tournament participant — without this,
+      // the bracket system has no record of who's actually in the
+      // tournament and can never generate matches for them.
+      await storage.addTournamentParticipant({
+        tournamentId: window.id,
+        playerId: userId,
+        playerName: user.displayName || user.username,
+        profileImage: user.profileImage || null,
+        seed: window.playerCount + 1,
+        status: "active",
+        eliminatedInRound: null,
+      });
+
+      // If this join fills the window, kick off round 1 automatically —
+      // players shouldn't be left waiting indefinitely for someone to
+      // manually start the bracket.
+      const newPlayerCount = window.playerCount + 1;
+      if (newPlayerCount >= window.maxPlayers) {
+        await startTournamentBracket(window.id);
+      }
 
       res.json({ 
         success: true, 
@@ -643,38 +717,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Shuffle participants for random seeding
-      const shuffled = [...participants].sort(() => Math.random() - 0.5);
-      
-      // Create first round matches
-      const round1Matches: any[] = [];
-      for (let i = 0; i < shuffled.length; i += 2) {
-        const player1 = shuffled[i];
-        const player2 = shuffled[i + 1];
-        
-        const roomCode = `TOUR_${tournamentId}_R1_M${Math.floor(i/2) + 1}`;
-        
-        const match = await storage.createTournamentMatch({
-          tournamentId,
-          roundNumber: 1,
-          matchNumber: Math.floor(i/2) + 1,
-          player1Id: player1.playerId,
-          player1Name: player1.playerName,
-          player2Id: player2?.playerId || null,
-          player2Name: player2?.playerName || null,
-          roomCode,
-          status: player2 ? "ready" : "bye",
-        });
-        
-        round1Matches.push(match);
-      }
-
-      // Update tournament status
-      await storage.updateTournamentStatus(tournamentId, "in_progress");
+      await startTournamentBracket(tournamentId);
+      const matches = await storage.getTournamentMatches(tournamentId);
 
       res.json({ 
         success: true,
-        matches: round1Matches,
+        matches: matches.filter(m => m.roundNumber === 1),
         message: "Tournament started! First round matches created."
       });
     } catch (error) {
@@ -683,83 +731,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Shared core: records a tournament match's result, and if that was the
+  // last match of its round, either declares the champion (single winner
+  // left) or auto-creates the next round's matches. Used by both the
+  // direct matchId route and the roomCode route (which MultiplayerGame.tsx
+  // calls once a tournament-room game actually finishes).
+  async function settleTournamentMatchResult(matchId: string, winnerId: string, winnerName: string, player1Score: number, player2Score: number): Promise<any> {
+    await storage.updateTournamentMatch(matchId, {
+      winnerId,
+      winnerName,
+      player1Score,
+      player2Score,
+      status: "completed",
+      completedAt: new Date()
+    });
+
+    const match = await storage.getTournamentMatch(matchId);
+    if (!match) {
+      return { status: 404, body: { error: "Match not found" } };
+    }
+
+    const allMatches = await storage.getTournamentMatches(match.tournamentId);
+    const roundMatches = allMatches.filter(m => m.roundNumber === match.roundNumber);
+    const allComplete = roundMatches.every(m => m.status === "completed" || m.status === "bye");
+
+    if (!allComplete) {
+      return { status: 200, body: { success: true, message: "Match result recorded. Waiting for other matches." } };
+    }
+
+    const winners = roundMatches.map(m => ({ id: m.winnerId, name: m.winnerName }));
+
+    if (winners.length === 1) {
+      await storage.updateTournamentStatus(match.tournamentId, "completed");
+      await storage.setTournamentWinner(match.tournamentId, winnerId, winnerName);
+      return {
+        status: 200,
+        body: { success: true, tournamentComplete: true, winnerId, winnerName, message: "Tournament complete! Winner declared." }
+      };
+    }
+
+    const nextRound = match.roundNumber + 1;
+    for (let i = 0; i < winners.length; i += 2) {
+      const p1 = winners[i];
+      const p2 = winners[i + 1];
+      const roomCode = `TOUR_${match.tournamentId}_R${nextRound}_M${Math.floor(i / 2) + 1}`;
+      await storage.createTournamentMatch({
+        tournamentId: match.tournamentId,
+        roundNumber: nextRound,
+        matchNumber: Math.floor(i / 2) + 1,
+        player1Id: p1.id,
+        player1Name: p1.name,
+        player2Id: p2?.id || null,
+        player2Name: p2?.name || null,
+        roomCode,
+        status: p2 ? "ready" : "bye",
+      });
+    }
+
+    return { status: 200, body: { success: true, nextRoundCreated: true, nextRound, message: `Round ${nextRound} matches created!` } };
+  }
+
   app.post("/api/tournament/match/:matchId/result", async (req, res) => {
     try {
       const { matchId } = req.params;
       const { winnerId, winnerName, player1Score, player2Score } = req.body;
-
-      await storage.updateTournamentMatch(matchId, {
-        winnerId,
-        winnerName,
-        player1Score,
-        player2Score,
-        status: "completed",
-        completedAt: new Date()
-      });
-
-      // Check if all matches in round are complete
-      const match = await storage.getTournamentMatch(matchId);
-      if (!match) {
-        return res.status(404).json({ error: "Match not found" });
-      }
-
-      const allMatches = await storage.getTournamentMatches(match.tournamentId);
-      const roundMatches = allMatches.filter(m => m.roundNumber === match.roundNumber);
-      const allComplete = roundMatches.every(m => m.status === "completed" || m.status === "bye");
-
-      if (allComplete) {
-        // Check if this was the final
-        const winners = roundMatches.map(m => ({ id: m.winnerId, name: m.winnerName }));
-        
-        if (winners.length === 1) {
-          // Tournament finished!
-          await storage.updateTournamentStatus(match.tournamentId, "completed");
-          await storage.setTournamentWinner(match.tournamentId, winnerId, winnerName);
-          
-          res.json({
-            success: true,
-            tournamentComplete: true,
-            winnerId,
-            winnerName,
-            message: "Tournament complete! Winner declared."
-          });
-        } else {
-          // Create next round matches
-          const nextRound = match.roundNumber + 1;
-          for (let i = 0; i < winners.length; i += 2) {
-            const p1 = winners[i];
-            const p2 = winners[i + 1];
-            
-            const roomCode = `TOUR_${match.tournamentId}_R${nextRound}_M${Math.floor(i/2) + 1}`;
-            
-            await storage.createTournamentMatch({
-              tournamentId: match.tournamentId,
-              roundNumber: nextRound,
-              matchNumber: Math.floor(i/2) + 1,
-              player1Id: p1.id,
-              player1Name: p1.name,
-              player2Id: p2?.id || null,
-              player2Name: p2?.name || null,
-              roomCode,
-              status: p2 ? "ready" : "bye",
-            });
-          }
-
-          res.json({
-            success: true,
-            nextRoundCreated: true,
-            nextRound,
-            message: `Round ${nextRound} matches created!`
-          });
-        }
-      } else {
-        res.json({
-          success: true,
-          message: "Match result recorded. Waiting for other matches."
-        });
-      }
+      const result = await settleTournamentMatchResult(matchId, winnerId, winnerName, player1Score, player2Score);
+      res.status(result.status).json(result.body);
     } catch (error) {
       console.error("Failed to record match result:", error);
+      res.status(500).json({ error: "Failed to record match result" });
+    }
+  });
+
+  // Called by MultiplayerGame.tsx when a live game room turns out to be a
+  // tournament match (roomCode starts with "TOUR_") — the game itself
+  // only knows its roomCode, not the tournament_matches row id, so this
+  // looks that up first. This is the missing link that actually advances
+  // the bracket; without it, tournament rounds never progress past round 1.
+  app.post("/api/tournament/match/by-room/:roomCode/result", async (req, res) => {
+    try {
+      const { roomCode } = req.params;
+      const { winnerId, winnerName, player1Score, player2Score } = req.body;
+      const match = await storage.getTournamentMatchByRoomCode(roomCode);
+      if (!match) {
+        return res.status(404).json({ error: "No tournament match found for this room" });
+      }
+      const result = await settleTournamentMatchResult(match.id, winnerId, winnerName, player1Score, player2Score);
+      res.status(result.status).json(result.body);
+    } catch (error) {
+      console.error("Failed to record match result by room:", error);
       res.status(500).json({ error: "Failed to record match result" });
     }
   });
