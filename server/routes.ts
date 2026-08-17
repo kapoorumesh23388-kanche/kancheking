@@ -383,6 +383,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/tournament/windows", async (req, res) => {
     try {
+      // Guarantee at least one open window exists before listing — this
+      // is what actually creates "Window 1" in the database the first
+      // time anyone loads the Tournament page, instead of the page
+      // showing a card with no real row behind it.
+      await storage.getActiveTournamentWindow();
       const windows = await storage.getTournamentWindows();
       res.json(windows);
     } catch (error) {
@@ -399,18 +404,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Look up the window FIRST — windowId from the client is often the
-      // display "Window 1/2/3" number (windowNumber), not the DB's UUID
-      // primary key, so match on both to be safe. If nothing matches, we
-      // bail out before touching any marbles, instead of silently
-      // deducting the entry fee for a tournament that never gets credited.
-      const windows = await storage.getTournamentWindows();
-      const window = windows.find(w =>
-        w.id === windowId ||
-        w.id === String(windowId) ||
-        w.windowNumber === Number(windowId) ||
-        String(w.windowNumber) === String(windowId)
-      );
+      // Get (or auto-create) the currently open tournament window. Using
+      // getActiveTournamentWindow() instead of a manual find() over
+      // getTournamentWindows() — the plain list was coming back empty
+      // when no window row existed yet, silently failing to match.
+      const window = await storage.getActiveTournamentWindow();
       if (!window) {
         return res.status(404).json({ error: "Tournament window not found. Please refresh and try again." });
       }
