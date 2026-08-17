@@ -99,14 +99,45 @@ function parseDiscountPercent(value: any): number | null {
 
 // Small built-in safety net — used only if the live Cuelinks offers list
 // can't be fetched, so a voucher is never silently dropped when a player
-// has earned one. Modeled on real, common Indian online-shopping deals.
+// has earned one. Modeled on real, common Indian online-shopping/food
+// deals, spread across several categories so it doesn't feel repetitive.
 const FALLBACK_OFFERS: VoucherOffer[] = [
+  // Fashion
   { brandName: "Myntra", title: "Flat 20% off on Fashion", code: "MYNTRA20", discountPercent: 20, minSpend: 999, url: "https://www.myntra.com" },
   { brandName: "Ajio", title: "Up to 50% off Sitewide", code: "AJIO50", discountPercent: 50, minSpend: null, url: "https://www.ajio.com" },
+  { brandName: "Zudio", title: "Flat 15% off on Fashion", code: "ZUDIO15", discountPercent: 15, minSpend: 599, url: "https://www.zudio.com" },
+  { brandName: "Pantaloons", title: "25% off on Apparel", code: "PANT25", discountPercent: 25, minSpend: 999, url: "https://www.pantaloons.com" },
+  { brandName: "Westside", title: "Flat 20% off Storewide", code: "WEST20", discountPercent: 20, minSpend: 799, url: "https://www.westside.com" },
+  { brandName: "Max Fashion", title: "Up to 40% off on Clothing", code: "MAX40", discountPercent: 40, minSpend: null, url: "https://www.maxfashion.in" },
+
+  // Food delivery / dining
+  { brandName: "Domino's", title: "Flat 25% off on Orders", code: "DOM25", discountPercent: 25, minSpend: 399, url: "https://www.dominos.co.in" },
+  { brandName: "Pizza Hut", title: "Buy 1 Get 1 on Pizzas", code: "PHBOGO", discountPercent: null, minSpend: 499, url: "https://www.pizzahut.co.in" },
+  { brandName: "Zomato", title: "Flat 50% off up to ₹100", code: "ZOMATO50", discountPercent: 50, minSpend: 199, url: "https://www.zomato.com" },
+  { brandName: "Swiggy", title: "Flat ₹125 off on Food Orders", code: "SWIGGY125", discountPercent: null, minSpend: 199, url: "https://www.swiggy.com" },
+  { brandName: "McDonald's", title: "20% off on Combo Meals", code: "MCD20", discountPercent: 20, minSpend: 249, url: "https://www.mcdelivery.co.in" },
+  { brandName: "KFC", title: "Flat 15% off on Orders", code: "KFC15", discountPercent: 15, minSpend: 299, url: "https://online.kfc.co.in" },
+
+  // Electronics / general shopping
   { brandName: "Flipkart", title: "10% off on Electronics", code: "FLIP10", discountPercent: 10, minSpend: 1500, url: "https://www.flipkart.com" },
   { brandName: "Amazon India", title: "Flat 15% off Storewide", code: "AMZ15", discountPercent: 15, minSpend: 500, url: "https://www.amazon.in" },
+  { brandName: "Croma", title: "Up to 12% off on Gadgets", code: "CROMA12", discountPercent: 12, minSpend: 2000, url: "https://www.croma.com" },
+
+  // Beauty / personal care
   { brandName: "Nykaa", title: "25% off on Beauty", code: "NYKAA25", discountPercent: 25, minSpend: 799, url: "https://www.nykaa.com" },
+  { brandName: "Purplle", title: "Flat 30% off on Cosmetics", code: "PURPLE30", discountPercent: 30, minSpend: 599, url: "https://www.purplle.com" },
+
+  // Grocery / quick commerce
   { brandName: "BigBasket", title: "Flat ₹100 off + 10% cashback", code: "BB10", discountPercent: 10, minSpend: 999, url: "https://www.bigbasket.com" },
+  { brandName: "Blinkit", title: "Flat 20% off on First Order", code: "BLINK20", discountPercent: 20, minSpend: 299, url: "https://www.blinkit.com" },
+
+  // Travel
+  { brandName: "MakeMyTrip", title: "Up to ₹2000 off on Flights", code: "MMT2000", discountPercent: null, minSpend: null, url: "https://www.makemytrip.com" },
+  { brandName: "OYO", title: "Flat 40% off on Hotels", code: "OYO40", discountPercent: 40, minSpend: null, url: "https://www.oyorooms.com" },
+
+  // Entertainment / services
+  { brandName: "BookMyShow", title: "Flat ₹75 off on Movie Tickets", code: "BMS75", discountPercent: null, minSpend: 300, url: "https://www.bookmyshow.com" },
+  { brandName: "Urban Company", title: "20% off on Home Services", code: "UC20", discountPercent: 20, minSpend: null, url: "https://www.urbancompany.com" },
 ];
 
 // Picks one live offer at random from the top-performing batch, for
