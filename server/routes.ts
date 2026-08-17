@@ -399,6 +399,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
 
+      // Look up the window FIRST — windowId from the client is often the
+      // display "Window 1/2/3" number (windowNumber), not the DB's UUID
+      // primary key, so match on both to be safe. If nothing matches, we
+      // bail out before touching any marbles, instead of silently
+      // deducting the entry fee for a tournament that never gets credited.
+      const windows = await storage.getTournamentWindows();
+      const window = windows.find(w =>
+        w.id === windowId ||
+        w.id === String(windowId) ||
+        w.windowNumber === Number(windowId) ||
+        String(w.windowNumber) === String(windowId)
+      );
+      if (!window) {
+        return res.status(404).json({ error: "Tournament window not found. Please refresh and try again." });
+      }
+
       // Tournament entry: 250 marbles from PvP Win Marbles ONLY.
       // (AI wins, ad rewards, and purchased marbles don't count.)
       const ENTRY_FEE = 250;
@@ -426,22 +442,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transactionId: null,
       });
 
-      const windows = await storage.getTournamentWindows();
-      // windowId from client might be a number (1, 2) so match appropriately
-      const window = windows.find(w => w.id === windowId || w.id === String(windowId));
-      let tournamentId = null;
-      if (window) {
-        await storage.updateTournamentPlayerCount(window.id, window.playerCount + 1);
-        await storage.addToPrizePool(window.id, ENTRY_FEE);
-        // Use the actual database window ID as tournament ID
-        tournamentId = window.id;
-      }
+      await storage.updateTournamentPlayerCount(window.id, window.playerCount + 1);
+      await storage.addToPrizePool(window.id, ENTRY_FEE);
 
       res.json({ 
         success: true, 
         marbles: updatedUser?.marbles ?? 0,
-        tournamentId,
-        windowId: window?.id || windowId,
+        tournamentId: window.id,
+        windowId: window.id,
         message: "Tournament entry confirmed. 250 marbles deducted (PvP wins only)."
       });
     } catch (error) {
