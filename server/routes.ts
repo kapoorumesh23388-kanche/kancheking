@@ -388,8 +388,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // time anyone loads the Tournament page, instead of the page
       // showing a card with no real row behind it.
       await storage.getActiveTournamentWindow();
-      const windows = await storage.getTournamentWindows();
-      res.json(windows);
+      const dbWindows = await storage.getTournamentWindows();
+
+      // Tournament.tsx expects { windows: [{ id, tournamentId, players,
+      // status: "Open"|"Waiting", pointPool, winnerReward }] } — quite
+      // different field names/shapes from the DB row (playerCount,
+      // prizePool, status: "waiting", no winnerReward at all). Map them
+      // here so the page always gets what it's actually reading.
+      const windows = dbWindows.map((w) => ({
+        id: w.id,
+        tournamentId: w.id,
+        players: w.playerCount,
+        status: (w.status === "waiting" && w.playerCount < w.maxPlayers) ? "Open" : "Waiting",
+        pointPool: w.prizePool,
+        winnerReward: 2500, // matches WINNER_POINTS_BONUS in /api/tournament/winner
+      }));
+
+      res.json({ windows });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch tournament windows" });
     }
