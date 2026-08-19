@@ -764,9 +764,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (winners.length === 1) {
       await storage.updateTournamentStatus(match.tournamentId, "completed");
       await storage.setTournamentWinner(match.tournamentId, winnerId, winnerName);
+      // This was the missing piece — the winner was being declared but
+      // never actually paid: prize pool marbles, 2500 points, and a
+      // brand voucher all happen here.
+      await payoutTournamentWinner(match.tournamentId, winnerId);
       return {
         status: 200,
-        body: { success: true, tournamentComplete: true, winnerId, winnerName, message: "Tournament complete! Winner declared." }
+        body: { success: true, tournamentComplete: true, winnerId, winnerName, message: "Tournament complete! Winner declared and paid out." }
       };
     }
 
