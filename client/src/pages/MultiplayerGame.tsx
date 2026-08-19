@@ -82,13 +82,23 @@ export default function MultiplayerGame() {
   const playerName = localStorage.getItem("playerDisplayName") || `Player_${playerId.slice(-6)}`;
   const profileImage = localStorage.getItem("playerProfileImageUpdate") || "";
   
+  // Tournament matches are played with the 250-marble entry fee as the
+  // stake — NOT the player's live wallet balance (which is already near
+  // zero right after that fee was deducted at entry). Using the wallet
+  // balance here was causing tournament matches to end instantly, since
+  // both players effectively started with ~0 marbles to play with.
+  const isTournamentRoom = roomCode?.startsWith("TOUR_");
+  const TOURNAMENT_STAKE = 250;
+
   const [phase, setPhase] = useState<GamePhase>("waiting");
   const [myMarbles, setMyMarbles] = useState(() => {
+    if (isTournamentRoom) return TOURNAMENT_STAKE;
     initializeMarbles();
     return getTotalMarbles();
   });
 
   useEffect(() => {
+    if (isTournamentRoom) return; // stake is fixed, never synced from wallet
     const uid = localStorage.getItem("userId");
     if (uid) {
       syncWalletFromServer(uid).then((wallet) => {
@@ -367,34 +377,44 @@ export default function MultiplayerGame() {
         const pointChange = won ? 5 : -5;
         setRoundPoints(prev => prev + pointChange);
         
-        // Send points AND marbles change to server — this is the ONLY
-        // place that actually changes the database balance now, so
-        // Home/Profile/GameHeader always show the same, correct number.
-        const userId = localStorage.getItem("userId") || playerId;
-        const gameMode = window.location.pathname.includes("random") ? "random" : "friend";
-        apiRequest("POST", "/api/game-points", {
-          userId,
-          points: pointChange,
-          gameType: gameMode,
-          opponent: opponentName,
-          won,
-          opponentType: "player", // PvP match
-          marblesDelta: won ? change : -change,
-        })
-          .then((res: any) => res.json?.() ?? res)
-          .then((data: any) => {
-            if (typeof data.marbles === "number") {
-              setMyMarbles(data.marbles);
-              setCachedTotals(data.marbles, data.points);
-            }
-            if (data.voucherClaim) {
-              toast({
-                title: "🎁 You won a voucher!",
-                description: `${data.voucherClaim.brandName} — check Shop > Redeem Voucher to claim it.`,
-              });
-            }
+        // Tournament matches settle exclusively through the dedicated
+        // /api/tournament/match/by-room/.../result call (fired when the
+        // match actually ends, below) — the normal per-round game-points
+        // call is skipped here entirely for tournament rooms. Otherwise
+        // it would (a) overwrite the fixed 250-marble tournament stake
+        // with the player's real (already-near-zero, post-entry-fee)
+        // wallet balance, and (b) touch the real wallet/voucher system
+        // with numbers that don't belong to the tournament's own economy.
+        if (!isTournamentRoom) {
+          // Send points AND marbles change to server — this is the ONLY
+          // place that actually changes the database balance now, so
+          // Home/Profile/GameHeader always show the same, correct number.
+          const userId = localStorage.getItem("userId") || playerId;
+          const gameMode = window.location.pathname.includes("random") ? "random" : "friend";
+          apiRequest("POST", "/api/game-points", {
+            userId,
+            points: pointChange,
+            gameType: gameMode,
+            opponent: opponentName,
+            won,
+            opponentType: "player", // PvP match
+            marblesDelta: won ? change : -change,
           })
-          .catch((err: any) => console.error("Failed to record game points:", err));
+            .then((res: any) => res.json?.() ?? res)
+            .then((data: any) => {
+              if (typeof data.marbles === "number") {
+                setMyMarbles(data.marbles);
+                setCachedTotals(data.marbles, data.points);
+              }
+              if (data.voucherClaim) {
+                toast({
+                  title: "🎁 You won a voucher!",
+                  description: `${data.voucherClaim.brandName} — check Shop > Redeem Voucher to claim it.`,
+                });
+              }
+            })
+            .catch((err: any) => console.error("Failed to record game points:", err));
+        }
         
         // Different messages for hider vs guesser
         let resultDetails = "";
