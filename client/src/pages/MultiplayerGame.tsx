@@ -181,12 +181,29 @@ export default function MultiplayerGame() {
       // advances to the next round. Without this call, the tournament
       // would never progress past this match.
       if (roomCode?.startsWith("TOUR_")) {
-        apiRequest("POST", `/api/tournament/match/by-room/${roomCode}/result`, {
-          winnerId: playerId,
-          winnerName: playerName,
-          player1Score: myMarbles,
-          player2Score: opponentMarbles,
-        }).catch((err: any) => console.error("Failed to record tournament match result:", err));
+        // This call is what actually advances the tournament bracket —
+        // if it silently fails just once (e.g. the free-tier server was
+        // spun down and the first request times out), the tournament
+        // gets permanently stuck with no visible error to the player.
+        // Retry a few times with backoff before giving up.
+        const settleTournamentResult = async (attempt = 1): Promise<void> => {
+          try {
+            await apiRequest("POST", `/api/tournament/match/by-room/${roomCode}/result`, {
+              winnerId: playerId,
+              winnerName: playerName,
+              player1Score: myMarbles,
+              player2Score: opponentMarbles,
+            });
+          } catch (err) {
+            if (attempt < 4) {
+              console.error(`Tournament settlement attempt ${attempt} failed, retrying...`, err);
+              setTimeout(() => settleTournamentResult(attempt + 1), attempt * 2000);
+            } else {
+              console.error("Tournament settlement failed after 4 attempts:", err);
+            }
+          }
+        };
+        settleTournamentResult();
       }
     }
   }, [opponentMarbles, opponentConnected, showCelebration]);
