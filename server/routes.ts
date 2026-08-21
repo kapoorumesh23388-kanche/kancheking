@@ -394,6 +394,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const player1 = shuffled[i];
       const player2 = shuffled[i + 1];
       const roomCode = `TOUR_${tournamentId}_R1_M${Math.floor(i / 2) + 1}`;
+      // Bye handling: with an odd number of players remaining in a round
+      // (unavoidable in a 10-player bracket — 5 -> 3 -> 2 -> 1), the last
+      // player has no opponent. Previously the match was created with
+      // status "bye" but no winnerId, so the next round's pairing carried
+      // a null player forward and the bracket silently got stuck. Now the
+      // bye player is immediately recorded as the winner of their "match".
       await storage.createTournamentMatch({
         tournamentId,
         roundNumber: 1,
@@ -404,6 +410,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         player2Name: player2?.playerName || null,
         roomCode,
         status: player2 ? "ready" : "bye",
+        winnerId: player2 ? null : player1.playerId,
+        winnerName: player2 ? null : player1.playerName,
+        completedAt: player2 ? null : new Date(),
       });
     }
     await storage.updateTournamentStatus(tournamentId, "in_progress");
@@ -448,14 +457,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // different field names/shapes from the DB row (playerCount,
       // prizePool, status: "waiting", no winnerReward at all). Map them
       // here so the page always gets what it's actually reading.
-      const windows = dbWindows.map((w) => ({
-        id: w.id,
-        tournamentId: w.id,
-        players: w.playerCount,
-        status: (w.status === "waiting" && w.playerCount < w.maxPlayers) ? "Open" : "Waiting",
-        pointPool: w.prizePool,
-        winnerReward: 2500, // matches WINNER_POINTS_BONUS in /api/tournament/winner
-      }));
+      // Previously this only ever produced "Open" or "Waiting" — once a
+      // window filled up and moved to "active"/"in_progress"/"completed"
+      // in the DB, it fell through to the `else` branch and displayed
+      // "Waiting" forever, even mid-tournament. Map every real DB status
+      // to its own display value instead.
+      const windows = dbWindows.map((w) => {
+        let status: string;
+        if (w.status === "completed") status = "Completed";
+        else if (w.status === "in_progress" || w.status === "active") status = "In Progress";
+        else status = w.playerCount < w.maxPlayers ? "Open" : "Waiting";
+
+        return {
+          id: w.id,
+          tournamentId: w.id,
+          players: w.playerCount,
+          status,
+          pointPool: w.prizePool,
+          winnerReward: 2500, // matches WINNER_POINTS_BONUS in /api/tournament/winner
+        };
+      });
 
       res.json({ windows });
     } catch (error) {
@@ -481,24 +502,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Tournament window not found. Please refresh and try again." });
       }
 
-      // Tournament entry: 250 marbles from PvP Win Marbles ONLY.
-      // (AI wins, ad rewards, and purchased marbles don't count.)
+      // Tournament entry has TWO independent checks:
+      // 1) Eligibility gate: pvpWinMarbles is a lifetime "have you earned
+      //    enough from real PvP wins" counter. It is NEVER spent/deducted —
+      //    it just needs to be >= ENTRY_FEE to unlock tournament access.
+      // 2) Affordability: the player's actual spendable `marbles` balance
+      //    must also be >= ENTRY_FEE, since that's what actually gets
+      //    locked into the prize pool as their stake.
       const ENTRY_FEE = 250;
       const eligibleMarbles = user.pvpWinMarbles || 0;
 
       if (eligibleMarbles < ENTRY_FEE) {
         return res.status(400).json({
-          error: `Insufficient eligible marbles for tournament entry. You need ${ENTRY_FEE} PvP Win Marbles (AI wins and ad rewards don't count).`,
+          error: `Insufficient PvP win marbles to unlock tournament entry. You need ${ENTRY_FEE} lifetime PvP Win Marbles (AI wins and ad rewards don't count).`,
           eligibleMarblesAvailable: eligibleMarbles,
           requiredMarbles: ENTRY_FEE,
           message: `You need ${ENTRY_FEE - eligibleMarbles} more PvP Win Marbles`
         });
       }
 
-      // Deduct entry fee from both the spendable balance and the
-      // PvP-win-marbles eligibility counter (single source of truth = DB)
+      if ((user.marbles || 0) < ENTRY_FEE) {
+        return res.status(400).json({
+          error: `Insufficient marble balance to enter. You need ${ENTRY_FEE} marbles available to stake as your entry.`,
+          marblesAvailable: user.marbles || 0,
+          requiredMarbles: ENTRY_FEE,
+          message: `You need ${ENTRY_FEE - (user.marbles || 0)} more marbles to enter this tournament`
+        });
+      }
+
+      // Lock the entry stake out of the spendable balance. pvpWinMarbles is
+      // intentionally left untouched — it's a pure eligibility gate, not a
+      // wallet, and previously being drained here (with no way back) is
+      // why "Eligible Marbles" showed 0 / "Need 250 more" even right after
+      // winning a tournament.
       const updatedUser = await storage.adjustWallet(userId, -ENTRY_FEE, 0);
-      await storage.addPvpWinMarbles(userId, -ENTRY_FEE);
 
       await storage.recordTransaction({
         userId,
@@ -779,6 +816,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const p1 = winners[i];
       const p2 = winners[i + 1];
       const roomCode = `TOUR_${match.tournamentId}_R${nextRound}_M${Math.floor(i / 2) + 1}`;
+      // Same bye fix as round 1 (see startTournamentBracket): auto-advance
+      // a bye player as the immediate winner of their placeholder match so
+      // the bracket doesn't stall waiting for a match that can never be
+      // played.
       await storage.createTournamentMatch({
         tournamentId: match.tournamentId,
         roundNumber: nextRound,
@@ -789,6 +830,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         player2Name: p2?.name || null,
         roomCode,
         status: p2 ? "ready" : "bye",
+        winnerId: p2 ? null : p1.id,
+        winnerName: p2 ? null : p1.name,
+        completedAt: p2 ? null : new Date(),
       });
     }
 
