@@ -10,8 +10,6 @@ import {
   getEligibleMarbles, 
   getRewardPoints, 
   getTotalMarbles,
-  isTournamentEligible,
-  getMarblesNeededForTournament,
   initializeMarbles,
   setCachedTotals,
   syncEligibleMarblesFromServer,
@@ -37,12 +35,17 @@ interface TournamentMatch {
 export default function Tournament() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [activeWindow, setActiveWindow] = useState(1);
   const [isJoining, setIsJoining] = useState(false);
   const [viewBracket, setViewBracket] = useState(false);
   const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
   
-  const playerId = localStorage.getItem("playerId") || `player_${Date.now()}`;
+  // IMPORTANT: this must match whatever ID handleJoinTournament() sends as
+  // `userId` when joining (see below) — that's the ID the backend stores
+  // as player1Id/player2Id on the match. It previously read a different,
+  // unused localStorage key ("playerId"), so the "Your Match is Ready"
+  // banner and the bracket's "Join Match" button could never find a match
+  // for the actual logged-in player, forcing manual room-code lookups.
+  const playerId = localStorage.getItem("userId") || `player_${Date.now()}`;
   
   // Load saved tournament ID on mount
   useEffect(() => {
@@ -79,7 +82,10 @@ export default function Tournament() {
   const [gamesWon, setGamesWon] = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
   
-  const entryFee = 250;
+  // No more single fixed entry fee — players choose from several parallel
+  // tiers (see TOURNAMENT_TIERS below), each running its own independent
+  // 10-player windows.
+  const TOURNAMENT_TIERS = [250, 500, 750, 1000, 1500];
   const winnerPoints = 2500;
   
   
@@ -116,45 +122,38 @@ export default function Tournament() {
     };
   }, [updatePlayerStats]);
 
-  // Use API data or fallback to default windows
-  const tournamentWindows = windowsData?.windows || [
-    {
-      id: 1,
-      tournamentId: null,
-      players: 0,
-      status: "Open",
-      pointPool: 0,
-      winnerReward: winnerPoints,
-    },
-    {
-      id: 2,
-      tournamentId: null,
-      players: 0,
-      status: "Waiting",
-      pointPool: 0,
-      winnerReward: winnerPoints,
-    },
-  ];
-  
-  // Auto-select tournament ID when windows data loads
-  useEffect(() => {
-    const activeWindowData = tournamentWindows.find(w => w.id === activeWindow);
-    if (activeWindowData?.tournamentId) {
-      setSelectedTournamentId(activeWindowData.tournamentId);
-    }
-  }, [tournamentWindows, activeWindow]);
+  // Group all windows (across every tier) returned by the API by their
+  // entryFee, so we can render one section per tier (250 / 500 / 750 /
+  // 1000 / 1500), each showing that tier's currently open window.
+  const allWindows = windowsData?.windows || [];
+  const windowsByTier = TOURNAMENT_TIERS.map((tier) => ({
+    tier,
+    window: allWindows.find((w) => w.entryFee === tier && w.status !== "Completed")
+      || allWindows.find((w) => w.entryFee === tier), // fall back to most recent even if completed, so the card isn't empty on first load
+  }));
 
-  const handleJoinTournament = async () => {
-    if (!isTournamentEligible()) {
-      const needed = getMarblesNeededForTournament();
+  // Auto-select tournament ID when windows data loads, based on whichever
+  // window we most recently joined (see handleJoinTournament).
+  useEffect(() => {
+    const savedTournamentId = localStorage.getItem("activeTournamentId");
+    if (savedTournamentId && allWindows.some(w => w.id === savedTournamentId)) {
+      setSelectedTournamentId(savedTournamentId);
+    }
+  }, [allWindows]);
+
+  const handleJoinTournament = async (window: any) => {
+    // No more eligibility gate — any player can enter any tier they can
+    // afford. Just check they have enough spendable marbles for this
+    // specific tier's entry fee.
+    if (totalMarbles < window.entryFee) {
       toast({
-        title: "Not Eligible",
-        description: `You need ${needed.toLocaleString()} more PvP Win Marbles. Only PvP wins count for tournament eligibility.`,
+        title: "Not Enough Marbles",
+        description: `You need ${(window.entryFee - totalMarbles).toLocaleString()} more marbles to join this ${window.entryFee.toLocaleString()}-marble tournament.`,
         variant: "destructive",
       });
       return;
     }
-    
+
     setIsJoining(true);
     try {
       const userId = localStorage.getItem("userId") || `player_${Date.now()}`;
@@ -163,44 +162,40 @@ export default function Tournament() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId,
-          windowId: activeWindow,
+          entryFee: window.entryFee,
         }),
       });
-      
+
       if (response.ok) {
         const data = await response.json();
 
-        // Server already deducted 250 marbles from the database (single
+        // Server already deducted the marbles from the database (single
         // source of truth) — just sync the local cache to match, no
         // separate local deduction needed here anymore.
         if (typeof data.marbles === "number") {
           setCachedTotals(data.marbles);
         }
         updatePlayerStats();
-        const userId = localStorage.getItem("userId");
-        if (userId) {
-          const val = await syncEligibleMarblesFromServer(userId);
-          if (val !== null) setEligibleMarbles(val);
-        }
-        
-        // Store the tournament ID for bracket viewing
+
+        // Store the tournament ID for bracket viewing / match tracking
         if (data.tournamentId) {
           setSelectedTournamentId(data.tournamentId);
           localStorage.setItem("activeTournamentId", data.tournamentId);
         }
-        
+
         toast({
           title: "Tournament Joined!",
-          description: `You've entered Window ${activeWindow}. ${entryFee} marbles deducted.`,
+          description: `You've entered the ${window.entryFee.toLocaleString()}-marble tournament. ${window.entryFee} marbles deducted.`,
         });
       } else {
-        throw new Error("Failed to join tournament");
+        const errData = await response.json().catch(() => null);
+        throw new Error(errData?.message || errData?.error || "Failed to join tournament");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to join tournament:", error);
       toast({
         title: "Error",
-        description: "Failed to join tournament. Please try again.",
+        description: error?.message || "Failed to join tournament. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -224,13 +219,13 @@ export default function Tournament() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-muted-foreground mb-2 text-xs flex items-center justify-center gap-1">
-                  Eligible Marbles
+                  Lifetime PvP Wins
                   <Info className="w-3 h-3 text-muted-foreground" />
                 </p>
                 <p className="text-2xl font-bold text-yellow-500" data-testid="text-eligible-marbles">
                   {eligibleMarbles.toLocaleString()}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">PvP Wins Only</p>
+                <p className="text-xs text-muted-foreground mt-1">For Leaderboard Ranking</p>
               </div>
             </CardContent>
           </Card>
@@ -271,22 +266,9 @@ export default function Tournament() {
         <Card className={`mb-8 ${eligibleMarbles >= entryFee ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30' : 'bg-gradient-to-r from-red-500/10 to-pink-500/10 border-red-500/30'}`}>
           <CardContent className="py-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Entry Fee (Eligible Marbles Only)</p>
-                  <p className="text-xl font-bold text-primary">{entryFee.toLocaleString()} Marbles</p>
-                </div>
-              </div>
-              <div className="text-right">
-                {eligibleMarbles >= entryFee ? (
-                  <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                    Eligible to Join
-                  </Badge>
-                ) : (
-                  <Badge variant="destructive">
-                    Need {(entryFee - eligibleMarbles).toLocaleString()} more PvP Win Marbles
-                  </Badge>
-                )}
+              <div>
+                <p className="text-sm text-muted-foreground">Choose your stake below — any amount from 250 to 1,500 marbles</p>
+                <p className="text-xl font-bold text-primary">Your Balance: {totalMarbles.toLocaleString()} Marbles</p>
               </div>
             </div>
           </CardContent>
@@ -319,74 +301,96 @@ export default function Tournament() {
           </CardContent>
         </Card>
 
-        {/* Tournament Windows */}
+        {/* Tournament Tiers */}
         <div className="mb-8">
-          <h3 className="text-2xl font-bold mb-6">Tournament Windows</h3>
+          <h3 className="text-2xl font-bold mb-6">Choose Your Tournament</h3>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {tournamentWindows.map((window) => (
-              <Card
-                key={window.id}
-                className={`cursor-pointer transition-all ${
-                  activeWindow === window.id
-                    ? "border-primary ring-2 ring-primary"
-                    : "border-primary/20"
-                }`}
-                onClick={() => setActiveWindow(window.id)}
-              >
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <CardTitle>Window {window.id}</CardTitle>
-                    <Badge variant={window.status === "Open" ? "default" : "secondary"}>
-                      {window.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-muted-foreground mb-2">Players Enrolled</p>
-                      <div className="flex items-end gap-2">
-                        <p className="text-4xl font-bold text-primary">{window.players}</p>
-                        <p className="text-muted-foreground mb-1">/ 10</p>
-                      </div>
-                      <div className="w-full bg-secondary rounded-full h-2 mt-2">
-                        <div
-                          className="bg-primary h-2 rounded-full transition-all"
-                          style={{ width: `${window.players}%` }}
-                        />
-                      </div>
+            {windowsByTier.map(({ tier, window }) => {
+              if (!window) {
+                // Windows haven't loaded from the API yet for this tier
+                return (
+                  <Card key={tier} className="border-primary/20">
+                    <CardContent className="py-10 flex justify-center">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </CardContent>
+                  </Card>
+                );
+              }
+              return (
+                <Card key={window.id} className="border-primary/20">
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <CardTitle>{tier.toLocaleString()}-Marble Tournament</CardTitle>
+                      <Badge variant={window.status === "Open" ? "default" : "secondary"}>
+                        {window.status}
+                      </Badge>
                     </div>
-                    <div>
-                      <p className="text-muted-foreground mb-2">Winner Gets</p>
-                      <p className="text-2xl font-bold text-yellow-400">{window.winnerReward.toLocaleString()} Points</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-muted-foreground mb-2">Players Enrolled</p>
+                        <div className="flex items-end gap-2">
+                          <p className="text-4xl font-bold text-primary">{window.players}</p>
+                          <p className="text-muted-foreground mb-1">/ 10</p>
+                        </div>
+                        <div className="w-full bg-secondary rounded-full h-2 mt-2">
+                          <div
+                            className="bg-primary h-2 rounded-full transition-all"
+                            style={{ width: `${window.players * 10}%` }}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-between">
+                        <div>
+                          <p className="text-muted-foreground mb-1 text-sm">Entry Fee</p>
+                          <p className="text-lg font-bold text-primary">{tier.toLocaleString()} Marbles</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-muted-foreground mb-1 text-sm">Winner Gets</p>
+                          <p className="text-lg font-bold text-yellow-400">
+                            {(tier * 10).toLocaleString()} Marbles + {winnerPoints.toLocaleString()} Points
+                          </p>
+                        </div>
+                      </div>
+                      {window.status === "Open" && (
+                        <Button
+                          className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground font-bold"
+                          size="lg"
+                          data-testid={`button-join-tournament-${tier}`}
+                          disabled={totalMarbles < tier || isJoining}
+                          onClick={() => handleJoinTournament(window)}
+                        >
+                          {isJoining ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Joining...
+                            </>
+                          ) : (
+                            `Join Tournament (${tier.toLocaleString()} Marbles)`
+                          )}
+                        </Button>
+                      )}
+                      {window.status === "Waiting" && (
+                        <Button className="w-full" size="lg" disabled>
+                          Waiting for Players...
+                        </Button>
+                      )}
+                      {window.status === "In Progress" && (
+                        <Button className="w-full" size="lg" disabled>
+                          Tournament in Progress
+                        </Button>
+                      )}
+                      {window.status === "Completed" && (
+                        <Button className="w-full" size="lg" disabled>
+                          Completed — Next Window Opening
+                        </Button>
+                      )}
                     </div>
-                    {window.status === "Open" && (
-                      <Button
-                        className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground font-bold"
-                        size="lg"
-                        data-testid="button-join-tournament"
-                        disabled={eligibleMarbles < entryFee || isJoining}
-                        onClick={handleJoinTournament}
-                      >
-                        {isJoining ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Joining...
-                          </>
-                        ) : (
-                          `Join Tournament (${entryFee.toLocaleString()} Marbles)`
-                        )}
-                      </Button>
-                    )}
-                    {window.status === "Waiting" && (
-                      <Button className="w-full" size="lg" disabled>
-                        Waiting for Players...
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
 
@@ -511,30 +515,25 @@ export default function Tournament() {
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">2.</span>
-                <span>Entry fee: 250 PvP Win Marbles (only PvP wins count)</span>
+                <span>Choose your entry fee: 250, 500, 750, 1,000, or 1,500 marbles — any player can join any tier they can afford</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">3.</span>
-                <span>Winner (beats all 9 players) receives 2,500 bonus points</span>
+                <span>Beat an opponent and take their locked marbles — win your way through the bracket</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">4.</span>
-                <span>When Window 1 reaches 10 players, Window 2 automatically opens</span>
+                <span>The tournament winner (beats all 9 opponents) takes the entire prize pool (10× the entry fee) plus 2,500 bonus points</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">5.</span>
+                <span>When a window reaches 10 players, a new window for that same tier automatically opens</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-primary font-bold">6.</span>
                 <span>Points earned can be redeemed in the Shop catalog</span>
               </li>
             </ul>
-            <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-              <p className="text-sm text-yellow-400 font-semibold mb-2">Marble Types:</p>
-              <ul className="text-xs text-muted-foreground space-y-1">
-                <li>• <span className="text-green-400">Purchased Marbles</span> - Gameplay only (not tournament)</li>
-                <li>• <span className="text-green-400">PvP Win Marbles</span> - Count for tournament</li>
-                <li>• <span className="text-yellow-400">AI Win Marbles</span> - Gameplay only</li>
-                <li>• <span className="text-yellow-400">Free Marbles (150)</span> - Gameplay only</li>
-              </ul>
-            </div>
           </CardContent>
         </Card>
       </div>

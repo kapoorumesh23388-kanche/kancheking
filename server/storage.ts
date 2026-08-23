@@ -48,7 +48,7 @@ export interface IStorage {
   getUserGamePoints(userId: string): Promise<GamePoint[]>;
   
   getTournamentWindows(): Promise<TournamentWindow[]>;
-  getActiveTournamentWindow(): Promise<TournamentWindow | undefined>;
+  getActiveTournamentWindow(entryFee?: number): Promise<TournamentWindow | undefined>;
   addTournamentWindow(window: Omit<TournamentWindow, 'id' | 'createdAt'>): Promise<TournamentWindow>;
   updateTournamentPlayerCount(windowId: string, count: number): Promise<void>;
   addToPrizePool(windowId: string, amount: number): Promise<void>;
@@ -657,19 +657,22 @@ export class MemStorage implements IStorage {
     return await db.select().from(tournamentWindowsTable);
   }
 
-  async getActiveTournamentWindow(): Promise<TournamentWindow | undefined> {
+  async getActiveTournamentWindow(entryFee: number = 250): Promise<TournamentWindow | undefined> {
     const windows = await db.select().from(tournamentWindowsTable);
-    const active = windows.find((w) => w.status === "waiting" && w.playerCount < w.maxPlayers);
+    const active = windows.find((w) => w.status === "waiting" && w.playerCount < w.maxPlayers && w.entryFee === entryFee);
     if (active) return active;
 
-    // No open window exists yet — create the first one automatically.
-    // maxPlayers: 10 matches the Tournament page's "/ 10" label.
+    // No open window exists yet for this tier — create the first one
+    // automatically. maxPlayers: 10 matches the Tournament page's "/ 10"
+    // label. windowNumber counts only within this tier so each tier's
+    // numbering starts fresh (Window 1, 2, 3... per entry-fee tier).
+    const windowsInTier = windows.filter((w) => w.entryFee === entryFee);
     return await this.addTournamentWindow({
-      windowNumber: windows.length + 1,
+      windowNumber: windowsInTier.length + 1,
       playerCount: 0,
       status: "waiting",
       maxPlayers: 10,
-      entryFee: 250,
+      entryFee,
       prizePool: 0,
       winnerId: null,
       winnerMarblesAwarded: 0,
@@ -697,12 +700,16 @@ export class MemStorage implements IStorage {
       .where(eq(tournamentWindowsTable.id, windowId));
 
     if (count >= window.maxPlayers) {
+      // Count only within this tier, and inherit its entryFee — otherwise
+      // every tier's next window would silently collapse back to 250.
+      const windowsInTier = (await db.select().from(tournamentWindowsTable))
+        .filter((w) => w.entryFee === window.entryFee);
       await this.addTournamentWindow({
-        windowNumber: window.windowNumber + 1,
+        windowNumber: windowsInTier.length + 1,
         playerCount: 0,
         status: "waiting",
         maxPlayers: 10, // keep consistent with the first window / "/ 10" label
-        entryFee: 250,
+        entryFee: window.entryFee,
         prizePool: 0,
         winnerId: null,
         winnerMarblesAwarded: 0,

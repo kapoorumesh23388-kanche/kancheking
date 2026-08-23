@@ -430,6 +430,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const prizePoolMarbles = window?.prizePool || 0;
 
     await storage.adjustWallet(userId, prizePoolMarbles, WINNER_POINTS_BONUS);
+    // Winning a tournament is a PvP win too — same as a friend-challenge or
+    // random-player win, it should count toward the PvP Win Marbles
+    // eligibility/leaderboard counter. Previously this only happened for
+    // normal 1v1 wins (see /api/game-points), so a tournament champion's
+    // eligible-marbles count never moved even though they'd just won
+    // hundreds/thousands of marbles from real opponents.
+    await storage.addPvpWinMarbles(userId, prizePoolMarbles);
     if (window) {
       await storage.setTournamentWinnerReward(window.id, userId, prizePoolMarbles);
     }
@@ -443,13 +450,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await grantVoucher(userId, "tournament_win");
   }
 
+  // The set of tournament entry-fee tiers players can choose from. Each
+  // tier runs its own independent 10-player windows in parallel (a 250
+  // window filling up has no effect on the 1000 window, etc).
+  const TOURNAMENT_TIERS = [250, 500, 750, 1000, 1500];
+
   app.get("/api/tournament/windows", async (req, res) => {
     try {
-      // Guarantee at least one open window exists before listing — this
-      // is what actually creates "Window 1" in the database the first
-      // time anyone loads the Tournament page, instead of the page
-      // showing a card with no real row behind it.
-      await storage.getActiveTournamentWindow();
+      // Guarantee at least one open window exists for EVERY tier before
+      // listing — this is what actually creates "Window 1" for each tier
+      // in the database the first time anyone loads the Tournament page,
+      // instead of the page showing cards with no real row behind them.
+      for (const tier of TOURNAMENT_TIERS) {
+        await storage.getActiveTournamentWindow(tier);
+      }
       const dbWindows = await storage.getTournamentWindows();
 
       // Tournament.tsx expects { windows: [{ id, tournamentId, players,
@@ -473,6 +487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tournamentId: w.id,
           players: w.playerCount,
           status,
+          entryFee: w.entryFee,
           pointPool: w.prizePool,
           winnerReward: 2500, // matches WINNER_POINTS_BONUS in /api/tournament/winner
         };
@@ -486,41 +501,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/tournament/join", async (req, res) => {
     try {
-      const { userId, windowId } = req.body;
-      
+      const { userId, entryFee } = req.body;
+
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Get (or auto-create) the currently open tournament window. Using
-      // getActiveTournamentWindow() instead of a manual find() over
-      // getTournamentWindows() — the plain list was coming back empty
-      // when no window row existed yet, silently failing to match.
-      const window = await storage.getActiveTournamentWindow();
-      if (!window) {
-        return res.status(404).json({ error: "Tournament window not found. Please refresh and try again." });
-      }
+      const ENTRY_FEE = TOURNAMENT_TIERS.includes(entryFee) ? entryFee : 250;
 
-      // Tournament entry has TWO independent checks:
-      // 1) Eligibility gate: pvpWinMarbles is a lifetime "have you earned
-      //    enough from real PvP wins" counter. It is NEVER spent/deducted —
-      //    it just needs to be >= ENTRY_FEE to unlock tournament access.
-      // 2) Affordability: the player's actual spendable `marbles` balance
-      //    must also be >= ENTRY_FEE, since that's what actually gets
-      //    locked into the prize pool as their stake.
-      const ENTRY_FEE = 250;
-      const eligibleMarbles = user.pvpWinMarbles || 0;
-
-      if (eligibleMarbles < ENTRY_FEE) {
-        return res.status(400).json({
-          error: `Insufficient PvP win marbles to unlock tournament entry. You need ${ENTRY_FEE} lifetime PvP Win Marbles (AI wins and ad rewards don't count).`,
-          eligibleMarblesAvailable: eligibleMarbles,
-          requiredMarbles: ENTRY_FEE,
-          message: `You need ${ENTRY_FEE - eligibleMarbles} more PvP Win Marbles`
-        });
-      }
-
+      // No eligibility gate anymore — any player can enter any tier they
+      // can afford. The only requirement is having enough spendable
+      // `marbles` balance to cover the stake for the chosen tier.
       if ((user.marbles || 0) < ENTRY_FEE) {
         return res.status(400).json({
           error: `Insufficient marble balance to enter. You need ${ENTRY_FEE} marbles available to stake as your entry.`,
@@ -530,18 +522,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Lock the entry stake out of the spendable balance. pvpWinMarbles is
-      // intentionally left untouched — it's a pure eligibility gate, not a
-      // wallet, and previously being drained here (with no way back) is
-      // why "Eligible Marbles" showed 0 / "Need 250 more" even right after
-      // winning a tournament.
+      // Get (or auto-create) the currently open window for this specific
+      // tier. Using getActiveTournamentWindow() instead of a manual find()
+      // over getTournamentWindows() — the plain list was coming back empty
+      // when no window row existed yet, silently failing to match.
+      const window = await storage.getActiveTournamentWindow(ENTRY_FEE);
+      if (!window) {
+        return res.status(404).json({ error: "Tournament window not found. Please refresh and try again." });
+      }
+
+      // Lock the entry stake out of the spendable balance.
       const updatedUser = await storage.adjustWallet(userId, -ENTRY_FEE, 0);
 
       await storage.recordTransaction({
         userId,
         amount: -ENTRY_FEE,
         type: "tournament_entry",
-        description: "Tournament entry fee (250 PvP Win Marbles)",
+        description: `Tournament entry fee (${ENTRY_FEE} marbles)`,
         transactionId: null,
       });
 
@@ -574,7 +571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         marbles: updatedUser?.marbles ?? 0,
         tournamentId: window.id,
         windowId: window.id,
-        message: "Tournament entry confirmed. 250 marbles deducted (PvP wins only)."
+        message: `Tournament entry confirmed. ${ENTRY_FEE} marbles deducted.`
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to join tournament" });
