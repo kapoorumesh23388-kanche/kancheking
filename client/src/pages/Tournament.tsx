@@ -209,7 +209,7 @@ export default function Tournament() {
           <h2 className="text-5xl font-bold text-primary mb-3" style={{ textShadow: '0 0 20px rgba(255,215,0,0.5)' }}>
             🏆 Kali Jotta Tournament
           </h2>
-          <p className="text-xl text-muted-foreground">10-Player Battles | 250 Marble Entry | 2,500 Points for Winner</p>
+          <p className="text-xl text-muted-foreground">10-Player Battles | Choose Your Stake | Winner Takes 10× the Pool</p>
         </div>
 
         {/* Real-time Player Stats */}
@@ -523,7 +523,7 @@ export default function Tournament() {
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">4.</span>
-                <span>The tournament winner (beats all 9 opponents) takes the entire prize pool (10× the entry fee) plus 2,500 bonus points</span>
+                <span>The tournament winner (beats all 9 opponents) takes the entire prize pool (10× the entry fee in marbles, plus matching bonus points)</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">5.</span>
