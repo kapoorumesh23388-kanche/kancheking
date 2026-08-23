@@ -86,7 +86,6 @@ export default function Tournament() {
   // tiers (see TOURNAMENT_TIERS below), each running its own independent
   // 10-player windows.
   const TOURNAMENT_TIERS = [250, 500, 750, 1000, 1500];
-  const winnerPoints = 2500;
   
   
   // Initialize marbles on first load
@@ -283,7 +282,8 @@ export default function Tournament() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <p className="text-sm font-semibold text-primary">Tournament Winner</p>
-                <p className="text-2xl font-bold text-yellow-400">{winnerPoints.toLocaleString()} Points</p>
+                <p className="text-xl font-bold text-yellow-400">10× Entry Fee</p>
+                <p className="text-xs text-muted-foreground mt-1">In both marbles and points</p>
               </div>
               <div>
                 <p className="text-sm font-semibold text-primary">Points Value</p>
@@ -349,7 +349,7 @@ export default function Tournament() {
                         <div className="text-right">
                           <p className="text-muted-foreground mb-1 text-sm">Winner Gets</p>
                           <p className="text-lg font-bold text-yellow-400">
-                            {(tier * 10).toLocaleString()} Marbles + {winnerPoints.toLocaleString()} Points
+                            {(tier * 10).toLocaleString()} Marbles + {(tier * 10).toLocaleString()} Points
                           </p>
                         </div>
                       </div>

@@ -426,10 +426,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // completion in /api/tournament/match/:matchId/result, so a winner gets
   // paid no matter which path declared them the champion.
   async function payoutTournamentWinner(windowId: string, userId: string): Promise<void> {
-    const WINNER_POINTS_BONUS = 2500;
     const windows = await storage.getTournamentWindows();
     const window = windows.find(w => w.id === windowId);
     const prizePoolMarbles = window?.prizePool || 0;
+    // Points scale with the tier, same as the marble prize — a 250 tier
+    // pays 2,500 points, a 1,500 tier pays 15,000 points. Previously this
+    // was a flat 2500 for every tier regardless of stake.
+    const WINNER_POINTS_BONUS = prizePoolMarbles;
 
     await storage.adjustWallet(userId, prizePoolMarbles, WINNER_POINTS_BONUS);
     // Winning a tournament is a PvP win too — same as a friend-challenge or
@@ -491,7 +494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status,
           entryFee: w.entryFee,
           pointPool: w.prizePool,
-          winnerReward: 2500, // matches WINNER_POINTS_BONUS in /api/tournament/winner
+          winnerReward: w.entryFee * w.maxPlayers, // scales per tier, matches the marble prize pool
         };
       });
 
@@ -583,7 +586,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tournament/winner", async (req, res) => {
     try {
       const { userId, windowId } = req.body;
-      const WINNER_POINTS_BONUS = 2500;
 
       const user = await storage.getUser(userId);
       if (!user) {
@@ -593,10 +595,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const windows = await storage.getTournamentWindows();
       const window = windows.find(w => w.id === windowId || w.id === String(windowId));
       const prizePoolMarbles = window?.prizePool || 0;
+      // Points scale with the tier, same as the marble prize (see the same
+      // fix in payoutTournamentWinner above).
+      const WINNER_POINTS_BONUS = prizePoolMarbles;
 
-      // Winner gets the FULL prize pool (accumulated 250-marble entry fees
-      // from every participant) as real marbles, PLUS a flat 2500 points
-      // bonus — both credited directly to the database balance.
+      // Winner gets the FULL prize pool (accumulated entry fees from every
+      // participant) as real marbles, PLUS matching points — both
+      // credited directly to the database balance.
       const updatedUser = await storage.adjustWallet(userId, prizePoolMarbles, WINNER_POINTS_BONUS);
 
       if (window) {
