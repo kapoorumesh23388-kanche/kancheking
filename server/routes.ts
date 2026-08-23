@@ -1269,6 +1269,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public: site-wide social links shown in the footer. Previously this
+  // endpoint didn't exist at all, so Home.tsx's fetch("/api/settings/social")
+  // silently 404'd for every player — the icons only ever appeared on
+  // browsers that already had a stale localStorage value cached from
+  // before, which is why new players never saw them.
+  app.get("/api/settings/social", async (req, res) => {
+    try {
+      const instagram = await storage.getAppSetting("socialInstagram");
+      const youtube = await storage.getAppSetting("socialYoutube");
+      res.json({ instagram: instagram || "", youtube: youtube || "" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch social settings" });
+    }
+  });
+
+  app.post("/api/admin/settings/social", async (req, res) => {
+    try {
+      const userId = req.headers['x-user-id'] as string;
+      const isAdmin = await checkAdminAuth(userId);
+      if (!isAdmin) {
+        return res.status(403).json({ error: "Access denied. Admin privileges required." });
+      }
+      const { instagram, youtube } = req.body;
+      if (typeof instagram === "string") await storage.setAppSetting("socialInstagram", instagram);
+      if (typeof youtube === "string") await storage.setAppSetting("socialYoutube", youtube);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update social settings" });
+    }
+  });
+
   // Helper function to check admin status for protected routes
   const checkAdminAuth = async (userId: string): Promise<boolean> => {
     if (!userId) return false;

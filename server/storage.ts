@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type TournamentParticipant, type TournamentMatch, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, type AdClaim, type BlogPost, type BlogReaction, type VoucherClaim, catalogItems, users as usersTable, spinRewards as spinRewardsTable, adClaims as adClaimsTable, blogPosts as blogPostsTable, blogReactions as blogReactionsTable, tournamentWindows as tournamentWindowsTable, tournamentParticipants as tournamentParticipantsTable, tournamentMatches as tournamentMatchesTable, adminUsers as adminUsersTable, voucherClaims as voucherClaimsTable } from "@shared/schema";
+import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type TournamentParticipant, type TournamentMatch, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, type AdClaim, type BlogPost, type BlogReaction, type VoucherClaim, catalogItems, users as usersTable, spinRewards as spinRewardsTable, adClaims as adClaimsTable, blogPosts as blogPostsTable, blogReactions as blogReactionsTable, tournamentWindows as tournamentWindowsTable, tournamentParticipants as tournamentParticipantsTable, tournamentMatches as tournamentMatchesTable, adminUsers as adminUsersTable, voucherClaims as voucherClaimsTable, appSettings as appSettingsTable } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, and, desc, lt } from "drizzle-orm";
@@ -48,6 +48,8 @@ export interface IStorage {
   getUserGamePoints(userId: string): Promise<GamePoint[]>;
   
   getTournamentWindows(): Promise<TournamentWindow[]>;
+  getAppSetting(key: string): Promise<string | undefined>;
+  setAppSetting(key: string, value: string): Promise<void>;
   getActiveTournamentWindow(entryFee?: number): Promise<TournamentWindow | undefined>;
   addTournamentWindow(window: Omit<TournamentWindow, 'id' | 'createdAt'>): Promise<TournamentWindow>;
   updateTournamentPlayerCount(windowId: string, count: number): Promise<void>;
@@ -655,6 +657,24 @@ export class MemStorage implements IStorage {
 
   async getTournamentWindows(): Promise<TournamentWindow[]> {
     return await db.select().from(tournamentWindowsTable);
+  }
+
+  async getAppSetting(key: string): Promise<string | undefined> {
+    try {
+      const [row] = await db.select().from(appSettingsTable).where(eq(appSettingsTable.key, key));
+      return row?.value;
+    } catch {
+      return undefined;
+    }
+  }
+
+  async setAppSetting(key: string, value: string): Promise<void> {
+    const existing = await db.select().from(appSettingsTable).where(eq(appSettingsTable.key, key));
+    if (existing.length > 0) {
+      await db.update(appSettingsTable).set({ value }).where(eq(appSettingsTable.key, key));
+    } else {
+      await db.insert(appSettingsTable).values({ key, value });
+    }
   }
 
   async getActiveTournamentWindow(entryFee: number = 250): Promise<TournamentWindow | undefined> {
