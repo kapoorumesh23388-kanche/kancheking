@@ -252,36 +252,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedUser = await storage.adjustWallet(userId, delta, points || 0);
       await storage.updateUserStats(userId, { gamesWon: newGamesWon, gamesPlayed: newGamesPlayed });
 
-      // If player won against friend or random player, add earned marbles
+      // If this was a PvP match (friend or random opponent — never AI),
+      // pvp_win_marbles now moves in real time just like the real marbles
+      // balance does: up on a win, down on a loss, by the same delta.
+      // Previously this only ever increased on a win and never moved on a
+      // loss, which let it drift away from what the player actually has
+      // riding on PvP performance.
       let voucherClaim = null;
-      if (won && opponentType && opponentType !== "ai") {
-        console.log(`[game-points] PvP win — userId=${userId} gameType=${gameType} opponentType=${opponentType} delta=${delta}`);
-        // Fix: previously this always added a flat 10 regardless of how
-        // many marbles were actually won in the match, which made the
-        // PvP Win Marbles counter (used for tournament eligibility AND
-        // the leaderboard) drift completely out of sync with reality.
-        // Now it reflects the real marblesDelta from this match.
-        const wonAmount = Math.max(0, delta);
-        // Add marbles to earned marbles for tournament eligibility
-        await storage.addEarnedMarbles(userId, wonAmount);
-        // Add to dedicated PvP win marbles counter (used ONLY for leaderboard ranking)
-        await storage.addPvpWinMarbles(userId, wonAmount);
+      if (opponentType && opponentType !== "ai") {
+        console.log(`[game-points] PvP match — userId=${userId} gameType=${gameType} opponentType=${opponentType} won=${won} delta=${delta}`);
+        await storage.addPvpWinMarbles(userId, delta);
 
-        // Fully defeating a player opponent unlocks one spin-wheel try —
-        // gated server-side so it can't be replayed for the same win.
-        await storage.setSpinAvailable(userId, true);
+        if (won) {
+          const wonAmount = Math.max(0, delta);
+          // Add marbles to earned marbles for tournament eligibility
+          await storage.addEarnedMarbles(userId, wonAmount);
 
-        // Brand voucher: every Challenge Friend / Random Player win earns
-        // one. NOTE: opponentType is always "player" for PvP matches —
-        // MultiplayerGame.tsx doesn't distinguish friend vs random there.
-        // The friend/random distinction actually comes through in
-        // `gameType`, set client-side from the URL path.
-        if (gameType === "friend") {
-          voucherClaim = await grantVoucher(userId, "challenge_friend_win");
-        } else if (gameType === "random") {
-          voucherClaim = await grantVoucher(userId, "random_player_win");
-        } else {
-          console.error(`[game-points] Unrecognized gameType "${gameType}" for a PvP win — no voucher trigger matched`);
+          // Fully defeating a player opponent unlocks one spin-wheel try —
+          // gated server-side so it can't be replayed for the same win.
+          await storage.setSpinAvailable(userId, true);
+
+          // Brand voucher: every Challenge Friend / Random Player win earns
+          // one. NOTE: opponentType is always "player" for PvP matches —
+          // MultiplayerGame.tsx doesn't distinguish friend vs random there.
+          // The friend/random distinction actually comes through in
+          // `gameType`, set client-side from the URL path.
+          if (gameType === "friend") {
+            voucherClaim = await grantVoucher(userId, "challenge_friend_win");
+          } else if (gameType === "random") {
+            voucherClaim = await grantVoucher(userId, "random_player_win");
+          } else {
+            console.error(`[game-points] Unrecognized gameType "${gameType}" for a PvP win — no voucher trigger matched`);
+          }
         }
       }
 
