@@ -262,8 +262,8 @@ export default function Tournament() {
           </Card>
         </div>
         
-        {/* Entry Fee & Eligibility */}
-        <Card className={`mb-8 ${eligibleMarbles >= entryFee ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30' : 'bg-gradient-to-r from-red-500/10 to-pink-500/10 border-red-500/30'}`}>
+        {/* Balance Summary */}
+        <Card className="mb-8 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-primary/30">
           <CardContent className="py-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
