@@ -13,6 +13,7 @@ import {
   initializeMarbles,
   setCachedTotals,
   syncEligibleMarblesFromServer,
+  syncWalletFromServer,
 } from "@/lib/marbleStorage";
 
 interface TournamentMatch {
@@ -95,6 +96,7 @@ export default function Tournament() {
     if (userId) syncEligibleMarblesFromServer(userId).then((val) => {
       if (val !== null) setEligibleMarbles(val);
     });
+    if (userId) syncWalletFromServer(userId);
   }, []);
   
   // Real-time update of player stats
