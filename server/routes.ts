@@ -25,6 +25,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const offer = await pickRandomOffer();
+      if (!offer) {
+        console.error(`[grantVoucher] No live Cuelinks offer available for ${userId} (${triggerType}) — voucher not granted, player should be told to try again`);
+        return null;
+      }
       const { trackedLink } = await convertToTrackedLink(offer.url, userId);
 
       const claim = await storage.createVoucherClaim({

@@ -30,7 +30,9 @@ export async function convertToTrackedLink(targetUrl: string, subId: string): Pr
         "Authorization": `Token ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ url: targetUrl, subid1: subId }),
+      // Field name per Cuelinks docs is "subid" (not "subid1"), and
+      // shorten:true asks for a clean clnk.in short link in short_url.
+      body: JSON.stringify({ url: targetUrl, subid: subId, shorten: true }),
     });
 
     if (!response.ok) {
@@ -39,8 +41,16 @@ export async function convertToTrackedLink(targetUrl: string, subId: string): Pr
       return { success: false, trackedLink: targetUrl, error: `Cuelinks API returned ${response.status}` };
     }
 
-    const data: any = await response.json();
-    const trackedLink = data.tracking_url || data.short_url || data.url || targetUrl;
+    const body: any = await response.json();
+    // The real response shape is { data: { tracking_url, short_url, affiliated, ... } }
+    // — everything was previously read off the top-level object instead of
+    // body.data, so trackedLink was always undefined and this silently
+    // fell back to the plain (uncommissioned) URL on every single call.
+    const data = body.data || body;
+    if (data.affiliated === false) {
+      console.error("[cuelinksClient] link not affiliated (campaign inactive or access not granted) for", targetUrl);
+    }
+    const trackedLink = data.short_url || data.tracking_url || targetUrl;
     return { success: true, trackedLink };
   } catch (err) {
     console.error("[cuelinksClient] convert exception:", err);
@@ -57,39 +67,76 @@ export interface VoucherOffer {
   url: string;
 }
 
-// Fetches a batch of live coupons/offers from Cuelinks for Indian
-// merchants. Field names are checked defensively since the exact response
-// shape isn't fully documented publicly — if Cuelinks changes field
-// names, this degrades gracefully to an empty list rather than throwing.
-async function getLiveOffers(limit = 20): Promise<VoucherOffer[]> {
+// Only offers from these brands are shown to players — keeps vouchers
+// recognizable/relevant for an Indian audience. This is a FILTER applied
+// to live data only; unlike the old FALLBACK_OFFERS list, nothing here is
+// ever used as offer data itself — every code/link a player receives
+// still comes straight from the live Cuelinks response.
+const INDIAN_BRAND_WHITELIST = [
+  "myntra", "ajio", "zudio", "pantaloons", "westside", "max fashion",
+  "domino's", "dominos", "pizza hut", "zomato", "swiggy", "mcdonald's", "mcdonalds", "kfc",
+  "flipkart", "amazon", "croma",
+  "nykaa", "purplle",
+  "bigbasket", "blinkit",
+  "makemytrip", "oyo",
+  "bookmyshow", "urban company",
+];
+
+function isWhitelistedIndianBrand(campaignName: string): boolean {
+  const name = (campaignName || "").toLowerCase();
+  return INDIAN_BRAND_WHITELIST.some((brand) => name.includes(brand));
+}
+
+// Fetches a batch of live coupons/offers from Cuelinks and filters down to
+// well-known Indian brands. /offers has no country parameter (only
+// /campaigns does, via a numeric country_id) so filtering happens
+// client-side against INDIAN_BRAND_WHITELIST instead of guessing at an
+// unverified country_id server-side.
+async function getLiveOffers(): Promise<VoucherOffer[]> {
   const apiKey = process.env.CUELINKS_API_KEY;
   if (!apiKey) return [];
 
   try {
-    const response = await fetch(`${CUELINKS_API_BASE}/offers?country=IN&per_page=${limit}`, {
+    // offer_type=coupon: only offers that actually carry a redeemable
+    // code. per_page=500 (API max) in one call, then filter client-side —
+    // cheaper and simpler than looking up a country_id and paginating
+    // /campaigns first.
+    const response = await fetch(`${CUELINKS_API_BASE}/offers?offer_type=coupon&per_page=500`, {
       headers: { "Authorization": `Token ${apiKey}` },
     });
     if (!response.ok) {
-      console.error("[cuelinksClient] offers fetch error:", response.status);
+      console.error("[cuelinksClient] offers fetch error:", response.status, await response.text());
       return [];
     }
-    const data: any = await response.json();
-    const list: any[] = data.offers || data.data || data.results || [];
+    const body: any = await response.json();
+    // Confirmed shape per Cuelinks docs: { data: [...], meta: {...} }
+    const list: any[] = body.data || [];
     return list
+      .filter((o: any) => isWhitelistedIndianBrand(o.campaign_name))
       .map((o: any): VoucherOffer => ({
-        brandName: o.brand_name || o.campaign_name || o.merchant_name || o.brand || "Partner Brand",
-        title: o.title || o.description || o.offer_title || "Exclusive deal",
-        code: o.code || o.coupon_code || o.voucher_code || null,
-        discountPercent: parseDiscountPercent(o.discount_percentage ?? o.discount ?? o.discount_percent),
-        minSpend: o.min_order_value ?? o.min_purchase ?? o.minimum_spend ?? null,
-        url: o.landing_url || o.url || o.link || o.website,
+        brandName: o.campaign_name || "Partner Brand",
+        title: o.title || o.description || "Exclusive deal",
+        code: o.coupon_code || null,
+        // Real field is percent_off, not discount_percentage/discount.
+        discountPercent: parseDiscountPercent(o.percent_off),
+        // The API has no min-spend field — only original_price/discount_price
+        // (absolute amounts, not a threshold), so this stays null rather
+        // than guessing at a field that doesn't exist.
+        minSpend: null,
+        // Real field is tracking_url — this was previously read as
+        // landing_url/url/link/website, none of which ever exist on a
+        // real response, so every live offer got silently dropped by the
+        // filter below and the function always fell through to the fake
+        // fallback list.
+        url: o.tracking_url,
       }))
-      .filter((o) => !!o.url);
+      .filter((o) => !!o.url && !!o.code);
   } catch (err) {
     console.error("[cuelinksClient] getLiveOffers exception:", err);
     return [];
   }
 }
+
 
 function parseDiscountPercent(value: any): number | null {
   if (value === null || value === undefined) return null;
@@ -97,56 +144,18 @@ function parseDiscountPercent(value: any): number | null {
   return isNaN(num) ? null : Math.round(num);
 }
 
-// Small built-in safety net — used only if the live Cuelinks offers list
-// can't be fetched, so a voucher is never silently dropped when a player
-// has earned one. Modeled on real, common Indian online-shopping/food
-// deals, spread across several categories so it doesn't feel repetitive.
-const FALLBACK_OFFERS: VoucherOffer[] = [
-  // Fashion
-  { brandName: "Myntra", title: "Flat 20% off on Fashion", code: "MYNTRA20", discountPercent: 20, minSpend: 999, url: "https://www.myntra.com" },
-  { brandName: "Ajio", title: "Up to 50% off Sitewide", code: "AJIO50", discountPercent: 50, minSpend: null, url: "https://www.ajio.com" },
-  { brandName: "Zudio", title: "Flat 15% off on Fashion", code: "ZUDIO15", discountPercent: 15, minSpend: 599, url: "https://www.zudio.com" },
-  { brandName: "Pantaloons", title: "25% off on Apparel", code: "PANT25", discountPercent: 25, minSpend: 999, url: "https://www.pantaloons.com" },
-  { brandName: "Westside", title: "Flat 20% off Storewide", code: "WEST20", discountPercent: 20, minSpend: 799, url: "https://www.westside.com" },
-  { brandName: "Max Fashion", title: "Up to 40% off on Clothing", code: "MAX40", discountPercent: 40, minSpend: null, url: "https://www.maxfashion.in" },
-
-  // Food delivery / dining
-  { brandName: "Domino's", title: "Flat 25% off on Orders", code: "DOM25", discountPercent: 25, minSpend: 399, url: "https://www.dominos.co.in" },
-  { brandName: "Pizza Hut", title: "Buy 1 Get 1 on Pizzas", code: "PHBOGO", discountPercent: null, minSpend: 499, url: "https://www.pizzahut.co.in" },
-  { brandName: "Zomato", title: "Flat 50% off up to ₹100", code: "ZOMATO50", discountPercent: 50, minSpend: 199, url: "https://www.zomato.com" },
-  { brandName: "Swiggy", title: "Flat ₹125 off on Food Orders", code: "SWIGGY125", discountPercent: null, minSpend: 199, url: "https://www.swiggy.com" },
-  { brandName: "McDonald's", title: "20% off on Combo Meals", code: "MCD20", discountPercent: 20, minSpend: 249, url: "https://www.mcdelivery.co.in" },
-  { brandName: "KFC", title: "Flat 15% off on Orders", code: "KFC15", discountPercent: 15, minSpend: 299, url: "https://online.kfc.co.in" },
-
-  // Electronics / general shopping
-  { brandName: "Flipkart", title: "10% off on Electronics", code: "FLIP10", discountPercent: 10, minSpend: 1500, url: "https://www.flipkart.com" },
-  { brandName: "Amazon India", title: "Flat 15% off Storewide", code: "AMZ15", discountPercent: 15, minSpend: 500, url: "https://www.amazon.in" },
-  { brandName: "Croma", title: "Up to 12% off on Gadgets", code: "CROMA12", discountPercent: 12, minSpend: 2000, url: "https://www.croma.com" },
-
-  // Beauty / personal care
-  { brandName: "Nykaa", title: "25% off on Beauty", code: "NYKAA25", discountPercent: 25, minSpend: 799, url: "https://www.nykaa.com" },
-  { brandName: "Purplle", title: "Flat 30% off on Cosmetics", code: "PURPLE30", discountPercent: 30, minSpend: 599, url: "https://www.purplle.com" },
-
-  // Grocery / quick commerce
-  { brandName: "BigBasket", title: "Flat ₹100 off + 10% cashback", code: "BB10", discountPercent: 10, minSpend: 999, url: "https://www.bigbasket.com" },
-  { brandName: "Blinkit", title: "Flat 20% off on First Order", code: "BLINK20", discountPercent: 20, minSpend: 299, url: "https://www.blinkit.com" },
-
-  // Travel
-  { brandName: "MakeMyTrip", title: "Up to ₹2000 off on Flights", code: "MMT2000", discountPercent: null, minSpend: null, url: "https://www.makemytrip.com" },
-  { brandName: "OYO", title: "Flat 40% off on Hotels", code: "OYO40", discountPercent: 40, minSpend: null, url: "https://www.oyorooms.com" },
-
-  // Entertainment / services
-  { brandName: "BookMyShow", title: "Flat ₹75 off on Movie Tickets", code: "BMS75", discountPercent: null, minSpend: 300, url: "https://www.bookmyshow.com" },
-  { brandName: "Urban Company", title: "20% off on Home Services", code: "UC20", discountPercent: 20, minSpend: null, url: "https://www.urbancompany.com" },
-];
-
 // Picks one live offer at random from the top-performing batch, for
-// variety across different players/vouchers. Falls back to a built-in
-// set of realistic Indian deals if the live fetch is unavailable.
-export async function pickRandomOffer(): Promise<VoucherOffer> {
-  const offers = await getLiveOffers(20);
+// variety across different players/vouchers. Returns null if no live
+// offers could be fetched (API down, key missing/invalid, network issue,
+// or no live coupon offers currently available) — callers must handle
+// this by asking the player to try again, rather than ever substituting
+// a fabricated/unverified code. A previous built-in fallback list of
+// guessed coupon codes (e.g. "DOM25") was removed because those codes
+// were never real and always failed at checkout.
+export async function pickRandomOffer(): Promise<VoucherOffer | null> {
+  const offers = await getLiveOffers();
   if (offers.length > 0) {
     return offers[Math.floor(Math.random() * offers.length)];
   }
-  return FALLBACK_OFFERS[Math.floor(Math.random() * FALLBACK_OFFERS.length)];
+  return null;
 }
