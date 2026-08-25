@@ -90,8 +90,7 @@ export interface IStorage {
   getEngagementAnalytics(): Promise<{ dailyStats: any[]; topUsers: any[]; adStats: any[] }>;
   
   // Brand Vouchers — earned by winning, not bought with points
-  incrementAiWinStreak(userId: string): Promise<number>;
-  resetAiWinStreak(userId: string): Promise<void>;
+  incrementDailyAiWins(userId: string): Promise<number>;
   createVoucherClaim(data: Omit<VoucherClaim, 'id' | 'createdAt'>): Promise<VoucherClaim>;
   getVoucherClaim(id: string): Promise<VoucherClaim | undefined>;
   getUserVoucherClaims(userId: string): Promise<VoucherClaim[]>;
@@ -1138,26 +1137,26 @@ export class MemStorage implements IStorage {
   }
 
   // --- Brand Vouchers ---
-  async incrementAiWinStreak(userId: string): Promise<number> {
+  // Daily cumulative AI-win counter for the voucher system: every 3rd AI
+  // defeat in a calendar day earns a voucher (3, 6, 9, 12...). Unlike the
+  // old aiWinStreak, a loss does NOT reset this — only a new day does,
+  // since it's a daily cumulative count rather than a consecutive streak.
+  async incrementDailyAiWins(userId: string): Promise<number> {
     try {
       const current = await this.getUser(userId);
       if (!current) return 0;
-      const newStreak = ((current as any).aiWinStreak || 0) + 1;
-      const [updated] = await db.update(usersTable).set({ aiWinStreak: newStreak } as any).where(eq(usersTable.id, userId)).returning();
+      const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+      const isNewDay = (current as any).aiWinsTodayDate !== today;
+      const newCount = isNewDay ? 1 : ((current as any).aiWinsToday || 0) + 1;
+      const [updated] = await db.update(usersTable)
+        .set({ aiWinsToday: newCount, aiWinsTodayDate: today } as any)
+        .where(eq(usersTable.id, userId))
+        .returning();
       if (updated) this.users.set(userId, updated);
-      return newStreak;
+      return newCount;
     } catch (err) {
-      console.error("incrementAiWinStreak error:", err);
+      console.error("incrementDailyAiWins error:", err);
       return 0;
-    }
-  }
-
-  async resetAiWinStreak(userId: string): Promise<void> {
-    try {
-      const [updated] = await db.update(usersTable).set({ aiWinStreak: 0 } as any).where(eq(usersTable.id, userId)).returning();
-      if (updated) this.users.set(userId, updated);
-    } catch (err) {
-      console.error("resetAiWinStreak error:", err);
     }
   }
 

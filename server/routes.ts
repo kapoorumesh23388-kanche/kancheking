@@ -1600,17 +1600,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fully defeating the AI unlocks one spin-wheel try too.
       await storage.setSpinAvailable(userId, true);
 
-      // Brand voucher: every 5 CONSECUTIVE AI wins earns one; the streak
-      // resets to 0 on a loss (see /api/ai-opponent/carry-over below) and
-      // also resets here after granting, so it takes another 5 to earn again.
-      const newStreak = await storage.incrementAiWinStreak(userId);
+      // Brand voucher: every 3rd AI win in a calendar day earns one (3rd,
+      // 6th, 9th, 12th win...). This is a daily cumulative count, not a
+      // consecutive streak — losing a match does NOT reset it, only a new
+      // day does (see incrementDailyAiWins in storage.ts).
+      const dailyWins = await storage.incrementDailyAiWins(userId);
       let voucherClaim = null;
-      if (newStreak >= 5) {
+      if (dailyWins > 0 && dailyWins % 3 === 0) {
         voucherClaim = await grantVoucher(userId, "ai_streak");
-        await storage.resetAiWinStreak(userId);
       }
 
-      res.json({ success: true, newAiLevel, aiWinStreak: newStreak >= 5 ? 0 : newStreak, voucherClaim });
+      res.json({ success: true, newAiLevel, aiWinsToday: dailyWins, voucherClaim });
     } catch (error) {
       console.error("AI level-up error:", error);
       res.status(500).json({ error: "Failed to level up AI opponent" });
@@ -1629,8 +1629,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const newAiLevel = await storage.setAiOpponentLevel(userId, aiEndingMarbles);
-      // AI beat the player — their consecutive-win streak breaks.
-      await storage.resetAiWinStreak(userId);
+      // Note: the AI-win voucher counter is now a daily cumulative count
+      // (see incrementDailyAiWins), not a consecutive streak — a loss to
+      // the AI no longer resets voucher progress, so nothing to reset here.
       res.json({ success: true, newAiLevel });
     } catch (error) {
       console.error("AI carry-over error:", error);
