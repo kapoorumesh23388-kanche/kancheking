@@ -9,6 +9,7 @@ const CUELINKS_API_BASE = "https://developers.cuelinks.com/pub_api/v3";
 interface ConvertLinkResult {
   success: boolean;
   trackedLink: string;
+  affiliated: boolean;
   error?: string;
 }
 
@@ -20,7 +21,7 @@ export async function convertToTrackedLink(targetUrl: string, subId: string): Pr
   const apiKey = process.env.CUELINKS_API_KEY;
   if (!apiKey) {
     console.error("[cuelinksClient] CUELINKS_API_KEY not set — sending player the plain (untracked) link");
-    return { success: false, trackedLink: targetUrl, error: "Cuelinks API key not configured" };
+    return { success: false, trackedLink: targetUrl, affiliated: false, error: "Cuelinks API key not configured" };
   }
 
   try {
@@ -38,7 +39,7 @@ export async function convertToTrackedLink(targetUrl: string, subId: string): Pr
     if (!response.ok) {
       const errorBody = await response.text();
       console.error("[cuelinksClient] convert error:", response.status, errorBody);
-      return { success: false, trackedLink: targetUrl, error: `Cuelinks API returned ${response.status}` };
+      return { success: false, trackedLink: targetUrl, affiliated: false, error: `Cuelinks API returned ${response.status}` };
     }
 
     const body: any = await response.json();
@@ -47,14 +48,15 @@ export async function convertToTrackedLink(targetUrl: string, subId: string): Pr
     // body.data, so trackedLink was always undefined and this silently
     // fell back to the plain (uncommissioned) URL on every single call.
     const data = body.data || body;
-    if (data.affiliated === false) {
-      console.error("[cuelinksClient] link not affiliated (campaign inactive or access not granted) for", targetUrl);
+    const affiliated = data.affiliated !== false; // treat missing field as affiliated
+    if (!affiliated) {
+      console.error("[cuelinksClient] link not affiliated (this brand's program hasn't been joined/approved in the Cuelinks dashboard yet) for", targetUrl);
     }
     const trackedLink = data.short_url || data.tracking_url || targetUrl;
-    return { success: true, trackedLink };
+    return { success: true, trackedLink, affiliated };
   } catch (err) {
     console.error("[cuelinksClient] convert exception:", err);
-    return { success: false, trackedLink: targetUrl, error: String(err) };
+    return { success: false, trackedLink: targetUrl, affiliated: false, error: String(err) };
   }
 }
 
@@ -144,18 +146,34 @@ function parseDiscountPercent(value: any): number | null {
   return isNaN(num) ? null : Math.round(num);
 }
 
-// Picks one live offer at random from the top-performing batch, for
-// variety across different players/vouchers. Returns null if no live
-// offers could be fetched (API down, key missing/invalid, network issue,
-// or no live coupon offers currently available) — callers must handle
-// this by asking the player to try again, rather than ever substituting
-// a fabricated/unverified code. A previous built-in fallback list of
-// guessed coupon codes (e.g. "DOM25") was removed because those codes
-// were never real and always failed at checkout.
-export async function pickRandomOffer(): Promise<VoucherOffer | null> {
+// Picks a live offer AND converts its link in one step, skipping any
+// candidate whose brand program hasn't actually been joined/approved in
+// the Cuelinks dashboard yet (platform-level API approval does NOT mean
+// every individual brand is auto-approved — each one has to be joined
+// separately). Tries up to 5 different live offers before giving up, so a
+// couple of not-yet-joined brands in the whitelist don't block every
+// voucher. Returns null if nothing affiliated could be found — callers
+// must handle this by asking the player to try again, rather than ever
+// handing out a voucher for a brand that isn't really affiliated (which is
+// exactly what was happening before: real live coupon data, real code,
+// but the tracked link came back unaffiliated because the account had
+// never joined that brand's specific program).
+export async function pickAffiliatedOffer(subId: string): Promise<{ offer: VoucherOffer; trackedLink: string } | null> {
   const offers = await getLiveOffers();
-  if (offers.length > 0) {
-    return offers[Math.floor(Math.random() * offers.length)];
+  if (offers.length === 0) return null;
+
+  // Shuffle so repeated calls don't always hammer the same few offers in
+  // the same order.
+  const shuffled = [...offers].sort(() => Math.random() - 0.5);
+  const candidates = shuffled.slice(0, 5);
+
+  for (const offer of candidates) {
+    const result = await convertToTrackedLink(offer.url, subId);
+    if (result.success && result.affiliated) {
+      return { offer, trackedLink: result.trackedLink };
+    }
   }
+
+  console.error("[cuelinksClient] No affiliated offer found among", candidates.length, "candidates — check which brand programs are actually joined/approved in the Cuelinks dashboard");
   return null;
 }

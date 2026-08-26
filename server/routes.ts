@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
 import { storage } from "./storage";
 import { generateOTP, sendLoginOTPEmail, verifyLoginOTP, sendAdminNotificationEmail, sendRedeemOTPEmail, verifyRedeemOTP, sendVoucherEmail } from "./emailService";
-import { convertToTrackedLink, pickRandomOffer } from "./cuelinksClient";
+import { pickAffiliatedOffer } from "./cuelinksClient";
 import { handleNewConnection } from "./ws-manager";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -24,12 +24,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return null;
       }
 
-      const offer = await pickRandomOffer();
-      if (!offer) {
-        console.error(`[grantVoucher] No live Cuelinks offer available for ${userId} (${triggerType}) — voucher not granted, player should be told to try again`);
+      const picked = await pickAffiliatedOffer(userId);
+      if (!picked) {
+        console.error(`[grantVoucher] No affiliated live offer available for ${userId} (${triggerType}) — voucher not granted, player should be told to try again`);
         return null;
       }
-      const { trackedLink } = await convertToTrackedLink(offer.url, userId);
+      const { offer, trackedLink } = picked;
 
       const claim = await storage.createVoucherClaim({
         userId,
