@@ -24,6 +24,16 @@ export async function convertToTrackedLink(targetUrl: string, subId: string): Pr
     return { success: false, trackedLink: targetUrl, affiliated: false, error: "Cuelinks API key not configured" };
   }
 
+  // channel_id is optional per the Cuelinks docs, but leaving it out means
+  // Cuelinks picks a default channel on the account — which turned out to
+  // be an old, never-verified "/blog" channel (its ID, 309080, showed up
+  // in every "not affiliated" error). Always specify the verified channel
+  // explicitly so conversions never silently fall back to an unverified one.
+  const channelId = process.env.CUELINKS_CHANNEL_ID;
+  if (!channelId) {
+    console.error("[cuelinksClient] CUELINKS_CHANNEL_ID not set — Cuelinks will pick a default channel, which may be an unverified one");
+  }
+
   try {
     const response = await fetch(`${CUELINKS_API_BASE}/links/convert`, {
       method: "POST",
@@ -33,7 +43,14 @@ export async function convertToTrackedLink(targetUrl: string, subId: string): Pr
       },
       // Field name per Cuelinks docs is "subid" (not "subid1"), and
       // shorten:true asks for a clean clnk.in short link in short_url.
-      body: JSON.stringify({ url: targetUrl, subid: subId, shorten: true }),
+      // channel_id pins this conversion to our verified channel explicitly
+      // (see comment above) instead of an ambiguous account default.
+      body: JSON.stringify({
+        url: targetUrl,
+        subid: subId,
+        shorten: true,
+        ...(channelId ? { channel_id: Number(channelId) } : {}),
+      }),
     });
 
     if (!response.ok) {
