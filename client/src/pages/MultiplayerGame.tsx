@@ -138,6 +138,11 @@ export default function MultiplayerGame() {
   const nextHiderRef = useRef<string | null>(null);
   const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Guards against the server double-broadcasting the same round_result
+  // event (seen in server logs as two identical consecutive [BROADCAST]
+  // lines) — without this, a duplicate message re-runs the marble/points
+  // update and re-grants a spin-wheel try for a single real win.
+  const lastRoundResultAtRef = useRef<number>(0);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showSpinWheel, setShowSpinWheel] = useState(false);
 
@@ -368,6 +373,17 @@ export default function MultiplayerGame() {
         break;
         
       case "round_result":
+        // A duplicate broadcast of the same round_result arriving within
+        // 1.5s is discarded here — processing it a second time would
+        // double-apply the marble/points change and re-grant a second
+        // spin-wheel try for what is really a single win.
+        const now = Date.now();
+        if (now - lastRoundResultAtRef.current < 1500) {
+          console.warn("[ROUND_RESULT] Duplicate/near-duplicate message ignored (arrived", now - lastRoundResultAtRef.current, "ms after the last one)");
+          break;
+        }
+        lastRoundResultAtRef.current = now;
+
         const iAmGuesser = message.data.guesser.id === playerId;
         const won = iAmGuesser ? message.data.won : !message.data.won;
         const change = message.data.bet;

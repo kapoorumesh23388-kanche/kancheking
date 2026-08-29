@@ -13,6 +13,14 @@ interface GuessingPanelProps {
 export default function GuessingPanel({ onGuess, maxBet = 100 }: GuessingPanelProps) {
   const { t } = useLanguage();
   const [bet, setBet] = useState(Math.min(10, maxBet));
+  // Locks both buttons the instant a guess is submitted, so a double-tap,
+  // double-click, or slow-network re-tap can't fire onGuess twice for the
+  // same round (this was previously unguarded — each extra tap sent a
+  // brand-new "guess" message the server had no way to tell apart from a
+  // genuine next round, doubling marbles/points and re-granting a spin).
+  // Resets automatically each round because MultiplayerGame.tsx remounts
+  // this component with a fresh key={roundNumber}.
+  const [hasGuessed, setHasGuessed] = useState(false);
 
   const handleBetChange = (value: string) => {
     const numValue = parseInt(value) || 0;
@@ -22,7 +30,9 @@ export default function GuessingPanel({ onGuess, maxBet = 100 }: GuessingPanelPr
   };
 
   const handleGuess = (guessType: string) => {
+    if (hasGuessed) return;
     if (bet > 0 && bet <= maxBet) {
+      setHasGuessed(true);
       onGuess?.(guessType, bet);
       console.log(`Guessed: ${guessType}, Bet: ${bet} marbles`);
     }
@@ -59,16 +69,18 @@ export default function GuessingPanel({ onGuess, maxBet = 100 }: GuessingPanelPr
         
         <div className="grid grid-cols-2 gap-2 sm:gap-4 md:gap-6">
           <Button
-            className="h-auto py-4 px-2 sm:py-6 sm:px-4 md:py-8 md:px-6 text-base sm:text-xl md:text-2xl font-bold bg-gradient-to-br from-[#9C27B0] via-[#E91E63] to-[#9C27B0] hover:from-[#9C27B0]/80 hover:via-[#E91E63]/80 hover:to-[#9C27B0]/80 text-white shadow-lg sm:shadow-xl transition-all hover:-translate-y-1 transform active:scale-95 uppercase tracking-wide border border-white/20 flex flex-col items-center"
+            className="h-auto py-4 px-2 sm:py-6 sm:px-4 md:py-8 md:px-6 text-base sm:text-xl md:text-2xl font-bold bg-gradient-to-br from-[#9C27B0] via-[#E91E63] to-[#9C27B0] hover:from-[#9C27B0]/80 hover:via-[#E91E63]/80 hover:to-[#9C27B0]/80 text-white shadow-lg sm:shadow-xl transition-all hover:-translate-y-1 transform active:scale-95 uppercase tracking-wide border border-white/20 flex flex-col items-center disabled:opacity-50 disabled:pointer-events-none disabled:hover:translate-y-0"
             onClick={() => handleGuess("kali")}
+            disabled={hasGuessed}
             data-testid="button-guess-kali"
           >
             <span>⬆️ {t("odd")}</span>
             <span className="text-[10px] sm:text-xs md:text-sm opacity-80">Kali</span>
           </Button>
           <Button
-            className="h-auto py-4 px-2 sm:py-6 sm:px-4 md:py-8 md:px-6 text-base sm:text-xl md:text-2xl font-bold bg-gradient-to-br from-[#2196F3] via-[#00BCD4] to-[#2196F3] hover:from-[#2196F3]/80 hover:via-[#00BCD4]/80 hover:to-[#2196F3]/80 text-white shadow-lg sm:shadow-xl transition-all hover:-translate-y-1 transform active:scale-95 uppercase tracking-wide border border-white/20 flex flex-col items-center"
+            className="h-auto py-4 px-2 sm:py-6 sm:px-4 md:py-8 md:px-6 text-base sm:text-xl md:text-2xl font-bold bg-gradient-to-br from-[#2196F3] via-[#00BCD4] to-[#2196F3] hover:from-[#2196F3]/80 hover:via-[#00BCD4]/80 hover:to-[#2196F3]/80 text-white shadow-lg sm:shadow-xl transition-all hover:-translate-y-1 transform active:scale-95 uppercase tracking-wide border border-white/20 flex flex-col items-center disabled:opacity-50 disabled:pointer-events-none disabled:hover:translate-y-0"
             onClick={() => handleGuess("jotta")}
+            disabled={hasGuessed}
             data-testid="button-guess-jotta"
           >
             <span>⬇️ {t("even")}</span>

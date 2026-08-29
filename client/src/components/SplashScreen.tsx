@@ -16,7 +16,7 @@ interface SplashScreenProps {
   minDurationMs?: number;
 }
 
-export default function SplashScreen({ onComplete, isAppReady, minDurationMs = 9000 }: SplashScreenProps) {
+export default function SplashScreen({ onComplete, isAppReady, minDurationMs = 5000 }: SplashScreenProps) {
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
 
   // Minimum-duration timer — guarantees the branded splash is visible for
