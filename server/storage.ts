@@ -16,6 +16,12 @@ export interface IStorage {
   updateUserOnboarding(userId: string, data: { displayName?: string; dateOfBirth?: string; adPreferences?: string[]; isAgeVerified?: boolean }): Promise<User | undefined>;
   incrementAiWins(userId: string): Promise<User | undefined>;
   addEarnedMarbles(userId: string, amount: number): Promise<User | undefined>;
+  // Same as addEarnedMarbles but does NOT touch the `marbles` wallet column —
+  // used when the caller has already applied the marbles change separately
+  // (e.g. via adjustWallet in a PvP win), so this only needs to bump the
+  // earnedMarbles counter for tournament eligibility without double-crediting
+  // the real wallet balance a second time.
+  incrementEarnedMarblesOnly(userId: string, amount: number): Promise<User | undefined>;
   adjustWallet(userId: string, marblesDelta: number, pointsDelta: number): Promise<User | undefined>;
   addPvpWinMarbles(userId: string, amount: number): Promise<User | undefined>;
   increaseAiOpponentLevel(userId: string): Promise<number>;
@@ -374,6 +380,31 @@ export class MemStorage implements IStorage {
         user.marbles = (user.marbles || 0) + amount;
         user.earnedMarbles = (user.earnedMarbles || 0) + amount;
         this.users.set(userId, user); return user;
+      }
+      return undefined;
+    }
+  }
+
+  // Same as addEarnedMarbles but does NOT touch the `marbles` wallet column —
+  // used when the caller has already applied the marbles change separately
+  // (e.g. via adjustWallet in a PvP win), so this only needs to bump the
+  // earnedMarbles counter for tournament eligibility without double-crediting
+  // the real wallet balance a second time. (Fixes: PvP win marbles showing
+  // 2x the actual bet amount on the winner's own screen.)
+  async incrementEarnedMarblesOnly(userId: string, amount: number): Promise<User | undefined> {
+    try {
+      const current = await this.getUser(userId);
+      if (!current) return undefined;
+      const newEarned = (current.earnedMarbles || 0) + amount;
+      const [updated] = await db.update(usersTable).set({ earnedMarbles: newEarned }).where(eq(usersTable.id, userId)).returning();
+      if (updated) this.users.set(userId, updated);
+      return updated;
+    } catch {
+      const user = this.users.get(userId);
+      if (user) {
+        user.earnedMarbles = (user.earnedMarbles || 0) + amount;
+        this.users.set(userId, user);
+        return user;
       }
       return undefined;
     }

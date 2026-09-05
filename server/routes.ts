@@ -269,8 +269,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (won) {
           const wonAmount = Math.max(0, delta);
-          // Add marbles to earned marbles for tournament eligibility
-          await storage.addEarnedMarbles(userId, wonAmount);
+          // Track earned marbles for tournament eligibility ONLY — the real
+          // wallet `marbles` balance was already incremented by `delta` via
+          // adjustWallet() above in this same request. Calling
+          // addEarnedMarbles() here used to ALSO add wonAmount to `marbles`
+          // a second time, silently double-crediting every PvP win (e.g. a
+          // 10-marble bet win credited +20 instead of +10 on the winner's
+          // own balance). incrementEarnedMarblesOnly() updates only the
+          // earnedMarbles counter, leaving `marbles` untouched here.
+          await storage.incrementEarnedMarblesOnly(userId, wonAmount);
 
           // Fully defeating a player opponent unlocks one spin-wheel try —
           // gated server-side so it can't be replayed for the same win.
