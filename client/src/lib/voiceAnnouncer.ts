@@ -1,3 +1,6 @@
+import { Capacitor } from "@capacitor/core";
+import { TextToSpeech } from "@capacitor-community/text-to-speech";
+
 export type GameLanguage =
   | "hi" | "en" | "ta" | "te" | "kn" | "ml" | "bn" | "mr" | "gu";
 
@@ -115,14 +118,24 @@ function isAndroidWebView(): boolean {
   return ua.includes("Android") && (ua.includes("wv") || ua.includes("WebView"));
 }
 
-// Voices preload on module load.
+// True only inside the actual Capacitor-wrapped app (Play Store build),
+// never in a regular mobile/desktop browser tab — even on Android Chrome.
+function isNativeApp(): boolean {
+  try {
+    return Capacitor.isNativePlatform();
+  } catch {
+    return false;
+  }
+}
+
+// Voices preload on module load (browser-only path).
 // Wrapped in try/catch: on some Capacitor/Android WebView builds,
 // touching speechSynthesis at module-load time can throw synchronously,
 // which would otherwise crash this entire module's import and break
 // every caller (including result SFX) - not just the voice feature.
 let speechSynthesisSupported = false;
 try {
-  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+  if (!isNativeApp() && typeof window !== "undefined" && "speechSynthesis" in window) {
     window.speechSynthesis.getVoices();
     window.speechSynthesis.onvoiceschanged = () => {
       try { window.speechSynthesis.getVoices(); } catch {}
@@ -144,6 +157,31 @@ export function setSpeakCallbacks(onStart: VoidFn, onEnd: VoidFn) {
   onSpeakEnd = onEnd;
 }
 
+// Inside the native Android app, the browser's Web Speech API
+// (speechSynthesis) is unreliable / silently does nothing on many
+// WebView builds. Instead we call the device's own native
+// text-to-speech engine through the @capacitor-community/text-to-speech
+// plugin, which works the same way a normal Android app's TTS does.
+function speakNative(text: string, lang: string, callEndOnce: VoidFn, safetyTimer: ReturnType<typeof setTimeout>) {
+  TextToSpeech.speak({
+    text,
+    lang,
+    rate: 0.85,
+    pitch: 1.0,
+    volume: 1.0,
+    category: "ambient",
+  })
+    .then(() => {
+      clearTimeout(safetyTimer);
+      callEndOnce();
+    })
+    .catch((e: unknown) => {
+      console.warn("Native TTS error:", e);
+      clearTimeout(safetyTimer);
+      callEndOnce();
+    });
+}
+
 function speakWithRetry(text: string, lang: string, retries = 4) {
   // Always notify GamePlay first, with its own safety net, BEFORE
   // touching speechSynthesis at all. This guarantees SFX gets unmuted
@@ -156,6 +194,14 @@ function speakWithRetry(text: string, lang: string, retries = 4) {
     endCalled = true;
     if (onSpeakEnd) onSpeakEnd();
   };
+
+  // Native app path: use the device's real TTS engine via the plugin.
+  if (isNativeApp()) {
+    const safetyTimer = setTimeout(callEndOnce, 6000);
+    speakNative(text, lang, callEndOnce, safetyTimer);
+    return;
+  }
+
   const safetyNetMs = isAndroidWebView() ? 1800 : 6000;
   const safetyTimer = setTimeout(callEndOnce, safetyNetMs);
 
