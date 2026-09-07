@@ -9,8 +9,9 @@ import MarbleSelector from "@/components/MarbleSelector";
 import GameChat from "@/components/GameChat";
 import { SpinWheel } from "@/components/SpinWheel";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Volume2, VolumeX, ArrowLeft, RotateCcw, Home } from "lucide-react";
+import { MessageCircle, Volume2, VolumeX, ArrowLeft, RotateCcw, Home, Mic, MicOff } from "lucide-react";
 import { announceResult, type GameLanguage } from "@/lib/voiceAnnouncer";
+import { useVoiceChat } from "@/hooks/useVoiceChat";
 import {
   Dialog,
   DialogContent,
@@ -145,6 +146,30 @@ export default function MultiplayerGame() {
   const lastRoundResultAtRef = useRef<number>(0);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showSpinWheel, setShowSpinWheel] = useState(false);
+
+  // Tracks the opponent's playerId (not just name/marbles) purely so the
+  // voice chat hook can deterministically decide which side creates the
+  // WebRTC offer (caller) vs waits for one (callee).
+  const opponentIdRef = useRef<string | null>(null);
+  const [opponentIdForVoice, setOpponentIdForVoice] = useState<string | null>(null);
+
+  const sendVoiceSignal = useCallback((message: any) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ ...message, roomCode, playerId }));
+    }
+  }, [roomCode, playerId]);
+
+  const {
+    isMuted: isMicMuted,
+    toggleMute: toggleMic,
+    handleSignalMessage: handleVoiceSignal,
+    remoteAudioRef,
+  } = useVoiceChat({
+    enabled: opponentConnected,
+    playerId,
+    opponentId: opponentIdForVoice,
+    sendSignal: sendVoiceSignal,
+  });
 
   // Initialize background music
   useEffect(() => {
@@ -326,12 +351,16 @@ export default function MultiplayerGame() {
             setOpponentMarbles(opponent.marbles);
             setOpponentImage(opponent.profileImage || null);
             setOpponentConnected(true);
+            opponentIdRef.current = opponent.id;
+            setOpponentIdForVoice(opponent.id);
           }
         } else if (message.playerId !== playerId) {
           setOpponentName(message.data.playerName);
           setOpponentMarbles(message.data.marbles);
           setOpponentImage(message.data.profileImage || null);
           setOpponentConnected(true);
+          opponentIdRef.current = message.playerId;
+          setOpponentIdForVoice(message.playerId);
         }
         
         if (message.data.playerCount >= 2) {
@@ -350,6 +379,8 @@ export default function MultiplayerGame() {
           setOpponentMarbles(opponentInfo.marbles);
           setOpponentImage(opponentInfo.profileImage || null);
           setOpponentConnected(true);
+          opponentIdRef.current = opponentInfo.id;
+          setOpponentIdForVoice(opponentInfo.id);
         }
         break;
         
@@ -361,7 +392,15 @@ export default function MultiplayerGame() {
           setOpponentMarbles(opponent.marbles);
           setOpponentImage(opponent.profileImage || null);
           setOpponentConnected(true);
+          opponentIdRef.current = opponent.id;
+          setOpponentIdForVoice(opponent.id);
         }
+        break;
+
+      case "voice_offer":
+      case "voice_answer":
+      case "voice_ice_candidate":
+        handleVoiceSignal(message);
         break;
         
       case "game_state_update":
@@ -780,6 +819,22 @@ export default function MultiplayerGame() {
         >
           {isMusicEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
         </Button>
+        <Button
+          size="icon"
+          variant="outline"
+          className={`rounded-full border-primary/50 ${
+            isMicMuted
+              ? "bg-red-500/20 text-red-400 hover:bg-red-500/40"
+              : "bg-primary/20 text-primary hover:bg-primary/40"
+          }`}
+          onClick={toggleMic}
+          data-testid="button-mic-toggle"
+          title={isMicMuted ? "Unmute your mic" : "Mute your mic"}
+        >
+          {isMicMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+        </Button>
+        {/* Remote opponent's voice audio — not visible, just plays sound */}
+        <audio ref={remoteAudioRef} autoPlay style={{ display: "none" }} />
         <Button
           size="icon"
           variant="outline"

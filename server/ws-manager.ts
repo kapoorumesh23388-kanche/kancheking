@@ -1,7 +1,7 @@
 import { WebSocket } from "ws";
 
 interface GameMessage {
-  type: "join" | "join_room" | "move" | "guess" | "result" | "chat" | "sync" | "presence" | "challenge" | "challenge_response" | "get_online_players" | "game_action" | "marble_update" | "request_sync";
+  type: "join" | "join_room" | "move" | "guess" | "result" | "chat" | "sync" | "presence" | "challenge" | "challenge_response" | "get_online_players" | "game_action" | "marble_update" | "request_sync" | "voice_offer" | "voice_answer" | "voice_ice_candidate";
   roomCode?: string;
   playerId: string;
   data: any;
@@ -714,6 +714,29 @@ export function handleNewConnection(ws: WebSocket) {
         }
         console.log(`[CHAT] Message in room ${chatRoomCode} from ${currentPlayerId}`);
         broadcastToRoom(chatRoomCode, message);
+      } else if (
+        message.type === "voice_offer" ||
+        message.type === "voice_answer" ||
+        message.type === "voice_ice_candidate"
+      ) {
+        // WebRTC signaling relay for the in-match open-mic voice chat.
+        // The server never inspects the SDP/ICE payload — it's just a
+        // dumb relay to the OTHER player in the room (not broadcast to
+        // everyone, unlike chat/game messages, since a signaling message
+        // echoed back to its own sender would be meaningless/harmful).
+        const voiceRoomCode = message.roomCode || currentRoomCode;
+        if (message.roomCode) {
+          currentRoomCode = message.roomCode;
+        }
+        const room = rooms.get(voiceRoomCode);
+        if (room) {
+          const payload = JSON.stringify({ ...message, fromPlayerId: currentPlayerId });
+          room.players.forEach((player, pid) => {
+            if (pid !== currentPlayerId && player.ws.readyState === 1) {
+              player.ws.send(payload);
+            }
+          });
+        }
       } else {
         // For other message types, also check for roomCode
         const msgRoomCode = message.roomCode || currentRoomCode;
