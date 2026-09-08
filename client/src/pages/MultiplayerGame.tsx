@@ -164,12 +164,26 @@ export default function MultiplayerGame() {
     toggleMute: toggleMic,
     handleSignalMessage: handleVoiceSignal,
     remoteAudioRef,
+    callStatus: voiceCallStatus,
   } = useVoiceChat({
     enabled: opponentConnected,
     playerId,
     opponentId: opponentIdForVoice,
     sendSignal: sendVoiceSignal,
   });
+
+  // Auto-duck the background music while the voice call is actually
+  // connected, so it doesn't drown out the opponent's voice. Restores
+  // it automatically once the call disconnects/fails, respecting
+  // whatever the user's own music on/off toggle was set to.
+  useEffect(() => {
+    if (!audioRef.current) return;
+    if (voiceCallStatus === "connected") {
+      audioRef.current.pause();
+    } else if (isMusicEnabled) {
+      audioRef.current.play().catch(err => console.log("Audio resume error:", err));
+    }
+  }, [voiceCallStatus, isMusicEnabled]);
 
   // Initialize background music
   useEffect(() => {

@@ -59,17 +59,29 @@ export function useVoiceChat({ enabled, playerId, opponentId, sendSignal }: UseV
     };
 
     pc.ontrack = (event) => {
+      console.log("[VoiceChat] ontrack fired, remote stream:", event.streams[0]);
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = event.streams[0];
-        remoteAudioRef.current.play().catch((e) => console.warn("Remote audio play blocked:", e));
+        remoteAudioRef.current.play()
+          .then(() => console.log("[VoiceChat] Remote audio playing"))
+          .catch((e) => console.warn("[VoiceChat] Remote audio play blocked:", e));
       }
     };
 
     pc.onconnectionstatechange = () => {
+      console.log("[VoiceChat] Connection state:", pc.connectionState);
       if (pc.connectionState === "connected") setCallStatus("connected");
       else if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
         setCallStatus("failed");
       }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.log("[VoiceChat] ICE connection state:", pc.iceConnectionState);
+    };
+
+    pc.onicegatheringstatechange = () => {
+      console.log("[VoiceChat] ICE gathering state:", pc.iceGatheringState);
     };
 
     return pc;
@@ -82,6 +94,7 @@ export function useVoiceChat({ enabled, playerId, opponentId, sendSignal }: UseV
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log("[VoiceChat] Got local mic stream (caller path), tracks:", stream.getAudioTracks().length);
       localStreamRef.current = stream;
       stream.getAudioTracks().forEach((t) => (t.enabled = !isMuted));
 
@@ -91,9 +104,11 @@ export function useVoiceChat({ enabled, playerId, opponentId, sendSignal }: UseV
 
       // Deterministic caller/callee split: lower playerId makes the offer.
       const iAmCaller = playerId < opponentId;
+      console.log("[VoiceChat] iAmCaller:", iAmCaller, "my id:", playerId, "opponent id:", opponentId);
       if (iAmCaller) {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
+        console.log("[VoiceChat] Sending offer");
         sendSignal({ type: "voice_offer", data: { sdp: offer } });
       }
     } catch (err) {
@@ -106,10 +121,12 @@ export function useVoiceChat({ enabled, playerId, opponentId, sendSignal }: UseV
     if (message.fromPlayerId === playerId) return; // ignore our own relayed messages
 
     if (message.type === "voice_offer") {
+      console.log("[VoiceChat] Received offer from", message.fromPlayerId);
       if (!pcRef.current) {
         // Callee path: we haven't started yet, set up now in response to the offer.
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          console.log("[VoiceChat] Got local mic stream (callee path), tracks:", stream.getAudioTracks().length);
           localStreamRef.current = stream;
           stream.getAudioTracks().forEach((t) => (t.enabled = !isMuted));
           const pc = createPeerConnection();
@@ -131,8 +148,10 @@ export function useVoiceChat({ enabled, playerId, opponentId, sendSignal }: UseV
       pendingCandidatesRef.current = [];
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
+      console.log("[VoiceChat] Sending answer");
       sendSignal({ type: "voice_answer", data: { sdp: answer } });
     } else if (message.type === "voice_answer") {
+      console.log("[VoiceChat] Received answer from", message.fromPlayerId);
       const pc = pcRef.current;
       if (pc) {
         await pc.setRemoteDescription(new RTCSessionDescription(message.data.sdp));
