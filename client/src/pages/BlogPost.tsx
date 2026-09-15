@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "wouter";
+import { Helmet } from "react-helmet-async";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ThumbsUp, ThumbsDown } from "lucide-react";
@@ -71,6 +72,22 @@ export default function BlogPost() {
 
   return (
     <div className="min-h-screen pt-20 pb-16 bg-gradient-to-b from-black via-blue-950 to-black">
+      {post && (
+        <Helmet>
+          <title>{post.title} | Kanche Stories | Kanche King</title>
+          <meta
+            name="description"
+            content={post.body.slice(0, 155).replace(/\s+/g, " ").trim() + "..."}
+          />
+          {/* Each story gets its own canonical URL — without this, every
+              blog post pointed back at the homepage, which told Google
+              these were duplicate pages rather than distinct content. */}
+          <link rel="canonical" href={`https://kancheking.com/blog/${post.id}`} />
+          <meta property="og:type" content="article" />
+          <meta property="og:title" content={post.title} />
+          <meta property="og:url" content={`https://kancheking.com/blog/${post.id}`} />
+        </Helmet>
+      )}
       <div className="container max-w-2xl mx-auto px-4">
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <Link href="/blog">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
+import { Helmet } from "react-helmet-async";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -38,6 +39,16 @@ export default function BlogPage() {
 
   return (
     <div className="min-h-screen pt-20 pb-16 bg-gradient-to-b from-black via-blue-950 to-black">
+      <Helmet>
+        <title>Kanche Stories — Marble Game Tales & Kali Jhota History | Kanche King</title>
+        <meta
+          name="description"
+          content="Read real stories about kanche (marbles), the childhood streets of India, and the traditional game of Kali Jhota — from the Kanche King community."
+        />
+        <link rel="canonical" href="https://kancheking.com/blog" />
+        <meta property="og:title" content="Kanche Stories — Marble Game Tales & Kali Jhota History" />
+        <meta property="og:url" content="https://kancheking.com/blog" />
+      </Helmet>
       <div className="container max-w-5xl mx-auto px-4">
         <div className="text-center mb-8">
           <h1
