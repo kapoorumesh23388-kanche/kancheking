@@ -227,6 +227,65 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Content section for search engines and new visitors — the homepage
+          previously had almost no text of its own (just a title and a
+          button), which likely contributed to Google flagging the site as
+          "low value content" during AdSense review. */}
+      <div className="container max-w-4xl mx-auto px-4 md:px-5 mt-6 md:mt-12">
+        <div className="marble-glass rounded-2xl p-5 md:p-10 space-y-6">
+          <section>
+            <h2 className="text-xl md:text-3xl font-bold text-[#00D9FF] mb-3">
+              What is Kanche King?
+            </h2>
+            <p className="text-white/80 text-sm md:text-base leading-relaxed">
+              Kanche King is a free digital version of <strong>Kali Jotta</strong>, the traditional Indian marble-guessing
+              game played for generations in the streets and school breaks across India. One player hides a handful of
+              marbles in a closed fist; the other guesses whether the count is odd or even. Get it right, and the
+              marbles come to you. It's simple to pick up in a minute, but genuinely tense once real stakes and a
+              real opponent are involved.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl md:text-3xl font-bold text-[#00D9FF] mb-3">
+              How to Play
+            </h2>
+            <ol className="text-white/80 text-sm md:text-base leading-relaxed space-y-2 list-decimal list-inside">
+              <li>One player (the Hider) secretly hides 1 to 20 marbles inside a closed fist.</li>
+              <li>The other player (the Guesser) calls <strong>Kali</strong> for an odd count or <strong>Jotta</strong> for an even count.</li>
+              <li>The Hider opens their fist and both players see the true count.</li>
+              <li>Guess right and you win the marbles wagered that round; guess wrong and the Hider keeps them.</li>
+              <li>Play against a computer opponent to practice, challenge a friend with a room code, or get matched with a random player online.</li>
+            </ol>
+          </section>
+
+          <section>
+            <h2 className="text-xl md:text-3xl font-bold text-[#00D9FF] mb-3">
+              Why People Still Love This Game
+            </h2>
+            <p className="text-white/80 text-sm md:text-base leading-relaxed">
+              Kanche (marbles) games like Kali Jotta were once a fixture of Indian childhoods — played in the shade of
+              a courtyard, on the walk home from school, or in a quiet lane between houses. Kanche King brings that
+              same simple, quick-thinking game to a phone screen, without needing to find a friend nearby with an
+              actual bag of marbles. It's entirely free to play — there's no real money involved anywhere on this
+              site, and nothing here can be bought or cashed out.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl md:text-3xl font-bold text-[#00D9FF] mb-3">
+              Game Modes
+            </h2>
+            <ul className="text-white/80 text-sm md:text-base leading-relaxed space-y-2">
+              <li>🤖 <strong>Play with AI</strong> — practice anytime against a computer opponent that gets tougher the more you beat it.</li>
+              <li>👥 <strong>Challenge a Friend</strong> — share a room code and play head-to-head with someone you know.</li>
+              <li>🌐 <strong>Random Match</strong> — get paired instantly with another player online.</li>
+              <li>🏆 <strong>Tournaments</strong> — enter multiplayer brackets and compete for a bigger reward pool.</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+
       {/* Footer */}
       <footer className="border-t border-[#00D9FF]/20 bg-[#0d0416]/60 backdrop-blur-sm mt-10 py-6">
         <div className="container max-w-6xl mx-auto px-5">

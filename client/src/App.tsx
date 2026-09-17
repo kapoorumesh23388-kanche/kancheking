@@ -38,7 +38,10 @@ import SplashScreen from "@/components/SplashScreen";
 // Google's AdSense reviewer/crawler visits these as a logged-out visitor —
 // if they hit the onboarding screen instead of real content, AdSense
 // rejects the site. Keep this list in sync with what AdSense needs to see.
-const PUBLIC_PATHS = ["/about", "/blog", "/terms", "/privacy"];
+// "/" is included because it's the page most likely to be crawled first —
+// without it, every anonymous visit (crawler or a genuinely new player)
+// was replaced by the bare signup wall instead of the actual homepage.
+const PUBLIC_PATHS = ["/", "/about", "/blog", "/terms", "/privacy"];
 
 function isPublicPath(path: string): boolean {
   // exact match ("/blog") or nested match ("/blog/some-post-id")
