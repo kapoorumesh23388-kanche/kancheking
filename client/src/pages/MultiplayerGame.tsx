@@ -29,6 +29,7 @@ import {
 } from "@/lib/marbleStorage";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import MarbleTransferAnimation from "@/components/MarbleTransferAnimation";
 import {
   initializeDailyRewards,
   updatePlaytime,
@@ -146,6 +147,11 @@ export default function MultiplayerGame() {
   const lastRoundResultAtRef = useRef<number>(0);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showSpinWheel, setShowSpinWheel] = useState(false);
+
+  // Drives the marble bottle transfer animation — a new triggerKey (via
+  // Date.now()) plays it once per round result; transferAnim is cleared
+  // by the component's onComplete callback once the animation finishes.
+  const [transferAnim, setTransferAnim] = useState<{ triggerKey: number; won: boolean; amount: number } | null>(null);
 
   // Tracks the opponent's playerId (not just name/marbles) purely so the
   // voice chat hook can deterministically decide which side creates the
@@ -442,6 +448,9 @@ export default function MultiplayerGame() {
         const change = message.data.bet;
         
         console.log(`[ROUND_RESULT] I am ${iAmGuesser ? 'guesser' : 'hider'}, won: ${won}`);
+
+        // Play the bottle-to-bottle marble transfer animation for this round.
+        setTransferAnim({ triggerKey: Date.now(), won, amount: change });
         
         // Optimistic local update — will be overwritten by server's
         // confirmed balance once the /api/game-points response arrives.
@@ -849,6 +858,14 @@ export default function MultiplayerGame() {
         </Button>
         {/* Remote opponent's voice audio — not visible, just plays sound */}
         <audio ref={remoteAudioRef} autoPlay style={{ display: "none" }} />
+        {transferAnim && (
+          <MarbleTransferAnimation
+            triggerKey={transferAnim.triggerKey}
+            won={transferAnim.won}
+            amount={transferAnim.amount}
+            onComplete={() => setTransferAnim(null)}
+          />
+        )}
         <Button
           size="icon"
           variant="outline"
