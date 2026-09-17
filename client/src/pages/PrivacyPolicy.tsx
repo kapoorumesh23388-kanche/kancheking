@@ -1,12 +1,23 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { Helmet } from "react-helmet-async";
 
 export default function PrivacyPolicy() {
   const [, navigate] = useLocation();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-blue-950 to-black pt-24 pb-10">
+      <Helmet>
+        <title>Privacy Policy — Kanche King</title>
+        <meta
+          name="description"
+          content="What information Kanche King collects when you play, why, and what control you have over it. No payment details are ever collected — the game is 100% free."
+        />
+        <link rel="canonical" href="https://kancheking.com/privacy" />
+        <meta property="og:title" content="Privacy Policy — Kanche King" />
+        <meta property="og:url" content="https://kancheking.com/privacy" />
+      </Helmet>
       <div className="container max-w-4xl mx-auto px-4">
         <div className="mb-8">
           <Button

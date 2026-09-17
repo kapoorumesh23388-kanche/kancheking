@@ -1,10 +1,21 @@
 import { Link } from "wouter";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
 export default function About() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0F2027] via-[#203A43] to-[#2C5364] text-white py-10">
+      <Helmet>
+        <title>About Kanche King — The Traditional Kali Jotta Marble Game</title>
+        <meta
+          name="description"
+          content="Learn how Kanche King brings the traditional Indian marble game Kali Jotta online — how to play, game features, and who built it. 100% free, no real money involved."
+        />
+        <link rel="canonical" href="https://kancheking.com/about" />
+        <meta property="og:title" content="About Kanche King — The Traditional Kali Jotta Marble Game" />
+        <meta property="og:url" content="https://kancheking.com/about" />
+      </Helmet>
       <div className="container max-w-4xl mx-auto px-5">
         <Link href="/">
           <Button variant="ghost" className="mb-6 flex items-center gap-2">

@@ -1,10 +1,21 @@
 import { Link } from "wouter";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
 export default function TermsAndConditions() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0F2027] via-[#203A43] to-[#2C5364] text-white py-10">
+      <Helmet>
+        <title>Terms & Conditions — Kanche King</title>
+        <meta
+          name="description"
+          content="Read the rules of Kanche King: how marbles, PvP wins, tournaments, Reward Points, and the Victory Spin Wheel work. No real money is involved anywhere in the game."
+        />
+        <link rel="canonical" href="https://kancheking.com/terms" />
+        <meta property="og:title" content="Terms & Conditions — Kanche King" />
+        <meta property="og:url" content="https://kancheking.com/terms" />
+      </Helmet>
       <div className="container max-w-4xl mx-auto px-5">
         <Link href="/">
           <Button variant="ghost" className="mb-6 flex items-center gap-2">
