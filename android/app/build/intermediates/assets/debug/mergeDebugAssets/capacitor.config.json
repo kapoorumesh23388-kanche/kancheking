@@ -4,6 +4,6 @@
 	"webDir": "dist/public",
 	"server": {
 		"url": "https://kancheking.com",
-		"cleartext": true
+		"cleartext": false
 	}
 }
