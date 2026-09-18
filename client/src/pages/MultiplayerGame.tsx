@@ -29,7 +29,7 @@ import {
 } from "@/lib/marbleStorage";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import MarbleTransferAnimation from "@/components/MarbleTransferAnimation";
+import MarbleBattleBottles from "@/components/MarbleBattleBottles";
 import {
   initializeDailyRewards,
   updatePlaytime,
@@ -858,14 +858,6 @@ export default function MultiplayerGame() {
         </Button>
         {/* Remote opponent's voice audio — not visible, just plays sound */}
         <audio ref={remoteAudioRef} autoPlay style={{ display: "none" }} />
-        {transferAnim && (
-          <MarbleTransferAnimation
-            triggerKey={transferAnim.triggerKey}
-            won={transferAnim.won}
-            amount={transferAnim.amount}
-            onComplete={() => setTransferAnim(null)}
-          />
-        )}
         <Button
           size="icon"
           variant="outline"
@@ -923,9 +915,14 @@ export default function MultiplayerGame() {
               </Card>
             </div>
             
-            {/* VS */}
+            {/* VS + persistent marble bottles, animating on each round result */}
             <div className="text-center">
-              <div className="text-4xl font-black text-primary animate-pulse">⚔️</div>
+              <MarbleBattleBottles
+                myMarbles={myMarbles}
+                opponentMarbles={opponentMarbles}
+                transferSignal={transferAnim}
+                onTransferComplete={() => setTransferAnim(null)}
+              />
               <p className="text-sm text-muted-foreground mt-2 uppercase tracking-widest font-bold">Battle</p>
             </div>
             

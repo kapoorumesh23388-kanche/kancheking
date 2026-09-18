@@ -46,6 +46,7 @@ import {
 } from "@/lib/voiceAnnouncer";
 import { useToast } from "@/hooks/use-toast";
 import { RotateCcw, Home } from "lucide-react";
+import MarbleBattleBottles from "@/components/MarbleBattleBottles";
 
 type GamePhase = "selecting" | "guessing" | "revealing" | "result";
 
@@ -62,6 +63,8 @@ export default function GamePlay() {
   const [selectedMarbleIds, setSelectedMarbleIds] = useState<number[]>([]);
   const [fistOpen, setFistOpen] = useState(false);
   const [isHiderPlayer1, setIsHiderPlayer1] = useState(true);
+  // Drives the marble bottle transfer animation on each round result.
+  const [transferAnim, setTransferAnim] = useState<{ triggerKey: number; won: boolean; amount: number } | null>(null);
   const [player1Marbles, setPlayer1Marbles] = useState(() => {
     initializeMarbles();
     initializeDailyRewards();
@@ -351,17 +354,14 @@ export default function GamePlay() {
       const actualCount = isHiderPlayer1 ? selectedMarbleIds.length : aiHiddenCount;
       const isOdd = actualCount % 2 === 1;
       let won = false;
-      let message = "";
-      
+
       // Logic: Odd marbles = Kali, Even marbles (0,2,4...) = Jotta
       if (lastGuess === "kali") {
         won = isOdd;
-        message = won ? "बधाई हो! कली है — तुम जीत गए! 🎉" : "जोट्टा है! अरे नहीं 😢";
       } else if (lastGuess === "jotta") {
         won = !isOdd;
-        message = won ? "बधाई हो! जोट्टा है — तुम जीत गए! 🎉" : "कली है! अरे नहीं 😢";
       }
-      
+
       // Determine if player won or lost this round
       let playerWon = false;
       if (isHiderPlayer1) {
@@ -371,6 +371,19 @@ export default function GamePlay() {
         // AI is hider, Player 1 is guesser - if player guess was correct, player wins
         playerWon = won;
       }
+
+      // Play the bottle-to-bottle marble transfer animation for this round.
+      setTransferAnim({ triggerKey: Date.now(), won: playerWon, amount: lastBet });
+
+      // The message must reflect whether the PLAYER actually won, not just
+      // whether the guess (which the AI makes half the time) was correct —
+      // previously this always said "you win!" whenever the guess was
+      // right, even when that correct guess was the AI's own, meaning the
+      // human player had actually just lost as the Hider.
+      const resultLabel = isOdd ? "कली है" : "जोट्टा है";
+      const message = playerWon
+        ? `बधाई हो! ${resultLabel} — तुम जीत गए! 🎉`
+        : `${resultLabel}! अरे नहीं 😢`;
       
       // Update marble counts — the SERVER call below is what actually
       // changes the database balance now. We optimistically show the
@@ -566,10 +579,13 @@ export default function GamePlay() {
               />
             </div>
             <div className="text-center flex flex-col items-center justify-center">
-              <div className="text-lg sm:text-xl md:text-3xl font-black text-primary animate-pulse" style={{ textShadow: "0 0 20px rgba(255,215,0,0.8)" }}>
-                ⚔️
-              </div>
-              <p className="text-[8px] sm:text-xs text-muted-foreground uppercase tracking-wider font-bold">Battle</p>
+              <MarbleBattleBottles
+                myMarbles={player1Marbles}
+                opponentMarbles={player2Marbles}
+                transferSignal={transferAnim}
+                onTransferComplete={() => setTransferAnim(null)}
+              />
+              <p className="text-[8px] sm:text-xs text-muted-foreground uppercase tracking-wider font-bold mt-1">Battle</p>
             </div>
             <div className="text-center">
               <PlayerBox
