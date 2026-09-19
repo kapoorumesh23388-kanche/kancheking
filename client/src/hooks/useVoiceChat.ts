@@ -20,6 +20,58 @@ const MIC_CONSTRAINTS: MediaTrackConstraints = {
   autoGainControl: true,
 };
 
+// Wraps a raw mic MediaStream with a lightweight, DIY voice-activity noise
+// gate built on the Web Audio API: it measures the mic's live volume and
+// only lets audio through when it's above a small threshold, muting
+// everything else (background hiss, a quiet feedback whine, room noise).
+// This runs IN ADDITION to the browser's own built-in echo cancellation —
+// it doesn't replace it, but catches low-level noise the browser's own
+// processing didn't fully remove, which is often exactly what a faint
+// "motor/bearing whirring" feedback tone sounds like.
+function applyNoiseGate(stream: MediaStream): MediaStream {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    const audioCtx = new AudioCtx();
+    const source = audioCtx.createMediaStreamSource(stream);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    const gainNode = audioCtx.createGain();
+    const destination = audioCtx.createMediaStreamDestination();
+
+    source.connect(analyser);
+    analyser.connect(gainNode);
+    gainNode.connect(destination);
+
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    const OPEN_THRESHOLD = 12; // volume level (0-255ish) needed to open the gate
+    const CLOSE_THRESHOLD = 7; // slightly lower, so it doesn't chatter on/off
+    let gateOpen = false;
+
+    const tick = () => {
+      analyser.getByteFrequencyData(data);
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) sum += data[i];
+      const avg = sum / data.length;
+
+      if (!gateOpen && avg > OPEN_THRESHOLD) {
+        gateOpen = true;
+        gainNode.gain.setTargetAtTime(1, audioCtx.currentTime, 0.02);
+      } else if (gateOpen && avg < CLOSE_THRESHOLD) {
+        gateOpen = false;
+        gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.08);
+      }
+      requestAnimationFrame(tick);
+    };
+    gainNode.gain.value = 0; // start closed/muted until someone actually speaks
+    tick();
+
+    return destination.stream;
+  } catch (e) {
+    console.warn("[VoiceChat] Noise gate setup failed, using raw mic stream:", e);
+    return stream;
+  }
+}
+
 interface UseVoiceChatOptions {
   // Becomes true once the opponent is connected and the match is starting.
   // The call is established automatically as soon as this flips true.
@@ -39,7 +91,8 @@ export function useVoiceChat({ enabled, playerId, opponentId, sendSignal }: UseV
   const [callStatus, setCallStatus] = useState<"idle" | "connecting" | "connected" | "failed">("idle");
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
-  const localStreamRef = useRef<MediaStream | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null); // the gated stream actually sent over WebRTC
+  const rawStreamRef = useRef<MediaStream | null>(null); // the raw mic stream, kept only to fully release the microphone on cleanup
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const startedRef = useRef(false);
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
@@ -56,6 +109,10 @@ export function useVoiceChat({ enabled, playerId, opponentId, sendSignal }: UseV
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
+    }
+    if (rawStreamRef.current) {
+      rawStreamRef.current.getTracks().forEach((t) => t.stop());
+      rawStreamRef.current = null;
     }
     pendingCandidatesRef.current = [];
   }, []);
@@ -106,12 +163,15 @@ export function useVoiceChat({ enabled, playerId, opponentId, sendSignal }: UseV
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS });
       console.log("[VoiceChat] Got local mic stream (caller path), tracks:", stream.getAudioTracks().length);
-      localStreamRef.current = stream;
-      stream.getAudioTracks().forEach((t) => (t.enabled = !isMuted));
+      console.log("[VoiceChat] Actual applied audio settings:", stream.getAudioTracks()[0]?.getSettings());
+      rawStreamRef.current = stream;
+      const gatedStream = applyNoiseGate(stream);
+      localStreamRef.current = gatedStream;
+      gatedStream.getAudioTracks().forEach((t) => (t.enabled = !isMuted));
 
       const pc = createPeerConnection();
       pcRef.current = pc;
-      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+      gatedStream.getTracks().forEach((track) => pc.addTrack(track, gatedStream));
 
       // Deterministic caller/callee split: lower playerId makes the offer.
       const iAmCaller = playerId < opponentId;
@@ -138,11 +198,14 @@ export function useVoiceChat({ enabled, playerId, opponentId, sendSignal }: UseV
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS });
           console.log("[VoiceChat] Got local mic stream (callee path), tracks:", stream.getAudioTracks().length);
-          localStreamRef.current = stream;
-          stream.getAudioTracks().forEach((t) => (t.enabled = !isMuted));
+          console.log("[VoiceChat] Actual applied audio settings:", stream.getAudioTracks()[0]?.getSettings());
+          rawStreamRef.current = stream;
+          const gatedStream = applyNoiseGate(stream);
+          localStreamRef.current = gatedStream;
+          gatedStream.getAudioTracks().forEach((t) => (t.enabled = !isMuted));
           const pc = createPeerConnection();
           pcRef.current = pc;
-          stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+          gatedStream.getTracks().forEach((track) => pc.addTrack(track, gatedStream));
           startedRef.current = true;
           setCallStatus("connecting");
         } catch (err) {
