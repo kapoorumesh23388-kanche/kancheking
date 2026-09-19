@@ -9,6 +9,17 @@ const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun1.l.google.com:19302" },
 ];
 
+// On phones, the microphone and speaker sit very close together, so the
+// mic easily picks up the phone's own speaker output and re-sends it,
+// creating a whirring/feedback noise on the other end. Laptops usually
+// avoid this via built-in acoustic hardware/software handling, but on
+// mobile browsers these constraints must be requested explicitly.
+const MIC_CONSTRAINTS: MediaTrackConstraints = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
+};
+
 interface UseVoiceChatOptions {
   // Becomes true once the opponent is connected and the match is starting.
   // The call is established automatically as soon as this flips true.
@@ -93,7 +104,7 @@ export function useVoiceChat({ enabled, playerId, opponentId, sendSignal }: UseV
     setCallStatus("connecting");
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS });
       console.log("[VoiceChat] Got local mic stream (caller path), tracks:", stream.getAudioTracks().length);
       localStreamRef.current = stream;
       stream.getAudioTracks().forEach((t) => (t.enabled = !isMuted));
@@ -125,7 +136,7 @@ export function useVoiceChat({ enabled, playerId, opponentId, sendSignal }: UseV
       if (!pcRef.current) {
         // Callee path: we haven't started yet, set up now in response to the offer.
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS });
           console.log("[VoiceChat] Got local mic stream (callee path), tracks:", stream.getAudioTracks().length);
           localStreamRef.current = stream;
           stream.getAudioTracks().forEach((t) => (t.enabled = !isMuted));
