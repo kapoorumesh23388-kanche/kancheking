@@ -65,7 +65,14 @@ export default function GamePlay() {
   const [isHiderPlayer1, setIsHiderPlayer1] = useState(true);
   // Drives the marble bottle transfer animation on each round result.
   const [transferAnim, setTransferAnim] = useState<{ triggerKey: number; won: boolean; amount: number } | null>(null);
+  const isGuest = localStorage.getItem("isGuest") === "true";
   const [player1Marbles, setPlayer1Marbles] = useState(() => {
+    if (isGuest) {
+      // Guest marbles are purely local — no server account exists to
+      // sync from, and nothing here persists once they leave.
+      const stored = localStorage.getItem("guestMarbles");
+      return stored ? parseInt(stored, 10) : 150;
+    }
     initializeMarbles();
     initializeDailyRewards();
     return getTotalMarbles();
@@ -147,6 +154,9 @@ export default function GamePlay() {
 
   // Trigger header update when marbles change
   useEffect(() => {
+    if (isGuest) {
+      localStorage.setItem("guestMarbles", String(player1Marbles));
+    }
     window.dispatchEvent(new Event("marbleUpdate"));
     window.dispatchEvent(new Event("storage"));
   }, [player1Marbles]);

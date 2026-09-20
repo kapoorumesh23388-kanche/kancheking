@@ -38,10 +38,7 @@ import SplashScreen from "@/components/SplashScreen";
 // Google's AdSense reviewer/crawler visits these as a logged-out visitor —
 // if they hit the onboarding screen instead of real content, AdSense
 // rejects the site. Keep this list in sync with what AdSense needs to see.
-// "/" is included because it's the page most likely to be crawled first —
-// without it, every anonymous visit (crawler or a genuinely new player)
-// was replaced by the bare signup wall instead of the actual homepage.
-const PUBLIC_PATHS = ["/", "/about", "/blog", "/terms", "/privacy"];
+const PUBLIC_PATHS = ["/about", "/blog", "/terms", "/privacy"];
 
 function isPublicPath(path: string): boolean {
   // exact match ("/blog") or nested match ("/blog/some-post-id")
@@ -134,6 +131,15 @@ function App() {
     const userId = localStorage.getItem("userId");
     const profileCompleted = localStorage.getItem("playerProfileCompleted");
     const profileName = localStorage.getItem("playerDisplayName");
+    const isGuest = localStorage.getItem("isGuest") === "true";
+
+    // Guest mode (Play as Guest, AI-only, no account) skips onboarding
+    // entirely — there's nothing to verify since nothing is saved.
+    if (isGuest) {
+      setNeedsOnboarding(false);
+      setOnboardingChecked(true);
+      return;
+    }
 
     // If there's no verified account yet (no userId from OTP signup/login),
     // or profile/name isn't set, send the player to the Email OTP onboarding flow.
