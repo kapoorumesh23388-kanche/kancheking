@@ -244,12 +244,13 @@ export default function OnboardingProfile() {
                 </Button>
                 <Button
                   type="button"
-                  variant={loginMethod === "mobile" ? "default" : "outline"}
-                  className="flex-1"
-                  onClick={() => setLoginMethod("mobile")}
+                  variant="outline"
+                  className="flex-1 opacity-40 cursor-not-allowed"
+                  disabled
+                  title="Mobile login is temporarily unavailable — please use email"
                   data-testid="button-login-method-mobile"
                 >
-                  📱 Mobile
+                  📱 Mobile (unavailable)
                 </Button>
               </div>
 
