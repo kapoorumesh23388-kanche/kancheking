@@ -2,28 +2,36 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Eye, EyeOff, Phone } from "lucide-react";
+import { Loader2, Eye, EyeOff, Phone, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 
-type Step = "credentials" | "phone" | "otp";
+type Step = "credentials" | "otp";
+type Method = "email" | "phone";
 
 export default function AdminLoginOTP() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const [step, setStep] = useState<Step>("credentials");
+  // Mobile OTP is temporarily disabled — Twilio's trial credit ran out and
+  // a paid plan isn't wanted right now. Email (via Resend, already used
+  // for player login) works the same way without that dependency. Left
+  // as a real toggle (not hardcoded) so re-enabling mobile later is just
+  // removing the "disabled" flag below, not rebuilding this screen.
+  const [method, setMethod] = useState<Method>("email");
+  const MOBILE_ENABLED = false;
+
   const [adminId, setAdminId] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState("");
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [maskedPhone, setMaskedPhone] = useState("");
+  const [maskedContact, setMaskedContact] = useState("");
 
   const handleLoginStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!adminId || !password) {
       toast({ title: "Error", description: "Please fill all fields", variant: "destructive" });
       return;
@@ -31,13 +39,14 @@ export default function AdminLoginOTP() {
 
     setIsLoading(true);
     try {
-      const res = await apiRequest("POST", "/api/admin/send-otp", { adminId, password });
+      const endpoint = method === "email" ? "/api/admin/send-otp-email" : "/api/admin/send-otp";
+      const res = await apiRequest("POST", endpoint, { adminId, password });
       const data = await res.json();
-      
+
       if (data.success) {
-        setMaskedPhone(data.phoneNumber);
+        setMaskedContact(method === "email" ? data.email : data.phoneNumber);
         setStep("otp");
-        toast({ title: "Success", description: "OTP sent to your phone!" });
+        toast({ title: "Success", description: `OTP sent to your ${method === "email" ? "email" : "phone"}!` });
       } else {
         toast({ title: "Error", description: data.error || "Failed to send OTP", variant: "destructive" });
       }
@@ -50,7 +59,7 @@ export default function AdminLoginOTP() {
 
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!otp) {
       toast({ title: "Error", description: "Please enter OTP", variant: "destructive" });
       return;
@@ -58,9 +67,10 @@ export default function AdminLoginOTP() {
 
     setIsLoading(true);
     try {
-      const res = await apiRequest("POST", "/api/admin/verify-otp", { adminId, otp });
+      const endpoint = method === "email" ? "/api/admin/verify-otp-email" : "/api/admin/verify-otp";
+      const res = await apiRequest("POST", endpoint, { adminId, otp });
       const data = await res.json();
-      
+
       if (data.success) {
         localStorage.setItem("adminToken", data.token);
         toast({ title: "Success", description: "Logged in successfully!" });
@@ -83,68 +93,110 @@ export default function AdminLoginOTP() {
             <CardTitle className="text-4xl font-bold text-primary mb-2">Admin Login</CardTitle>
             <CardDescription>
               {step === "credentials" && "Enter your credentials"}
-              {step === "otp" && "Enter the OTP sent to your phone"}
+              {step === "otp" && `Enter the OTP sent to your ${method === "email" ? "email" : "phone"}`}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {step === "credentials" && (
-              <form onSubmit={handleLoginStep1} className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Admin ID</label>
-                  <Input
-                    placeholder="Enter admin ID"
-                    value={adminId}
-                    onChange={(e) => setAdminId(e.target.value)}
-                    disabled={isLoading}
-                    data-testid="input-admin-id"
-                  />
+              <>
+                {/* Login method toggle */}
+                <div className="flex gap-2 mb-5">
+                  <button
+                    type="button"
+                    onClick={() => MOBILE_ENABLED && setMethod("phone")}
+                    disabled={!MOBILE_ENABLED}
+                    title={!MOBILE_ENABLED ? "Mobile login is temporarily unavailable — please use email" : undefined}
+                    data-testid="button-method-phone"
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg border text-sm font-medium transition-all ${
+                      !MOBILE_ENABLED
+                        ? "opacity-40 cursor-not-allowed border-white/10 text-muted-foreground"
+                        : method === "phone"
+                        ? "border-primary bg-primary/20 text-primary"
+                        : "border-white/20 text-muted-foreground hover:border-white/40"
+                    }`}
+                  >
+                    <Phone className="w-4 h-4" />
+                    Mobile {!MOBILE_ENABLED && "(unavailable)"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMethod("email")}
+                    data-testid="button-method-email"
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg border text-sm font-medium transition-all ${
+                      method === "email"
+                        ? "border-primary bg-primary/20 text-primary"
+                        : "border-white/20 text-muted-foreground hover:border-white/40"
+                    }`}
+                  >
+                    <Mail className="w-4 h-4" />
+                    Email
+                  </button>
                 </div>
 
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Password</label>
-                  <div className="relative">
+                <form onSubmit={handleLoginStep1} className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Admin ID</label>
                     <Input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter admin ID"
+                      value={adminId}
+                      onChange={(e) => setAdminId(e.target.value)}
                       disabled={isLoading}
-                      data-testid="input-admin-password"
+                      data-testid="input-admin-id"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-                      data-testid="button-toggle-password"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
                   </div>
-                </div>
 
-                <Button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground font-bold py-6"
-                  disabled={isLoading}
-                  data-testid="button-send-otp"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending OTP...
-                    </>
-                  ) : (
-                    "Send OTP"
-                  )}
-                </Button>
-              </form>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Password</label>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={isLoading}
+                        data-testid="input-admin-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+                        data-testid="button-toggle-password"
+                      >
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground font-bold py-6"
+                    disabled={isLoading}
+                    data-testid="button-send-otp"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending OTP...
+                      </>
+                    ) : (
+                      "Send OTP"
+                    )}
+                  </Button>
+                </form>
+              </>
             )}
 
             {step === "otp" && (
               <form onSubmit={handleVerifyOTP} className="space-y-4">
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 text-center mb-4">
                   <div className="flex items-center justify-center gap-2 mb-2">
-                    <Phone className="w-5 h-5 text-primary" />
-                    <p className="text-muted-foreground">OTP sent to phone ending in <strong>{maskedPhone}</strong></p>
+                    {method === "email" ? (
+                      <Mail className="w-5 h-5 text-primary" />
+                    ) : (
+                      <Phone className="w-5 h-5 text-primary" />
+                    )}
+                    <p className="text-muted-foreground">
+                      OTP sent to <strong>{maskedContact}</strong>
+                    </p>
                   </div>
                 </div>
 

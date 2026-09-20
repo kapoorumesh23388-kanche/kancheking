@@ -58,9 +58,61 @@ export function verifyLoginOTP(email: string, otp: string): boolean {
   return true;
 }
 
+// --- Admin login OTP (separate store from player login OTP) ---
+const adminOtpStore = new Map<string, { otp: string; expiresAt: number }>();
+
+export async function sendAdminOTPEmail(email: string, otp: string): Promise<boolean> {
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "Kanche King <otp@kancheking.com>",
+        to: [email],
+        subject: "Kanche King — Admin Login OTP",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #1a0a2e; color: #fff; padding: 30px; border-radius: 12px;">
+            <h2 style="color: #a855f7; text-align: center;">🎮 Kanche King — Admin</h2>
+            <p>Your admin login OTP is:</p>
+            <div style="background: #2d1b69; border: 2px solid #a855f7; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+              <h1 style="color: #f0abfc; font-size: 40px; letter-spacing: 8px; margin: 0;">${otp}</h1>
+            </div>
+            <p style="color: #aaa;">This OTP is valid for <strong>10 minutes</strong>.</p>
+            <p style="color: #aaa;">If you did not request this, please secure your admin account immediately.</p>
+          </div>
+        `,
+      }),
+    });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("[sendAdminOTPEmail] Resend API error:", response.status, errorBody);
+      return false;
+    }
+    adminOtpStore.set(email, { otp, expiresAt: Date.now() + 10 * 60 * 1000 });
+    return true;
+  } catch (err) {
+    console.error("[sendAdminOTPEmail] Error:", err);
+    return false;
+  }
+}
+
+export function verifyAdminOTP(email: string, otp: string): boolean {
+  const entry = adminOtpStore.get(email);
+  if (!entry) return false;
+  if (Date.now() > entry.expiresAt) {
+    adminOtpStore.delete(email);
+    return false;
+  }
+  if (entry.otp !== otp) return false;
+  adminOtpStore.delete(email); // One-time use
+  return true;
+}
+
 // --- Redeem OTP (separate store from login OTP) ---
 const redeemOtpStore = new Map<string, { otp: string; expiresAt: number }>();
-
 export async function sendRedeemOTPEmail(email: string, otp: string): Promise<boolean> {
   try {
     const response = await fetch("https://api.resend.com/emails", {

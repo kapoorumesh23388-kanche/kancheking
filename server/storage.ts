@@ -78,6 +78,8 @@ export interface IStorage {
   updateAdminPassword(adminId: string, oldPassword: string, newPassword: string): Promise<boolean>;
   updateAdminPhone(adminId: string, phoneNumber: string): Promise<void>;
   getAdminPhone(adminId: string): Promise<string | undefined>;
+  updateAdminEmail(adminId: string, email: string): Promise<void>;
+  getAdminEmail(adminId: string): Promise<string | undefined>;
   saveOTP(adminId: string, otp: string): Promise<void>;
   verifyOTP(adminId: string, otp: string): Promise<boolean>;
 
@@ -916,6 +918,17 @@ export class MemStorage implements IStorage {
   async getAdminPhone(adminId: string): Promise<string | undefined> {
     const [admin] = await db.select().from(adminUsersTable).where(eq(adminUsersTable.adminId, adminId));
     return admin?.phoneNumber ?? undefined;
+  }
+
+  async updateAdminEmail(adminId: string, email: string): Promise<void> {
+    await db.update(adminUsersTable)
+      .set({ email })
+      .where(eq(adminUsersTable.adminId, adminId));
+  }
+
+  async getAdminEmail(adminId: string): Promise<string | undefined> {
+    const [admin] = await db.select().from(adminUsersTable).where(eq(adminUsersTable.adminId, adminId));
+    return admin?.email ?? undefined;
   }
 
   async saveOTP(adminId: string, otp: string): Promise<void> {
