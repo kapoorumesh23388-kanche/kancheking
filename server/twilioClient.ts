@@ -87,3 +87,21 @@ export async function getTwilioClient() {
   if (!client) return null;
   return { client, phoneNumber: process.env.TWILIO_PHONE_NUMBER || '' };
 }
+
+// Fetches short-lived TURN/STUN credentials from Twilio's Network
+// Traversal Service, used as a fallback relay for the in-match voice chat
+// feature when a direct peer-to-peer connection can't be established
+// (common on mobile-data connections behind carrier-grade NAT). Falls
+// back to null if Twilio isn't configured — the client then just uses
+// free public STUN servers only, which work fine on most WiFi networks.
+export async function getTurnCredentials(): Promise<any[] | null> {
+  try {
+    const client = await getClient();
+    if (!client) return null;
+    const token = await client.tokens.create();
+    return token.iceServers || null;
+  } catch (error) {
+    console.error('Twilio TURN credentials error:', error);
+    return null;
+  }
+}

@@ -1826,6 +1826,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Email-based admin login, added as an alternative to the phone/Twilio
+  // flow above — Twilio's trial credit ran out and a paid plan isn't
+  // wanted right now, so email (via Resend, already used for player
+  // login) covers admin login without that dependency.
+  app.post("/api/admin/send-otp-email", async (req, res) => {
+    try {
+      const { adminId, password } = req.body;
+
+      if (!adminId || !password) {
+        return res.status(400).json({ error: "Admin ID and password required" });
+      }
+
+      const admin = await storage.getAdminByIdAndPassword(adminId, password);
+      if (!admin) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      let email = await storage.getAdminEmail(adminId);
+      if (!email) {
+        // Default admin notification inbox, same one used elsewhere for
+        // admin-facing emails (feedback/support notifications etc).
+        email = "kancheking.kalijhota@gmail.com";
+        await storage.updateAdminEmail(adminId, email);
+      }
+
+      const { generateOTP, sendAdminOTPEmail } = await import('./emailService');
+      const otp = generateOTP();
+      const sent = await sendAdminOTPEmail(email, otp);
+
+      if (!sent) {
+        return res.status(500).json({ error: "Failed to send OTP" });
+      }
+
+      res.json({
+        success: true,
+        message: "OTP sent to your email",
+        email: email.replace(/^(.{2}).+(@.+)$/, "$1***$2"),
+      });
+    } catch (error) {
+      console.error("Send admin email OTP error:", error);
+      res.status(500).json({ error: "Failed to send OTP" });
+    }
+  });
+
+  app.post("/api/admin/verify-otp-email", async (req, res) => {
+    try {
+      const { adminId, otp } = req.body;
+
+      if (!adminId || !otp) {
+        return res.status(400).json({ error: "Admin ID and OTP required" });
+      }
+
+      const email = await storage.getAdminEmail(adminId);
+      if (!email) {
+        return res.status(400).json({ error: "No email on file for this admin" });
+      }
+
+      const { verifyAdminOTP } = await import('./emailService');
+      const isValid = verifyAdminOTP(email, otp);
+      if (!isValid) {
+        return res.status(401).json({ error: "Invalid OTP" });
+      }
+
+      const token = `admin-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      res.json({ success: true, token, adminId });
+    } catch (error) {
+      console.error("Verify admin email OTP error:", error);
+      res.status(500).json({ error: "Failed to verify OTP" });
+    }
+  });
+
   // Tournament entry validation endpoint
   // Tournament allows: EARNED (player wins) + PURCHASED marbles (NOT AI wins or ads)
   app.post("/api/tournament/can-enter", async (req, res) => {
@@ -2082,6 +2153,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get room error:", error);
       res.status(500).json({ error: "Failed to get room" });
+    }
+  });
+
+  // Provides short-lived TURN/STUN credentials for the in-match voice
+  // chat feature (WebRTC), used as a fallback when two players can't
+  // establish a direct connection (e.g. both on mobile data behind
+  // carrier NAT). Never hardcode TURN credentials in client code — they
+  // must be short-lived and fetched per-session like this, or anyone
+  // could use the relay for unrelated traffic.
+  app.get("/api/turn-credentials", async (req, res) => {
+    try {
+      const { getTurnCredentials } = await import('./twilioClient');
+      const iceServers = await getTurnCredentials();
+      res.json({ iceServers: iceServers || [] });
+    } catch (error) {
+      console.error("TURN credentials error:", error);
+      res.json({ iceServers: [] });
     }
   });
 
