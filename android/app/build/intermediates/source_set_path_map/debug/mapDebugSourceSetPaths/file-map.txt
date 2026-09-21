@@ -31,4 +31,5 @@ com.kancheking.app-debug-29 C:\Users\deeks\Desktop\kancheking\android\app\build\
 com.kancheking.app-debug-30 C:\Users\deeks\Desktop\kancheking\android\app\src\debug\res
 com.kancheking.app-main-31 C:\Users\deeks\Desktop\kancheking\android\app\src\main\res
 com.kancheking.app-debug-32 C:\Users\deeks\Desktop\kancheking\android\capacitor-cordova-android-plugins\build\intermediates\packaged_res\debug\packageDebugResources
-com.kancheking.app-debug-33 C:\Users\deeks\Desktop\kancheking\node_modules\@capacitor\android\capacitor\build\intermediates\packaged_res\debug\packageDebugResources
+com.kancheking.app-debug-33 C:\Users\deeks\Desktop\kancheking\node_modules\@capacitor-community\text-to-speech\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.kancheking.app-debug-34 C:\Users\deeks\Desktop\kancheking\node_modules\@capacitor\android\capacitor\build\intermediates\packaged_res\debug\packageDebugResources

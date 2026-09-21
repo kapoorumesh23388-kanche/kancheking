@@ -8,9 +8,253 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
+// server/emailService.ts
+var emailService_exports = {};
+__export(emailService_exports, {
+  generateOTP: () => generateOTP,
+  sendAdminNotificationEmail: () => sendAdminNotificationEmail,
+  sendAdminOTPEmail: () => sendAdminOTPEmail,
+  sendLoginOTPEmail: () => sendLoginOTPEmail,
+  sendRedeemOTPEmail: () => sendRedeemOTPEmail,
+  sendVoucherEmail: () => sendVoucherEmail,
+  verifyAdminOTP: () => verifyAdminOTP,
+  verifyLoginOTP: () => verifyLoginOTP,
+  verifyRedeemOTP: () => verifyRedeemOTP
+});
+function generateOTP() {
+  return Math.floor(1e5 + Math.random() * 9e5).toString();
+}
+async function sendLoginOTPEmail(email, otp) {
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: "Kanche King <otp@kancheking.com>",
+        to: [email],
+        subject: "Kanche King \u2014 Your Login OTP",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #1a0a2e; color: #fff; padding: 30px; border-radius: 12px;">
+            <h2 style="color: #a855f7; text-align: center;">\u{1F3AE} Kanche King</h2>
+            <p>Your login OTP is:</p>
+            <div style="background: #2d1b69; border: 2px solid #a855f7; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+              <h1 style="color: #f0abfc; font-size: 40px; letter-spacing: 8px; margin: 0;">${otp}</h1>
+            </div>
+            <p style="color: #aaa;">This OTP is valid for <strong>10 minutes</strong>.</p>
+            <p style="color: #aaa;">If you did not request this, please ignore this email.</p>
+          </div>
+        `
+      })
+    });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("[sendLoginOTPEmail] Resend API error:", response.status, errorBody);
+      return false;
+    }
+    otpStore.set(email, { otp, expiresAt: Date.now() + 10 * 60 * 1e3 });
+    return true;
+  } catch (err) {
+    console.error("[sendLoginOTPEmail] Error:", err);
+    return false;
+  }
+}
+function verifyLoginOTP(email, otp) {
+  const entry = otpStore.get(email);
+  if (!entry) return false;
+  if (Date.now() > entry.expiresAt) {
+    otpStore.delete(email);
+    return false;
+  }
+  if (entry.otp !== otp) return false;
+  otpStore.delete(email);
+  return true;
+}
+async function sendAdminOTPEmail(email, otp) {
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: "Kanche King <otp@kancheking.com>",
+        to: [email],
+        subject: "Kanche King \u2014 Admin Login OTP",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #1a0a2e; color: #fff; padding: 30px; border-radius: 12px;">
+            <h2 style="color: #a855f7; text-align: center;">\u{1F3AE} Kanche King \u2014 Admin</h2>
+            <p>Your admin login OTP is:</p>
+            <div style="background: #2d1b69; border: 2px solid #a855f7; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+              <h1 style="color: #f0abfc; font-size: 40px; letter-spacing: 8px; margin: 0;">${otp}</h1>
+            </div>
+            <p style="color: #aaa;">This OTP is valid for <strong>10 minutes</strong>.</p>
+            <p style="color: #aaa;">If you did not request this, please secure your admin account immediately.</p>
+          </div>
+        `
+      })
+    });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("[sendAdminOTPEmail] Resend API error:", response.status, errorBody);
+      return false;
+    }
+    adminOtpStore.set(email, { otp, expiresAt: Date.now() + 10 * 60 * 1e3 });
+    return true;
+  } catch (err) {
+    console.error("[sendAdminOTPEmail] Error:", err);
+    return false;
+  }
+}
+function verifyAdminOTP(email, otp) {
+  const entry = adminOtpStore.get(email);
+  if (!entry) return false;
+  if (Date.now() > entry.expiresAt) {
+    adminOtpStore.delete(email);
+    return false;
+  }
+  if (entry.otp !== otp) return false;
+  adminOtpStore.delete(email);
+  return true;
+}
+async function sendRedeemOTPEmail(email, otp) {
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: "Kanche King <otp@kancheking.com>",
+        to: [email],
+        subject: "Kanche King \u2014 Confirm Your Redemption",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #1a0a2e; color: #fff; padding: 30px; border-radius: 12px;">
+            <h2 style="color: #a855f7; text-align: center;">\u{1F3AE} Kanche King</h2>
+            <p>Your OTP to confirm this points redemption is:</p>
+            <div style="background: #2d1b69; border: 2px solid #a855f7; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+              <h1 style="color: #f0abfc; font-size: 40px; letter-spacing: 8px; margin: 0;">${otp}</h1>
+            </div>
+            <p style="color: #aaa;">This OTP is valid for <strong>10 minutes</strong>.</p>
+            <p style="color: #aaa;">If you did not request this redemption, please ignore this email.</p>
+          </div>
+        `
+      })
+    });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("[sendRedeemOTPEmail] Resend API error:", response.status, errorBody);
+      return false;
+    }
+    redeemOtpStore.set(email, { otp, expiresAt: Date.now() + 10 * 60 * 1e3 });
+    return true;
+  } catch (err) {
+    console.error("[sendRedeemOTPEmail] Error:", err);
+    return false;
+  }
+}
+function verifyRedeemOTP(email, otp) {
+  const entry = redeemOtpStore.get(email);
+  if (!entry) return false;
+  if (Date.now() > entry.expiresAt) {
+    redeemOtpStore.delete(email);
+    return false;
+  }
+  if (entry.otp !== otp) return false;
+  redeemOtpStore.delete(email);
+  return true;
+}
+async function sendVoucherEmail(email, brandName, discountLabel, trackedLink, claimWindowSeconds) {
+  const minutes = Math.max(1, Math.round(claimWindowSeconds / 60));
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: "Kanche King <rewards@kancheking.com>",
+        to: [email],
+        subject: `Kanche King \u2014 You Earned a ${brandName} Voucher!`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #1a0a2e; color: #fff; padding: 30px; border-radius: 12px;">
+            <h2 style="color: #a855f7; text-align: center;">\u{1F381} Kanche King</h2>
+            <p>Nice win! You just earned a voucher:</p>
+            <div style="background: #2d1b69; border: 2px solid #a855f7; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+              <h1 style="color: #f0abfc; font-size: 24px; margin: 0 0 8px 0;">${brandName}</h1>
+              <p style="color: #ffb547; font-size: 18px; margin: 0;">${discountLabel}</p>
+            </div>
+            <div style="text-align: center; margin: 24px 0;">
+              <a href="${trackedLink}" style="background: #a855f7; color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">Open My Voucher</a>
+            </div>
+            <p style="color: #aaa;">This link works right away \u2014 no need to rush, but the in-app popup countdown (${minutes} minute${minutes === 1 ? "" : "s"}) is just to keep your session active.</p>
+            <p style="color: #aaa; font-size: 12px;">This is a special offer link \u2014 pricing/discount is set by the brand and may change.</p>
+          </div>
+        `
+      })
+    });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("[sendVoucherEmail] Resend API error:", response.status, errorBody);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[sendVoucherEmail] Error:", err);
+    return false;
+  }
+}
+async function sendAdminNotificationEmail(subject, htmlBody) {
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: "Kanche King <notify@kancheking.com>",
+        to: [ADMIN_EMAIL],
+        subject,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1a0a2e; color: #fff; padding: 30px; border-radius: 12px;">
+            <h2 style="color: #a855f7;">\u{1F3AE} Kanche King \u2014 Admin Notification</h2>
+            ${htmlBody}
+          </div>
+        `
+      })
+    });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("[sendAdminNotificationEmail] Resend API error:", response.status, errorBody);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[sendAdminNotificationEmail] Error:", err);
+    return false;
+  }
+}
+var otpStore, adminOtpStore, redeemOtpStore, ADMIN_EMAIL;
+var init_emailService = __esm({
+  "server/emailService.ts"() {
+    "use strict";
+    otpStore = /* @__PURE__ */ new Map();
+    adminOtpStore = /* @__PURE__ */ new Map();
+    redeemOtpStore = /* @__PURE__ */ new Map();
+    ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || "kancheking.kalijhota@gmail.com";
+  }
+});
+
 // server/twilioClient.ts
 var twilioClient_exports = {};
 __export(twilioClient_exports, {
+  getTurnCredentials: () => getTurnCredentials,
   getTwilioClient: () => getTwilioClient,
   sendOTPSMS: () => sendOTPSMS,
   sendOTPViaTwilio: () => sendOTPViaTwilio,
@@ -80,6 +324,17 @@ async function getTwilioClient() {
   const client = await getClient();
   if (!client) return null;
   return { client, phoneNumber: process.env.TWILIO_PHONE_NUMBER || "" };
+}
+async function getTurnCredentials() {
+  try {
+    const client = await getClient();
+    if (!client) return null;
+    const token = await client.tokens.create();
+    return token.iceServers || null;
+  } catch (error) {
+    console.error("Twilio TURN credentials error:", error);
+    return null;
+  }
 }
 var twilioClient;
 var init_twilioClient = __esm({
@@ -169,6 +424,7 @@ var adminUsers = pgTable("admin_users", {
   adminId: varchar("admin_id").notNull().unique(),
   password: text("password").notNull(),
   phoneNumber: varchar("phone_number"),
+  email: varchar("email"),
   createdAt: timestamp("created_at").defaultNow()
 });
 var catalogItems = pgTable("catalog_items", {
@@ -1151,6 +1407,13 @@ var MemStorage = class {
     const [admin] = await db.select().from(adminUsers).where(eq(adminUsers.adminId, adminId));
     return admin?.phoneNumber ?? void 0;
   }
+  async updateAdminEmail(adminId, email) {
+    await db.update(adminUsers).set({ email }).where(eq(adminUsers.adminId, adminId));
+  }
+  async getAdminEmail(adminId) {
+    const [admin] = await db.select().from(adminUsers).where(eq(adminUsers.adminId, adminId));
+    return admin?.email ?? void 0;
+  }
   async saveOTP(adminId, otp) {
     this.otpStore.set(adminId, { otp, timestamp: Date.now() });
   }
@@ -1475,181 +1738,8 @@ var MemStorage = class {
 };
 var storage = new MemStorage();
 
-// server/emailService.ts
-var otpStore = /* @__PURE__ */ new Map();
-function generateOTP() {
-  return Math.floor(1e5 + Math.random() * 9e5).toString();
-}
-async function sendLoginOTPEmail(email, otp) {
-  try {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        from: "Kanche King <otp@kancheking.com>",
-        to: [email],
-        subject: "Kanche King \u2014 Your Login OTP",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #1a0a2e; color: #fff; padding: 30px; border-radius: 12px;">
-            <h2 style="color: #a855f7; text-align: center;">\u{1F3AE} Kanche King</h2>
-            <p>Your login OTP is:</p>
-            <div style="background: #2d1b69; border: 2px solid #a855f7; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
-              <h1 style="color: #f0abfc; font-size: 40px; letter-spacing: 8px; margin: 0;">${otp}</h1>
-            </div>
-            <p style="color: #aaa;">This OTP is valid for <strong>10 minutes</strong>.</p>
-            <p style="color: #aaa;">If you did not request this, please ignore this email.</p>
-          </div>
-        `
-      })
-    });
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error("[sendLoginOTPEmail] Resend API error:", response.status, errorBody);
-      return false;
-    }
-    otpStore.set(email, { otp, expiresAt: Date.now() + 10 * 60 * 1e3 });
-    return true;
-  } catch (err) {
-    console.error("[sendLoginOTPEmail] Error:", err);
-    return false;
-  }
-}
-function verifyLoginOTP(email, otp) {
-  const entry = otpStore.get(email);
-  if (!entry) return false;
-  if (Date.now() > entry.expiresAt) {
-    otpStore.delete(email);
-    return false;
-  }
-  if (entry.otp !== otp) return false;
-  otpStore.delete(email);
-  return true;
-}
-var redeemOtpStore = /* @__PURE__ */ new Map();
-async function sendRedeemOTPEmail(email, otp) {
-  try {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        from: "Kanche King <otp@kancheking.com>",
-        to: [email],
-        subject: "Kanche King \u2014 Confirm Your Redemption",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #1a0a2e; color: #fff; padding: 30px; border-radius: 12px;">
-            <h2 style="color: #a855f7; text-align: center;">\u{1F3AE} Kanche King</h2>
-            <p>Your OTP to confirm this points redemption is:</p>
-            <div style="background: #2d1b69; border: 2px solid #a855f7; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
-              <h1 style="color: #f0abfc; font-size: 40px; letter-spacing: 8px; margin: 0;">${otp}</h1>
-            </div>
-            <p style="color: #aaa;">This OTP is valid for <strong>10 minutes</strong>.</p>
-            <p style="color: #aaa;">If you did not request this redemption, please ignore this email.</p>
-          </div>
-        `
-      })
-    });
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error("[sendRedeemOTPEmail] Resend API error:", response.status, errorBody);
-      return false;
-    }
-    redeemOtpStore.set(email, { otp, expiresAt: Date.now() + 10 * 60 * 1e3 });
-    return true;
-  } catch (err) {
-    console.error("[sendRedeemOTPEmail] Error:", err);
-    return false;
-  }
-}
-function verifyRedeemOTP(email, otp) {
-  const entry = redeemOtpStore.get(email);
-  if (!entry) return false;
-  if (Date.now() > entry.expiresAt) {
-    redeemOtpStore.delete(email);
-    return false;
-  }
-  if (entry.otp !== otp) return false;
-  redeemOtpStore.delete(email);
-  return true;
-}
-var ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || "kancheking.kalijhota@gmail.com";
-async function sendVoucherEmail(email, brandName, discountLabel, trackedLink, claimWindowSeconds) {
-  const minutes = Math.max(1, Math.round(claimWindowSeconds / 60));
-  try {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        from: "Kanche King <rewards@kancheking.com>",
-        to: [email],
-        subject: `Kanche King \u2014 You Earned a ${brandName} Voucher!`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #1a0a2e; color: #fff; padding: 30px; border-radius: 12px;">
-            <h2 style="color: #a855f7; text-align: center;">\u{1F381} Kanche King</h2>
-            <p>Nice win! You just earned a voucher:</p>
-            <div style="background: #2d1b69; border: 2px solid #a855f7; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
-              <h1 style="color: #f0abfc; font-size: 24px; margin: 0 0 8px 0;">${brandName}</h1>
-              <p style="color: #ffb547; font-size: 18px; margin: 0;">${discountLabel}</p>
-            </div>
-            <div style="text-align: center; margin: 24px 0;">
-              <a href="${trackedLink}" style="background: #a855f7; color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">Open My Voucher</a>
-            </div>
-            <p style="color: #aaa;">This link works right away \u2014 no need to rush, but the in-app popup countdown (${minutes} minute${minutes === 1 ? "" : "s"}) is just to keep your session active.</p>
-            <p style="color: #aaa; font-size: 12px;">This is a special offer link \u2014 pricing/discount is set by the brand and may change.</p>
-          </div>
-        `
-      })
-    });
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error("[sendVoucherEmail] Resend API error:", response.status, errorBody);
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error("[sendVoucherEmail] Error:", err);
-    return false;
-  }
-}
-async function sendAdminNotificationEmail(subject, htmlBody) {
-  try {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        from: "Kanche King <notify@kancheking.com>",
-        to: [ADMIN_EMAIL],
-        subject,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1a0a2e; color: #fff; padding: 30px; border-radius: 12px;">
-            <h2 style="color: #a855f7;">\u{1F3AE} Kanche King \u2014 Admin Notification</h2>
-            ${htmlBody}
-          </div>
-        `
-      })
-    });
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error("[sendAdminNotificationEmail] Resend API error:", response.status, errorBody);
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error("[sendAdminNotificationEmail] Error:", err);
-    return false;
-  }
-}
+// server/routes.ts
+init_emailService();
 
 // server/cuelinksClient.ts
 var CUELINKS_API_BASE = "https://developers.cuelinks.com/pub_api/v3";
@@ -3802,6 +3892,59 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to verify OTP" });
     }
   });
+  app2.post("/api/admin/send-otp-email", async (req, res) => {
+    try {
+      const { adminId, password } = req.body;
+      if (!adminId || !password) {
+        return res.status(400).json({ error: "Admin ID and password required" });
+      }
+      const admin = await storage.getAdminByIdAndPassword(adminId, password);
+      if (!admin) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+      let email = await storage.getAdminEmail(adminId);
+      if (!email) {
+        email = "kancheking.kalijhota@gmail.com";
+        await storage.updateAdminEmail(adminId, email);
+      }
+      const { generateOTP: generateOTP2, sendAdminOTPEmail: sendAdminOTPEmail2 } = await Promise.resolve().then(() => (init_emailService(), emailService_exports));
+      const otp = generateOTP2();
+      const sent = await sendAdminOTPEmail2(email, otp);
+      if (!sent) {
+        return res.status(500).json({ error: "Failed to send OTP" });
+      }
+      res.json({
+        success: true,
+        message: "OTP sent to your email",
+        email: email.replace(/^(.{2}).+(@.+)$/, "$1***$2")
+      });
+    } catch (error) {
+      console.error("Send admin email OTP error:", error);
+      res.status(500).json({ error: "Failed to send OTP" });
+    }
+  });
+  app2.post("/api/admin/verify-otp-email", async (req, res) => {
+    try {
+      const { adminId, otp } = req.body;
+      if (!adminId || !otp) {
+        return res.status(400).json({ error: "Admin ID and OTP required" });
+      }
+      const email = await storage.getAdminEmail(adminId);
+      if (!email) {
+        return res.status(400).json({ error: "No email on file for this admin" });
+      }
+      const { verifyAdminOTP: verifyAdminOTP2 } = await Promise.resolve().then(() => (init_emailService(), emailService_exports));
+      const isValid = verifyAdminOTP2(email, otp);
+      if (!isValid) {
+        return res.status(401).json({ error: "Invalid OTP" });
+      }
+      const token = `admin-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      res.json({ success: true, token, adminId });
+    } catch (error) {
+      console.error("Verify admin email OTP error:", error);
+      res.status(500).json({ error: "Failed to verify OTP" });
+    }
+  });
   app2.post("/api/tournament/can-enter", async (req, res) => {
     try {
       const { userId } = req.body;
@@ -4013,6 +4156,16 @@ async function registerRoutes(app2) {
     } catch (error) {
       console.error("Get room error:", error);
       res.status(500).json({ error: "Failed to get room" });
+    }
+  });
+  app2.get("/api/turn-credentials", async (req, res) => {
+    try {
+      const { getTurnCredentials: getTurnCredentials2 } = await Promise.resolve().then(() => (init_twilioClient(), twilioClient_exports));
+      const iceServers = await getTurnCredentials2();
+      res.json({ iceServers: iceServers || [] });
+    } catch (error) {
+      console.error("TURN credentials error:", error);
+      res.json({ iceServers: [] });
     }
   });
   const httpServer = createServer(app2);
