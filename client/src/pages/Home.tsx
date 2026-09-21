@@ -23,6 +23,11 @@ export default function Home() {
     localStorage.setItem("isGuest", "true");
     localStorage.setItem("guestMarbles", "150");
     localStorage.setItem("playerDisplayName", "Guest");
+    // App.tsx already listens for this event (used after real signup) to
+    // immediately clear needsOnboarding — without it, the SPA navigation
+    // below wouldn't re-run App's onboarding check, and /modes would still
+    // show the signup wall since that check only runs once on page load.
+    window.dispatchEvent(new Event("profileUpdated"));
     setLocation("/modes");
   };
 
