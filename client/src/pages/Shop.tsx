@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import type { CatalogItem } from "@shared/schema";
+import { isAdMobAvailable, showRewardedAd } from "@/lib/admob";
 import {
   getTotalMarbles,
   getRewardPoints,
@@ -207,6 +208,56 @@ export default function Shop() {
       .catch(() => {});
   }, []);
 
+  // --- Real AdMob rewarded ads (Android app only) ---
+  const [nativeAdBusy, setNativeAdBusy] = useState(false);
+
+  const watchNativeAds = async (pack: typeof AD_PACKS[0]) => {
+    if (nativeAdBusy) return;
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+      toast({ title: "Login required", description: "Please create a profile to earn marbles from ads.", variant: "destructive" });
+      return;
+    }
+    setNativeAdBusy(true);
+    try {
+      for (let i = 0; i < pack.adsCount; i++) {
+        toast({ title: `📺 Ad ${i + 1} of ${pack.adsCount}`, description: "Watch the full ad to earn your marbles." });
+        const result = await showRewardedAd();
+        if (result === "unavailable") {
+          toast({ title: "No ad available", description: "Couldn't load an ad right now. Please try again in a bit.", variant: "destructive" });
+          return;
+        }
+        if (result === "not_completed") {
+          toast({ title: "Ad closed early", description: "You need to watch the full ad to earn marbles.", variant: "destructive" });
+          return;
+        }
+        if (i < pack.adsCount - 1) await new Promise((r) => setTimeout(r, 3000));
+      }
+
+      // All ads watched — claim via the server (records the daily once-per-pack
+      // limit and credits marbles atomically in the DB).
+      try {
+        const res = await fetch("/api/ads/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, packId: pack.id }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setCachedTotals(data.marbles);
+          setClaimedToday((prev) => ({ ...prev, [pack.id]: true }));
+          toast({ title: "🎉 Ads Complete!", description: `You earned ${data.marblesAwarded} marbles!` });
+        } else {
+          toast({ title: "Error", description: data.error || "Could not claim reward.", variant: "destructive" });
+        }
+      } catch {
+        toast({ title: "Error", description: "Network error. Try again.", variant: "destructive" });
+      }
+    } finally {
+      setNativeAdBusy(false);
+    }
+  };
+
   // --- Ad watching logic ---
   const startWatchingAds = (pack: typeof AD_PACKS[0]) => {
     if (claimedToday[pack.id]) {
@@ -215,6 +266,11 @@ export default function Shop() {
         description: "You can claim each ad reward once per day. Come back tomorrow!",
         variant: "destructive",
       });
+      return;
+    }
+    // Inside the Android app: play real AdMob rewarded videos instead of the timer.
+    if (isAdMobAvailable()) {
+      void watchNativeAds(pack);
       return;
     }
     setAdWatchState({
@@ -547,7 +603,7 @@ export default function Shop() {
                     <Button
                       className="w-full bg-gradient-to-r from-[#00D9FF] to-[#E91E8C] font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => startWatchingAds(pack)}
-                      disabled={!!claimedToday[pack.id]}
+                      disabled={!!claimedToday[pack.id] || nativeAdBusy}
                     >
                       {claimedToday[pack.id] ? "✅ Claimed Today" : "Watch Now"}
                     </Button>

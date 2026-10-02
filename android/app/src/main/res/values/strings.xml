@@ -4,4 +4,7 @@
     <string name="title_activity_main">Kanche King</string>
     <string name="package_name">com.kancheking.app</string>
     <string name="custom_url_scheme">com.kancheking.app</string>
+    <!-- AdMob App ID. This is Google's TEST app id. Replace with your real one -->
+    <!-- (format ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY) before the Play Store release. -->
+    <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
 </resources>

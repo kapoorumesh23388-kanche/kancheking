@@ -30,6 +30,7 @@ import {
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import MarbleBattleBottles from "@/components/MarbleBattleBottles";
+import { maybeShowInterstitial } from "@/lib/admob";
 import {
   initializeDailyRewards,
   updatePlaytime,
@@ -1110,6 +1111,8 @@ export default function MultiplayerGame() {
               <Button
                 className="bg-gradient-to-r from-[#00D9FF] to-[#00FF88] hover:opacity-90 text-black font-bold py-6 text-lg"
                 onClick={() => {
+                  // Native AdMob interstitial (every 3rd game, Android app only)
+                  void maybeShowInterstitial();
                   setShowCelebration(false);
                   setOpponentMarbles(150);
                   setPhase("selecting");

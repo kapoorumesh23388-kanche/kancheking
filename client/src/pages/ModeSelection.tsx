@@ -2,12 +2,15 @@ import ModeCard from "@/components/ModeCard";
 import { Link, useLocation } from "wouter";
 import { useLanguage } from "@/lib/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
+import { useAdMobBanner } from "@/hooks/useAdMobBanner";
 
 export default function ModeSelection() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const isGuest = localStorage.getItem("isGuest") === "true";
+  // Native AdMob banner (Android app only); reserves space so it never covers cards.
+  const bannerSpace = useAdMobBanner(true);
 
   // Guest players (Play as Guest, no account) can only play against the
   // AI — every other mode needs a real profile, since they all involve
@@ -26,7 +29,7 @@ export default function ModeSelection() {
   };
 
   return (
-    <div className="min-h-screen pt-20 pb-10">
+    <div className="min-h-screen pt-20 pb-10" style={{ paddingBottom: 40 + bannerSpace }}>
       <div className="container max-w-7xl mx-auto px-5">
         <div className="text-center mb-10">
           <h2

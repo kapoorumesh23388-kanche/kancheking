@@ -33,6 +33,7 @@ import BlogPage from "@/pages/BlogPage";
 import BlogPost from "@/pages/BlogPost";
 import NotFound from "@/pages/not-found";
 import SplashScreen from "@/components/SplashScreen";
+import { initAdMob, preloadInterstitial } from "@/lib/admob";
 
 // Paths that must be reachable WITHOUT the email-OTP onboarding wall.
 // Google's AdSense reviewer/crawler visits these as a logged-out visitor —
@@ -94,6 +95,13 @@ function Router({ needsOnboarding }: { needsOnboarding: boolean }) {
 
 function AppContent({ needsOnboarding }: { needsOnboarding: boolean }) {
   const { pendingChallenge, respondToChallenge } = usePresence();
+
+  // AdMob (Android app only — no-op on the website / older APKs).
+  useEffect(() => {
+    initAdMob().then((ok) => {
+      if (ok) preloadInterstitial();
+    });
+  }, []);
   const [location] = useLocation();
 
   // Show the header even for logged-out visitors, as long as they're on
