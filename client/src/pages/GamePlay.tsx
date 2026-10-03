@@ -47,7 +47,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { RotateCcw, Home } from "lucide-react";
 import MarbleBattleBottles from "@/components/MarbleBattleBottles";
-import { maybeShowInterstitial } from "@/lib/admob";
+import { maybeShowInterstitial, isAdMobAvailable, showRewardedAd } from "@/lib/admob";
 
 type GamePhase = "selecting" | "guessing" | "revealing" | "result";
 
@@ -98,6 +98,7 @@ export default function GamePlay() {
     aiChoice?: string;
   } | null>(null);
   const [showAdReward, setShowAdReward] = useState(false);
+  const [adBusy, setAdBusy] = useState(false);
   const [adRewardPlayer, setAdRewardPlayer] = useState<"player1" | "player2" | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isMusicEnabled, setIsMusicEnabled] = useState(true);
@@ -513,12 +514,42 @@ export default function GamePlay() {
     if (isMusicEnabled) startBGM(bgmTheme);
   };
 
-  const handleWatchAd = () => {
-    if (adRewardPlayer === "player1") {
-      setPlayer1Marbles(prev => prev + 25);
-    } else if (adRewardPlayer === "player2") {
-      setPlayer2Marbles(prev => prev + 25);
+  // Returns true when the +25 marbles were granted (dialog can close).
+  const handleWatchAd = async (): Promise<boolean> => {
+    const grant = () => {
+      if (adRewardPlayer === "player1") {
+        setPlayer1Marbles(prev => prev + 25);
+      } else if (adRewardPlayer === "player2") {
+        setPlayer2Marbles(prev => prev + 25);
+      }
+    };
+
+    // Android app: play a real AdMob rewarded video first.
+    if (isAdMobAvailable()) {
+      setAdBusy(true);
+      try {
+        const result = await showRewardedAd();
+        if (result === "rewarded") {
+          grant();
+          return true;
+        }
+        toast({
+          title: result === "not_completed" ? "Ad closed early" : "No ad available",
+          description:
+            result === "not_completed"
+              ? "Watch the full ad to earn 25 marbles."
+              : "Couldn't load an ad right now. Please try again in a bit.",
+          variant: "destructive",
+        });
+        return false;
+      } finally {
+        setAdBusy(false);
+      }
     }
+
+    // Website: keep the old behaviour.
+    grant();
+    return true;
   };
 
   const handleSendChatMessage = (msg: { type: "text" | "voice"; content: string; duration?: number }) => {
@@ -850,16 +881,21 @@ export default function GamePlay() {
               <Button
                 variant="outline"
                 className="py-3"
-                onClick={() => setShowAdReward(false)}
+                onClick={() => {
+                  setShowAdReward(false);
+                  // Game is over for this player — count it for the interstitial pacing
+                  void maybeShowInterstitial();
+                }}
                 data-testid="button-skip-ad"
               >
                 Skip
               </Button>
               <Button
                 className="bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground font-bold py-3"
-                onClick={() => {
-                  handleWatchAd();
-                  setShowAdReward(false);
+                disabled={adBusy}
+                onClick={async () => {
+                  const ok = await handleWatchAd();
+                  if (ok) setShowAdReward(false);
                 }}
                 data-testid="button-watch-ad"
               >

@@ -136,9 +136,26 @@ export async function removeBanner(): Promise<void> {
 // ---------------------------------------------------------------------------
 // 4) Interstitial (between games)
 // ---------------------------------------------------------------------------
-let gamesSinceInterstitial = 0;
-let lastInterstitialAt = 0;
 let interstitialReady = false;
+
+// Counters are kept in localStorage because the game does full page reloads
+// (e.g. the Home button), which would reset plain variables every time.
+function readNum(key: string): number {
+  try {
+    return Number(localStorage.getItem(key)) || 0;
+  } catch {
+    return 0;
+  }
+}
+function writeNum(key: string, value: number): void {
+  try {
+    localStorage.setItem(key, String(value));
+  } catch {
+    /* ignore */
+  }
+}
+const K_GAMES = "admob_games_since_interstitial";
+const K_LAST = "admob_last_interstitial_at";
 
 async function prepareInterstitial(): Promise<void> {
   if (interstitialReady || !(await initAdMob())) return;
@@ -164,12 +181,13 @@ export function preloadInterstitial(): void {
 export async function maybeShowInterstitial(): Promise<void> {
   if (!isAdMobAvailable()) return;
 
-  gamesSinceInterstitial += 1;
-  if (gamesSinceInterstitial < INTERSTITIAL_EVERY_N_GAMES) {
+  const games = readNum(K_GAMES) + 1;
+  writeNum(K_GAMES, games);
+  if (games < INTERSTITIAL_EVERY_N_GAMES) {
     void prepareInterstitial();
     return;
   }
-  if (Date.now() - lastInterstitialAt < INTERSTITIAL_MIN_GAP_MS) return;
+  if (Date.now() - readNum(K_LAST) < INTERSTITIAL_MIN_GAP_MS) return;
 
   if (!interstitialReady) await prepareInterstitial();
   if (!interstitialReady) return;
@@ -177,8 +195,8 @@ export async function maybeShowInterstitial(): Promise<void> {
   try {
     const { AdMob } = await loadModule();
     interstitialReady = false;
-    gamesSinceInterstitial = 0;
-    lastInterstitialAt = Date.now();
+    writeNum(K_GAMES, 0);
+    writeNum(K_LAST, Date.now());
     await AdMob.showInterstitial();
   } catch (e) {
     console.log("[AdMob] showInterstitial failed:", e);
