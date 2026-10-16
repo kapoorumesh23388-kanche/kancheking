@@ -21,8 +21,11 @@ export default function GuessingPanel({ onGuess, maxBet = 100 }: GuessingPanelPr
   // Resets automatically each round because MultiplayerGame.tsx remounts
   // this component with a fresh key={roundNumber}.
   const [hasGuessed, setHasGuessed] = useState(false);
+  // What was locked in (shown to the player so they know it cannot change).
+  const [lockedBet, setLockedBet] = useState<{ guess: string; bet: number } | null>(null);
 
   const handleBetChange = (value: string) => {
+    if (hasGuessed) return; // bet is locked once placed
     const numValue = parseInt(value) || 0;
     if (numValue <= maxBet && numValue > 0) {
       setBet(numValue);
@@ -33,6 +36,7 @@ export default function GuessingPanel({ onGuess, maxBet = 100 }: GuessingPanelPr
     if (hasGuessed) return;
     if (bet > 0 && bet <= maxBet) {
       setHasGuessed(true);
+      setLockedBet({ guess: guessType, bet });
       onGuess?.(guessType, bet);
       console.log(`Guessed: ${guessType}, Bet: ${bet} marbles`);
     }
@@ -61,12 +65,26 @@ export default function GuessingPanel({ onGuess, maxBet = 100 }: GuessingPanelPr
               className="w-20 sm:w-28 md:w-32 text-center text-lg sm:text-xl md:text-2xl font-bold border-2 sm:border-3 border-primary/50 bg-black/40 text-[#00FF88] focus:border-primary"
               min={1}
               max={maxBet}
+              disabled={hasGuessed}
               data-testid="input-bet"
             />
             <span className="text-xs sm:text-sm text-muted-foreground font-semibold">/ {maxBet}</span>
           </div>
         </div>
         
+        {lockedBet && (
+          <div
+            className="mb-3 sm:mb-5 rounded-lg border-2 border-[#00FF88]/50 bg-[#00FF88]/10 px-3 py-2 text-center"
+            data-testid="text-bet-locked"
+          >
+            <p className="text-sm sm:text-base font-bold text-[#00FF88]">
+              🔒 Your bet is locked: {lockedBet.bet} marbles on{" "}
+              {lockedBet.guess === "kali" ? "Kali (Odd)" : "Jhota (Even)"}
+            </p>
+            <p className="text-xs text-muted-foreground">You can't change it now.</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-2 sm:gap-4 md:gap-6">
           <Button
             className="h-auto py-4 px-2 sm:py-6 sm:px-4 md:py-8 md:px-6 text-base sm:text-xl md:text-2xl font-bold bg-gradient-to-br from-[#9C27B0] via-[#E91E63] to-[#9C27B0] hover:from-[#9C27B0]/80 hover:via-[#E91E63]/80 hover:to-[#9C27B0]/80 text-white shadow-lg sm:shadow-xl transition-all hover:-translate-y-1 transform active:scale-95 uppercase tracking-wide border border-white/20 flex flex-col items-center disabled:opacity-50 disabled:pointer-events-none disabled:hover:translate-y-0"

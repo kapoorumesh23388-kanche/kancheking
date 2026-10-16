@@ -222,7 +222,7 @@ export default function OnboardingProfile() {
           <CardTitle className="text-4xl font-bold text-primary mb-2">
             {step === "contact" ? "Welcome to Kanche King!" : step === "otp" ? "Enter OTP" : "Create Profile"}
           </CardTitle>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-sm break-all">
             {step === "contact" ? "Login or create account with email or mobile" : step === "otp" ? `OTP sent to ${loginMethod === "email" ? email : phone}` : "Set up your player profile"}
           </p>
         </CardHeader>
@@ -261,10 +261,15 @@ export default function OnboardingProfile() {
                   </Label>
                   <Input
                     type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                     placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="bg-primary/10 border-primary/30 text-white placeholder:text-muted-foreground"
+                    className="h-12 py-3 px-3 text-[15px] sm:text-base md:text-base leading-normal bg-primary/10 border-primary/30 text-white placeholder:text-muted-foreground"
                     onKeyDown={(e) => e.key === "Enter" && handleSendOTP()}
                   />
                 </div>

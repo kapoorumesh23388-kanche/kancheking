@@ -700,8 +700,19 @@ export default function GamePlay() {
                 {isHiderPlayer1 ? (
                   <div className="bg-white/5 border border-primary/20 rounded-lg p-3 sm:p-4 text-center">
                     <p className="text-base sm:text-xl font-bold text-primary mb-2 sm:mb-3">
-                      {showRevealButton ? "🤖 AI is guessing..." : "Waiting for AI to guess..."}
+                      {showRevealButton ? "🤖 AI has placed its bet" : "Waiting for AI to guess..."}
                     </p>
+                    {showRevealButton && lastGuess && (
+                      <div
+                        className="mb-3 sm:mb-4 rounded-lg border-2 border-[#E91E8C]/50 bg-[#E91E8C]/15 px-3 py-3"
+                        data-testid="text-ai-bet"
+                      >
+                        <p className="text-xs sm:text-sm text-muted-foreground">AI's Bet</p>
+                        <p className="text-xl sm:text-2xl font-bold text-[#E91E8C]">
+                          {lastBet} marbles on {lastGuess === "kali" ? "Kali (Odd)" : "Jhota (Even)"}
+                        </p>
+                      </div>
+                    )}
                     {showRevealButton && (
                       <Button
                         className="w-full bg-gradient-to-r from-[#00FF88] to-[#00C853] hover:from-[#00FF88]/80 hover:to-[#00C853]/80 text-black py-3 sm:py-4 text-sm sm:text-lg font-bold animate-pulse"
