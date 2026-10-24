@@ -56,7 +56,7 @@ export interface IStorage {
   getTournamentWindows(): Promise<TournamentWindow[]>;
   getAppSetting(key: string): Promise<string | undefined>;
   setAppSetting(key: string, value: string): Promise<void>;
-  getActiveTournamentWindow(entryFee?: number): Promise<TournamentWindow | undefined>;
+  getActiveTournamentWindow(entryFee?: number, maxPlayers?: number): Promise<TournamentWindow | undefined>;
   addTournamentWindow(window: Omit<TournamentWindow, 'id' | 'createdAt'>): Promise<TournamentWindow>;
   updateTournamentPlayerCount(windowId: string, count: number): Promise<void>;
   addToPrizePool(windowId: string, amount: number): Promise<void>;
@@ -113,6 +113,7 @@ export interface IStorage {
   // Tournament Bracket Methods
   getTournamentParticipants(tournamentId: string): Promise<TournamentParticipant[]>;
   addTournamentParticipant(participant: Omit<TournamentParticipant, 'id' | 'createdAt'>): Promise<TournamentParticipant>;
+  removeTournamentParticipant(tournamentId: string, playerId: string): Promise<void>;
   getTournamentMatches(tournamentId: string): Promise<TournamentMatch[]>;
   getTournamentMatch(matchId: string): Promise<TournamentMatch | undefined>;
   getTournamentMatchByRoomCode(roomCode: string): Promise<TournamentMatch | undefined>;
@@ -709,21 +710,23 @@ export class MemStorage implements IStorage {
     }
   }
 
-  async getActiveTournamentWindow(entryFee: number = 250): Promise<TournamentWindow | undefined> {
+  async getActiveTournamentWindow(entryFee: number = 250, maxPlayers: number = 10): Promise<TournamentWindow | undefined> {
     const windows = await db.select().from(tournamentWindowsTable);
-    const active = windows.find((w) => w.status === "waiting" && w.playerCount < w.maxPlayers && w.entryFee === entryFee);
+    // A window is identified by BOTH its entry fee and its size (2/4/8/16
+    // players), so every size runs its own independent queue.
+    const active = windows.find((w) => w.status === "waiting" && w.playerCount < w.maxPlayers && w.entryFee === entryFee && w.maxPlayers === maxPlayers);
     if (active) return active;
 
     // No open window exists yet for this tier — create the first one
     // automatically. maxPlayers: 10 matches the Tournament page's "/ 10"
     // label. windowNumber counts only within this tier so each tier's
     // numbering starts fresh (Window 1, 2, 3... per entry-fee tier).
-    const windowsInTier = windows.filter((w) => w.entryFee === entryFee);
+    const windowsInTier = windows.filter((w) => w.entryFee === entryFee && w.maxPlayers === maxPlayers);
     return await this.addTournamentWindow({
       windowNumber: windowsInTier.length + 1,
       playerCount: 0,
       status: "waiting",
-      maxPlayers: 10,
+      maxPlayers,
       entryFee,
       prizePool: 0,
       winnerId: null,
@@ -755,12 +758,12 @@ export class MemStorage implements IStorage {
       // Count only within this tier, and inherit its entryFee — otherwise
       // every tier's next window would silently collapse back to 250.
       const windowsInTier = (await db.select().from(tournamentWindowsTable))
-        .filter((w) => w.entryFee === window.entryFee);
+        .filter((w) => w.entryFee === window.entryFee && w.maxPlayers === window.maxPlayers);
       await this.addTournamentWindow({
         windowNumber: windowsInTier.length + 1,
         playerCount: 0,
         status: "waiting",
-        maxPlayers: 10, // keep consistent with the first window / "/ 10" label
+        maxPlayers: window.maxPlayers, // next window keeps the same size
         entryFee: window.entryFee,
         prizePool: 0,
         winnerId: null,
@@ -1281,6 +1284,15 @@ export class MemStorage implements IStorage {
   async getTournamentParticipants(tournamentId: string): Promise<TournamentParticipant[]> {
     return await db.select().from(tournamentParticipantsTable)
       .where(eq(tournamentParticipantsTable.tournamentId, tournamentId));
+  }
+
+  async removeTournamentParticipant(tournamentId: string, playerId: string): Promise<void> {
+    await db.delete(tournamentParticipantsTable).where(
+      and(
+        eq(tournamentParticipantsTable.tournamentId, tournamentId),
+        eq(tournamentParticipantsTable.playerId, playerId),
+      ),
+    );
   }
 
   async addTournamentParticipant(participant: Omit<TournamentParticipant, 'id' | 'createdAt'>): Promise<TournamentParticipant> {

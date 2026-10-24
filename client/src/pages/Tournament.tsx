@@ -87,6 +87,9 @@ export default function Tournament() {
   // tiers (see TOURNAMENT_TIERS below), each running its own independent
   // 10-player windows.
   const TOURNAMENT_TIERS = [250, 500, 750, 1000, 1500];
+  // Player picks how many people play (powers of two = clean bracket).
+  const TOURNAMENT_SIZES = [2, 4, 8, 16];
+  const [selectedSize, setSelectedSize] = useState<number>(2);
   
   
   // Initialize marbles on first load
@@ -129,8 +132,8 @@ export default function Tournament() {
   const allWindows = windowsData?.windows || [];
   const windowsByTier = TOURNAMENT_TIERS.map((tier) => ({
     tier,
-    window: allWindows.find((w) => w.entryFee === tier && w.status !== "Completed")
-      || allWindows.find((w) => w.entryFee === tier), // fall back to most recent even if completed, so the card isn't empty on first load
+    window: allWindows.find((w) => w.entryFee === tier && w.maxPlayers === selectedSize && w.status !== "Completed")
+      || allWindows.find((w) => w.entryFee === tier && w.maxPlayers === selectedSize), // fall back to most recent even if completed, so the card isn't empty on first load
   }));
 
   // Auto-select tournament ID when windows data loads, based on whichever
@@ -141,6 +144,41 @@ export default function Tournament() {
       setSelectedTournamentId(savedTournamentId);
     }
   }, [allWindows]);
+
+  // Leave a tournament that has not started yet and get the entry fee back.
+  const handleLeaveTournament = async (tournamentWindow: any) => {
+    setIsJoining(true);
+    try {
+      const userId = localStorage.getItem("userId") || "";
+      const response = await fetch("/api/tournament/leave", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, windowId: tournamentWindow.id }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error || "Could not leave the tournament");
+      }
+      if (typeof data?.marbles === "number") {
+        setCachedTotals(data.marbles);
+      }
+      updatePlayerStats();
+      localStorage.removeItem("activeTournamentId");
+      setSelectedTournamentId(null);
+      toast({
+        title: "Left Tournament",
+        description: data?.message || "Your entry fee has been refunded.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Could not leave the tournament.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsJoining(false);
+    }
+  };
 
   const handleJoinTournament = async (window: any) => {
     // No more eligibility gate — any player can enter any tier they can
@@ -164,6 +202,7 @@ export default function Tournament() {
         body: JSON.stringify({
           userId,
           entryFee: window.entryFee,
+          maxPlayers: window.maxPlayers ?? selectedSize,
         }),
       });
 
@@ -211,7 +250,7 @@ export default function Tournament() {
           <h2 className="text-5xl font-bold text-primary mb-3" style={{ textShadow: '0 0 20px rgba(255,215,0,0.5)' }}>
             🏆 Kali Jotta Tournament
           </h2>
-          <p className="text-xl text-muted-foreground">10-Player Battles | Choose Your Stake | Winner Takes 10× the Pool</p>
+          <p className="text-xl text-muted-foreground">Choose Your Size | Choose Your Stake | Winner Takes the Pool</p>
         </div>
 
         {/* Real-time Player Stats */}
@@ -303,6 +342,24 @@ export default function Tournament() {
           </CardContent>
         </Card>
 
+        {/* Tournament size selector */}
+        <div className="mb-6">
+          <h3 className="text-2xl font-bold mb-3">How many players?</h3>
+          <div className="flex flex-wrap gap-3">
+            {TOURNAMENT_SIZES.map((size) => (
+              <Button
+                key={size}
+                type="button"
+                variant={selectedSize === size ? "default" : "outline"}
+                onClick={() => setSelectedSize(size)}
+                data-testid={`button-size-${size}`}
+              >
+                {size} Players
+              </Button>
+            ))}
+          </div>
+        </div>
+
         {/* Tournament Tiers */}
         <div className="mb-8">
           <h3 className="text-2xl font-bold mb-6">Choose Your Tournament</h3>
@@ -322,7 +379,7 @@ export default function Tournament() {
                 <Card key={window.id} className="border-primary/20">
                   <CardHeader>
                     <div className="flex justify-between items-center">
-                      <CardTitle>{tier.toLocaleString()}-Marble Tournament</CardTitle>
+                      <CardTitle>{(window.maxPlayers ?? selectedSize)}-Player · {tier.toLocaleString()}-Marble Tournament</CardTitle>
                       <Badge variant={window.status === "Open" ? "default" : "secondary"}>
                         {window.status}
                       </Badge>
@@ -334,12 +391,12 @@ export default function Tournament() {
                         <p className="text-muted-foreground mb-2">Players Enrolled</p>
                         <div className="flex items-end gap-2">
                           <p className="text-4xl font-bold text-primary">{window.players}</p>
-                          <p className="text-muted-foreground mb-1">/ 10</p>
+                          <p className="text-muted-foreground mb-1">/ {window.maxPlayers ?? selectedSize}</p>
                         </div>
                         <div className="w-full bg-secondary rounded-full h-2 mt-2">
                           <div
                             className="bg-primary h-2 rounded-full transition-all"
-                            style={{ width: `${window.players * 10}%` }}
+                            style={{ width: `${(window.players / (window.maxPlayers ?? selectedSize)) * 100}%` }}
                           />
                         </div>
                       </div>
@@ -351,11 +408,27 @@ export default function Tournament() {
                         <div className="text-right">
                           <p className="text-muted-foreground mb-1 text-sm">Winner Gets</p>
                           <p className="text-lg font-bold text-yellow-400">
-                            {(tier * 10).toLocaleString()} Marbles + {(tier * 10).toLocaleString()} Points
+                            {(tier * (window.maxPlayers ?? selectedSize)).toLocaleString()} Marbles + {(tier * ((window.maxPlayers ?? selectedSize) - 1)).toLocaleString()} Points
                           </p>
                         </div>
                       </div>
-                      {window.status === "Open" && (
+                      {(window.status === "Open" || window.status === "Waiting") && selectedTournamentId === window.id && (
+                        <div className="space-y-2">
+                          <Button className="w-full" size="lg" disabled>
+                            ✅ You&apos;re in — waiting for players...
+                          </Button>
+                          <Button
+                            className="w-full"
+                            variant="outline"
+                            disabled={isJoining}
+                            onClick={() => handleLeaveTournament(window)}
+                            data-testid={`button-leave-tournament-${tier}`}
+                          >
+                            Leave &amp; get {tier.toLocaleString()} marbles back
+                          </Button>
+                        </div>
+                      )}
+                      {window.status === "Open" && selectedTournamentId !== window.id && (
                         <Button
                           className="w-full bg-gradient-to-r from-primary to-[#FFA500] hover:from-primary/80 hover:to-[#FFA500]/80 text-primary-foreground font-bold"
                           size="lg"
@@ -373,7 +446,7 @@ export default function Tournament() {
                           )}
                         </Button>
                       )}
-                      {window.status === "Waiting" && (
+                      {window.status === "Waiting" && selectedTournamentId !== window.id && (
                         <Button className="w-full" size="lg" disabled>
                           Waiting for Players...
                         </Button>
@@ -513,7 +586,7 @@ export default function Tournament() {
             <ul className="space-y-3">
               <li className="flex gap-3">
                 <span className="text-primary font-bold">1.</span>
-                <span>10 players compete in each tournament window</span>
+                <span>Pick a tournament size — 2, 4, 8 or 16 players — and the entry fee you want to play for</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">2.</span>
@@ -525,11 +598,11 @@ export default function Tournament() {
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">4.</span>
-                <span>The tournament winner (beats all 9 opponents) takes the entire prize pool (10× the entry fee in marbles, plus matching bonus points)</span>
+                <span>The tournament winner takes the entire prize pool in marbles, plus bonus points = entry fee × opponents beaten (a 2-player 250 match pays 500 marbles and 250 points)</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">5.</span>
-                <span>When a window reaches 10 players, a new window for that same tier automatically opens</span>
+                <span>When a window fills up, a new one with the same size and entry fee opens. Waiting too long? Leave and get your entry fee back</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-primary font-bold">6.</span>

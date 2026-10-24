@@ -443,7 +443,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Points scale with the tier, same as the marble prize — a 250 tier
     // pays 2,500 points, a 1,500 tier pays 15,000 points. Previously this
     // was a flat 2500 for every tier regardless of stake.
-    const WINNER_POINTS_BONUS = prizePoolMarbles;
+    // New rule: points = entry fee x opponents beaten, i.e. the prize pool
+    // minus the winner's own stake (2 players @250 -> 250 points,
+    // 10 players @250 -> 9 x 250 = 2,250 points).
+    const WINNER_POINTS_BONUS = Math.max(0, prizePoolMarbles - (window?.entryFee || 0));
 
     await storage.adjustWallet(userId, prizePoolMarbles, WINNER_POINTS_BONUS);
     // Winning a tournament is a PvP win too — same as a friend-challenge or
@@ -470,6 +473,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // tier runs its own independent 10-player windows in parallel (a 250
   // window filling up has no effect on the 1000 window, etc).
   const TOURNAMENT_TIERS = [250, 500, 750, 1000, 1500];
+  // Players choose how many people the tournament has. Powers of two keep
+  // the bracket clean (no byes).
+  const TOURNAMENT_SIZES = [2, 4, 8, 16];
 
   app.get("/api/tournament/windows", async (req, res) => {
     try {
@@ -478,7 +484,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // in the database the first time anyone loads the Tournament page,
       // instead of the page showing cards with no real row behind them.
       for (const tier of TOURNAMENT_TIERS) {
-        await storage.getActiveTournamentWindow(tier);
+        for (const size of TOURNAMENT_SIZES) {
+          await storage.getActiveTournamentWindow(tier, size);
+        }
       }
       const dbWindows = await storage.getTournamentWindows();
 
@@ -506,6 +514,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           entryFee: w.entryFee,
           pointPool: w.prizePool,
           winnerReward: w.entryFee * w.maxPlayers, // scales per tier, matches the marble prize pool
+          maxPlayers: w.maxPlayers,
+          // Bonus points = entry fee x opponents beaten (the winner's own
+          // stake does not count as a beaten opponent).
+          winnerPoints: w.entryFee * (w.maxPlayers - 1),
         };
       });
 
@@ -517,7 +529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/tournament/join", async (req, res) => {
     try {
-      const { userId, entryFee } = req.body;
+      const { userId, entryFee, maxPlayers } = req.body;
 
       const user = await storage.getUser(userId);
       if (!user) {
@@ -525,6 +537,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const ENTRY_FEE = TOURNAMENT_TIERS.includes(entryFee) ? entryFee : 250;
+      // Older app screens do not send a size — they keep the legacy 10.
+      const SIZE = TOURNAMENT_SIZES.includes(maxPlayers) ? maxPlayers : 10;
 
       // No eligibility gate anymore — any player can enter any tier they
       // can afford. The only requirement is having enough spendable
@@ -542,11 +556,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // tier. Using getActiveTournamentWindow() instead of a manual find()
       // over getTournamentWindows() — the plain list was coming back empty
       // when no window row existed yet, silently failing to match.
-      const window = await storage.getActiveTournamentWindow(ENTRY_FEE);
+      const window = await storage.getActiveTournamentWindow(ENTRY_FEE, SIZE);
       if (!window) {
         return res.status(404).json({ error: "Tournament window not found. Please refresh and try again." });
       }
 
+      // The same player must never fill two seats of one window (in a
+      // 2-player tournament they would end up playing themselves).
+      const existingParticipants = await storage.getTournamentParticipants(window.id);
+      if (existingParticipants.some((p) => p.playerId === userId)) {
+        return res.status(400).json({
+          error: "You are already in this tournament. Wait for the other players to join.",
+          message: "You are already in this tournament. Wait for the other players to join.",
+        });
+      }
       // Lock the entry stake out of the spendable balance.
       const updatedUser = await storage.adjustWallet(userId, -ENTRY_FEE, 0);
 
@@ -594,6 +617,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Leave a tournament window that has not started yet and get the full
+  // entry fee back. Only possible while the window is still "waiting".
+  app.post("/api/tournament/leave", async (req, res) => {
+    try {
+      const { userId, windowId } = req.body;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const windows = await storage.getTournamentWindows();
+      const window = windows.find((w) => w.id === windowId);
+      if (!window) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      if (window.status !== "waiting") {
+        return res.status(400).json({ error: "This tournament has already started, so the entry fee cannot be refunded." });
+      }
+      const participants = await storage.getTournamentParticipants(window.id);
+      if (!participants.some((p) => p.playerId === userId)) {
+        return res.status(400).json({ error: "You are not in this tournament." });
+      }
+      // Remove the seat first so a double-tap can never refund twice.
+      await storage.removeTournamentParticipant(window.id, userId);
+      await storage.updateTournamentPlayerCount(window.id, Math.max(0, window.playerCount - 1));
+      await storage.addToPrizePool(window.id, -window.entryFee);
+      const updatedUser = await storage.adjustWallet(userId, window.entryFee, 0);
+      await storage.recordTransaction({
+        userId,
+        amount: window.entryFee,
+        type: "tournament_refund",
+        description: `Tournament entry refunded (${window.entryFee} marbles)`,
+        transactionId: null,
+      });
+      res.json({
+        success: true,
+        marbles: updatedUser?.marbles ?? 0,
+        refunded: window.entryFee,
+        message: `You left the tournament. ${window.entryFee} marbles refunded.`,
+      });
+    } catch (error) {
+      console.error("Failed to leave tournament:", error);
+      res.status(500).json({ error: "Failed to leave tournament" });
+    }
+  });
+
   app.post("/api/tournament/winner", async (req, res) => {
     try {
       const { userId, windowId } = req.body;
@@ -608,7 +676,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const prizePoolMarbles = window?.prizePool || 0;
       // Points scale with the tier, same as the marble prize (see the same
       // fix in payoutTournamentWinner above).
-      const WINNER_POINTS_BONUS = prizePoolMarbles;
+      // Same rule as the automatic payout: entry fee x opponents beaten.
+      const WINNER_POINTS_BONUS = Math.max(0, prizePoolMarbles - (window?.entryFee || 0));
 
       // Winner gets the FULL prize pool (accumulated entry fees from every
       // participant) as real marbles, PLUS matching points — both
