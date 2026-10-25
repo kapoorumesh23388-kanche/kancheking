@@ -136,7 +136,16 @@ export default function OnboardingProfile() {
         localStorage.setItem("playerProfileCompleted", "true");
         window.dispatchEvent(new Event("profileUpdated"));
         toast({ title: "Welcome back!", description: `Logged in as ${data.displayName}` });
-        navigate("/");
+        // Existing player who tapped an invite link: no referral bonus
+        // (that is for new accounts), just join the room.
+        const pendingRoom = localStorage.getItem("pendingInviteRoom");
+        localStorage.removeItem("pendingReferralCode");
+        localStorage.removeItem("pendingInviteRoom");
+        if (pendingRoom) {
+          navigate(`/game/friend-join?code=${encodeURIComponent(pendingRoom)}`);
+        } else {
+          navigate("/");
+        }
       }
     } catch (error) {
       toast({ title: "Error", description: error instanceof Error ? error.message : "Invalid OTP", variant: "destructive" });
@@ -173,7 +182,8 @@ export default function OnboardingProfile() {
     try {
       const url = loginMethod === "email" ? "/api/auth/complete-signup" : "/api/auth/mobile/complete-signup";
       const body = loginMethod === "email"
-        ? { email: email.trim().toLowerCase(), displayName: displayName.trim(), gender, dateOfBirth, age }
+        ? { email: email.trim().toLowerCase(), displayName: displayName.trim(), gender, dateOfBirth, age,
+            referralCode: localStorage.getItem("pendingReferralCode") || undefined }
         : { phone: phone.replace(/\D/g, ""), displayName: displayName.trim(), gender, dateOfBirth, age };
       const res = await fetch(url, {
         method: "POST",
@@ -208,7 +218,17 @@ export default function OnboardingProfile() {
 
       window.dispatchEvent(new Event("profileUpdated"));
       window.dispatchEvent(new Event("ageVerified"));
-      navigate("/");
+
+      // Came here from a friend's invite link? Drop them straight into that
+      // room (the referral code was already sent with the signup above).
+      const pendingRoom = localStorage.getItem("pendingInviteRoom");
+      localStorage.removeItem("pendingReferralCode");
+      localStorage.removeItem("pendingInviteRoom");
+      if (pendingRoom) {
+        navigate(`/game/friend-join?code=${encodeURIComponent(pendingRoom)}`);
+      } else {
+        navigate("/");
+      }
     } catch (error) {
       toast({ title: "Error", description: error instanceof Error ? error.message : "Failed", variant: "destructive" });
       setIsLoading(false);

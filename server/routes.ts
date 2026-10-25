@@ -206,35 +206,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/referral/validate", async (req, res) => {
+  // Retired: the old endpoint paid the referrer +50 on EVERY call, so anyone
+  // could farm marbles by repeating it. Referral bonuses are now paid
+  // automatically, exactly once, after the friend's first game (see
+  // rewardReferralIfDue below).
+  app.post("/api/referral/validate", (_req, res) => {
+    res.status(410).json({ error: "Referral bonuses are now automatic after your friend's first game." });
+  });
+
+  // ---------------------------------------------------------------------
+  // Referral rewards (website link -> signup -> first game)
+  // ---------------------------------------------------------------------
+  const REFERRER_BONUS = 50;     // marbles for the player who invited
+  const FRIEND_BONUS = 25;       // marbles for the new player
+  const REFERRAL_MONTHLY_CAP = 20; // rewarded referrals per inviter per month
+
+  // gmail ignores dots and "+tag", so a@gmail.com / a.b+1@gmail.com are
+  // the same inbox. Normalise so people can't refer their own aliases.
+  function normalizeEmail(email: string): string {
+    const [localRaw, domainRaw] = email.toLowerCase().trim().split("@");
+    if (!localRaw || !domainRaw) return email.toLowerCase().trim();
+    if (domainRaw === "gmail.com" || domainRaw === "googlemail.com") {
+      return `${localRaw.split("+")[0].replace(/\./g, "")}@gmail.com`;
+    }
+    return `${localRaw}@${domainRaw}`;
+  }
+
+  // Pays the referral bonus once, the first time a referred player finishes
+  // a game. Safe to call on every game result: it does nothing unless the
+  // player has a pending referral, and the claim step is atomic.
+  async function rewardReferralIfDue(userId: string): Promise<void> {
     try {
-      const { referralCode, userId } = req.body;
-      
-      const referrer = await storage.getUserByReferralCode(referralCode);
-      if (!referrer) {
-        return res.status(404).json({ error: "Invalid referral code" });
-      }
-
       const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
+      const ref = user?.referredBy;
+      if (!user || !ref || ref.startsWith("paid:") || ref.startsWith("capped:")) return;
 
-      const referrerNewMarbles = referrer.marbles + 50;
-      await storage.updateUserMarbles(referrer.id, referrerNewMarbles);
-      await storage.addEarnedMarbles(referrer.id, 50);
-      
+      const referrer = await storage.getUser(ref);
+      if (!referrer || referrer.id === user.id) return;
+
+      const referred = await storage.getReferredUsers(referrer.id);
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const paidThisMonth = referred.filter(
+        (u) => u.referredBy === `paid:${referrer.id}` && u.createdAt && new Date(u.createdAt) >= monthStart,
+      ).length;
+      const capped = paidThisMonth >= REFERRAL_MONTHLY_CAP;
+
+      const claimed = await storage.claimReferralReward(user.id, ref, capped ? `capped:${ref}` : `paid:${ref}`);
+      if (!claimed) return; // another request already paid this referral
+
+      // Normal marbles only. Never earnedMarbles: those feed tournament
+      // eligibility and voucher rewards, which referrals must not unlock.
+      await storage.adjustWallet(user.id, FRIEND_BONUS, 0);
       await storage.recordTransaction({
-        userId: referrer.id,
-        amount: 50,
+        userId: user.id,
+        amount: FRIEND_BONUS,
         type: "referral",
-        description: `Referral bonus from ${user.username}`,
+        description: "Welcome bonus for joining through a friend's invite",
         transactionId: null,
       });
-
-      res.json({ success: true, message: "Referral validated" });
+      if (!capped) {
+        await storage.adjustWallet(referrer.id, REFERRER_BONUS, 0);
+        await storage.recordTransaction({
+          userId: referrer.id,
+          amount: REFERRER_BONUS,
+          type: "referral",
+          description: `Referral bonus: ${user.displayName || "a friend"} played their first game`,
+          transactionId: null,
+        });
+      }
     } catch (error) {
-      res.status(500).json({ error: "Referral validation failed" });
+      console.error("[referral] reward failed:", error);
+    }
+  }
+
+  // Name of the player behind an invite link (shown on the /join page).
+  app.get("/api/referral/inviter/:code", async (req, res) => {
+    try {
+      const inviter = await storage.getUserByReferralCode(req.params.code);
+      if (!inviter) return res.status(404).json({ error: "Invite not found" });
+      res.json({ displayName: inviter.displayName || null });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to look up invite" });
+    }
+  });
+
+  // Invite section on the Profile page.
+  app.get("/api/referral/stats/:userId", async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+      const referralCode = user.referralCode || (await storage.ensureReferralCode(user.id));
+
+      const referred = await storage.getReferredUsers(user.id);
+      const rewardedUsers = referred.filter((u) => u.referredBy === `paid:${user.id}`);
+      const pending = referred.filter((u) => u.referredBy === user.id).length;
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const rewardedThisMonth = rewardedUsers.filter(
+        (u) => u.createdAt && new Date(u.createdAt) >= monthStart,
+      ).length;
+
+      res.json({
+        referralCode,
+        joined: referred.length,
+        rewarded: rewardedUsers.length,
+        pending,
+        marblesEarned: rewardedUsers.length * REFERRER_BONUS,
+        referrerBonus: REFERRER_BONUS,
+        friendBonus: FRIEND_BONUS,
+        monthlyCap: REFERRAL_MONTHLY_CAP,
+        remainingThisMonth: Math.max(0, REFERRAL_MONTHLY_CAP - rewardedThisMonth),
+      });
+    } catch (error) {
+      console.error("Referral stats error:", error);
+      res.status(500).json({ error: "Failed to load referral stats" });
     }
   });
 
@@ -247,6 +335,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
+
+      // A referred friend's first finished game pays out the referral bonus.
+      // Done before the wallet update below so the marbles returned to the
+      // app already include it.
+      await rewardReferralIfDue(userId);
 
       const newGamesPlayed = user.gamesPlayed + 1;
       const newGamesWon = won ? user.gamesWon + 1 : user.gamesWon;
@@ -2461,7 +2554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // a moment where an account exists without a name.
   app.post("/api/auth/complete-signup", async (req, res) => {
     try {
-      const { email, displayName, gender, dateOfBirth } = req.body;
+      const { email, displayName, gender, dateOfBirth, referralCode } = req.body;
       if (!email) {
         return res.status(400).json({ error: "Email required" });
       }
@@ -2524,6 +2617,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           dateOfBirth,
           isAgeVerified,
         });
+      }
+
+      // Invited through a friend's link? Remember who invited them. The
+      // bonus itself is paid later, after their first game (see
+      // rewardReferralIfDue). Never blocks or fails the signup.
+      if (referralCode && typeof referralCode === "string") {
+        try {
+          const referrer = await storage.getUserByReferralCode(referralCode.trim());
+          const sameInbox = referrer?.email && normalizeEmail(referrer.email) === normalizeEmail(emailKey);
+          if (referrer && referrer.id !== newUserId && !sameInbox) {
+            await storage.setReferredBy(newUserId, referrer.id);
+          }
+        } catch (refError) {
+          console.error("[referral] could not attach referral:", refError);
+        }
       }
 
       res.json({

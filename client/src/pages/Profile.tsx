@@ -10,6 +10,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdsPreferenceCard from "@/components/AdsPreferenceCard";
 import AnimatedPlayerAvatar from "@/components/AnimatedPlayerAvatar";
+import InviteFriendsCard from "@/components/InviteFriendsCard";
 
 export default function Profile() {
   const { toast } = useToast();
@@ -389,6 +390,9 @@ export default function Profile() {
                 ))}
               </div>
             )}
+
+            {/* Invite friends + referral stats */}
+            <InviteFriendsCard />
 
             {/* Ads Preference */}
             <AdsPreferenceCard

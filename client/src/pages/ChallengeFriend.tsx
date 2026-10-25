@@ -7,6 +7,9 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { getTotalMarbles } from "@/lib/marbleStorage";
+import { useQuery } from "@tanstack/react-query";
+import InviteShare from "@/components/InviteShare";
+import { buildInviteUrl } from "@/lib/invite";
 
 export default function ChallengeFriend() {
   const [location, setLocation] = useLocation();
@@ -21,6 +24,15 @@ export default function ChallengeFriend() {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const hasNavigatedRef = useRef(false);
+  const autoJoinedRef = useRef(false);
+
+  // The sender's referral code goes into the share link so friends who sign
+  // up through it are counted as referred by this player.
+  const accountUserId = localStorage.getItem("userId");
+  const { data: referralInfo } = useQuery<{ referralCode: string }>({
+    queryKey: ["/api/referral/stats", accountUserId],
+    enabled: !!accountUserId,
+  });
   
   const playerId = localStorage.getItem("playerId") || `player_${Date.now()}`;
   const playerName = localStorage.getItem("playerDisplayName") || `Player_${playerId.slice(-6)}`;
@@ -135,6 +147,18 @@ export default function ChallengeFriend() {
     };
   }, [roomCode, waitingForOpponent, playerId, playerName, playerMarbles, profileImage, setLocation, toast]);
 
+  // Opened from an invite link (/game/friend-join?code=ROOM...): join that
+  // room automatically instead of making the player type the code.
+  useEffect(() => {
+    if (autoJoinedRef.current) return;
+    const code = new URLSearchParams(window.location.search).get("code");
+    if (!code || !localStorage.getItem("userId")) return;
+    autoJoinedRef.current = true;
+    setJoinCode(code.toUpperCase());
+    joinRoom(code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const createRoom = async () => {
     setIsCreating(true);
     try {
@@ -168,7 +192,7 @@ export default function ChallengeFriend() {
   };
 
   const shareLink = async () => {
-    const url = `${window.location.origin}/game/friend-join?code=${roomCode}`;
+    const url = buildInviteUrl(referralInfo?.referralCode, roomCode);
     if (navigator.share) {
       await navigator.share({
         title: "Kali Jotta Challenge",
@@ -184,10 +208,12 @@ export default function ChallengeFriend() {
     }
   };
 
-  const joinRoom = async () => {
-    if (!joinCode.trim()) return;
+  const joinRoom = async (codeOverride?: string) => {
+    // onClick passes an event object, so only accept a real string override.
+    const raw = typeof codeOverride === "string" ? codeOverride : joinCode;
+    if (!raw.trim()) return;
     setIsJoining(true);
-    const code = joinCode.toUpperCase();
+    const code = raw.trim().toUpperCase();
     try {
       const res = await apiRequest("POST", "/api/game-room/join", { 
         roomCode: code, 
@@ -274,9 +300,10 @@ export default function ChallengeFriend() {
                 <p className="text-xs sm:text-sm text-primary/80 mb-2 font-semibold">Share Link</p>
                 <div className="bg-black/50 rounded p-2 sm:p-3 mb-3 border border-primary/20">
                   <p className="text-[10px] sm:text-xs text-muted-foreground break-all font-mono" data-testid="text-share-link">
-                    {`${window.location.origin}/game/friend-join?code=${roomCode}`}
+                    {buildInviteUrl(referralInfo?.referralCode, roomCode)}
                   </p>
                 </div>
+                <InviteShare referralCode={referralInfo?.referralCode} roomCode={roomCode} showLink={false} />
               </div>
 
               {/* Action Buttons */}
@@ -387,7 +414,7 @@ export default function ChallengeFriend() {
               />
               <Button
                 className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 font-bold text-white py-6 text-lg"
-                onClick={joinRoom}
+                onClick={() => joinRoom()}
                 disabled={isJoining || !joinCode.trim()}
                 data-testid="button-join-room"
               >

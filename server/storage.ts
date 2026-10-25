@@ -1,12 +1,16 @@
 import { type User, type InsertUser, type CatalogItem, type MarbleTransaction, type GamePoint, type TournamentWindow, type TournamentParticipant, type TournamentMatch, type GameRoom, type FeedbackSubmission, type AdminUser, type SpinReward, type AdClaim, type BlogPost, type BlogReaction, type VoucherClaim, catalogItems, users as usersTable, spinRewards as spinRewardsTable, adClaims as adClaimsTable, blogPosts as blogPostsTable, blogReactions as blogReactionsTable, tournamentWindows as tournamentWindowsTable, tournamentParticipants as tournamentParticipantsTable, tournamentMatches as tournamentMatchesTable, adminUsers as adminUsersTable, voucherClaims as voucherClaimsTable, appSettings as appSettingsTable } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, and, desc, lt } from "drizzle-orm";
+import { eq, and, or, desc, lt } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByReferralCode(code: string): Promise<User | undefined>;
+  setReferredBy(userId: string, referredBy: string | null): Promise<void>;
+  claimReferralReward(userId: string, from: string, to: string): Promise<boolean>;
+  getReferredUsers(referrerId: string): Promise<User[]>;
+  ensureReferralCode(userId: string): Promise<string | undefined>;
   getAllUsers(): Promise<User[]>;
   createUser(user: InsertUser, referralCode?: string, customId?: string): Promise<User>;
   updateUserMarbles(userId: string, marbles: number): Promise<User | undefined>;
@@ -182,9 +186,60 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByReferralCode(code: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
+    const cached = Array.from(this.users.values()).find(
       (user) => user.referralCode === code,
     );
+    if (cached) return cached;
+    // The in-memory cache is empty after a server restart, so fall back to
+    // the database — otherwise a valid referral link would suddenly stop
+    // working until that referrer logged in again.
+    try {
+      const [dbUser] = await db.select().from(usersTable).where(eq(usersTable.referralCode, code));
+      if (dbUser) this.users.set(dbUser.id, dbUser);
+      return dbUser;
+    } catch {
+      return undefined;
+    }
+  }
+
+  // users.referred_by holds the referrer's user id while the bonus is
+  // pending, "paid:<id>" once both sides were rewarded, and "capped:<id>"
+  // when the referrer had hit the monthly limit (the friend is still
+  // rewarded). No extra database column is needed.
+  async setReferredBy(userId: string, referredBy: string | null): Promise<void> {
+    const [updated] = await db.update(usersTable).set({ referredBy }).where(eq(usersTable.id, userId)).returning();
+    if (updated) this.users.set(userId, updated);
+  }
+
+  // Atomic compare-and-set: succeeds for exactly ONE caller, so parallel
+  // requests can never pay the same referral twice.
+  async claimReferralReward(userId: string, from: string, to: string): Promise<boolean> {
+    const [row] = await db.update(usersTable)
+      .set({ referredBy: to })
+      .where(and(eq(usersTable.id, userId), eq(usersTable.referredBy, from)))
+      .returning();
+    if (row) this.users.set(userId, row);
+    return !!row;
+  }
+
+  async getReferredUsers(referrerId: string): Promise<User[]> {
+    return await db.select().from(usersTable).where(
+      or(
+        eq(usersTable.referredBy, referrerId),
+        eq(usersTable.referredBy, `paid:${referrerId}`),
+        eq(usersTable.referredBy, `capped:${referrerId}`),
+      ),
+    );
+  }
+
+  async ensureReferralCode(userId: string): Promise<string | undefined> {
+    const user = await this.getUser(userId);
+    if (!user) return undefined;
+    if (user.referralCode) return user.referralCode;
+    const code = `REF${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+    const [updated] = await db.update(usersTable).set({ referralCode: code }).where(eq(usersTable.id, userId)).returning();
+    if (updated) this.users.set(userId, updated);
+    return updated?.referralCode ?? undefined;
   }
 
   async getAllUsers(): Promise<User[]> {

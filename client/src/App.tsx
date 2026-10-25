@@ -33,6 +33,7 @@ import BlogPage from "@/pages/BlogPage";
 import BlogPost from "@/pages/BlogPost";
 import NotFound from "@/pages/not-found";
 import SplashScreen from "@/components/SplashScreen";
+import JoinInvite from "@/pages/JoinInvite";
 import { initAdMob, preloadInterstitial } from "@/lib/admob";
 
 // Paths that must be reachable WITHOUT the email-OTP onboarding wall.
@@ -46,7 +47,7 @@ import { initAdMob, preloadInterstitial } from "@/lib/admob";
 // "/" is included because it's the page most likely to be crawled first —
 // without it, every anonymous visit (crawler or a genuinely new player)
 // was replaced by the bare signup wall instead of the actual homepage.
-const PUBLIC_PATHS = ["/", "/about", "/blog", "/terms", "/privacy"];
+const PUBLIC_PATHS = ["/", "/about", "/blog", "/terms", "/privacy", "/join"];
 
 function isPublicPath(path: string): boolean {
   // exact match ("/blog") or nested match ("/blog/some-post-id")
@@ -65,6 +66,7 @@ function Router({ needsOnboarding }: { needsOnboarding: boolean }) {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/onboarding" component={OnboardingProfile} />
+      <Route path="/join" component={JoinInvite} />
       <Route path="/kanchey-king" component={KancheyKing} />
       <Route path="/modes" component={ModeSelection} />
       <Route path="/game-modes" component={GameModes} />
