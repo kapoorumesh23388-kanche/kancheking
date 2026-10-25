@@ -29,7 +29,7 @@ export default function PrivacyPolicy() {
             ← Back to Home
           </Button>
           <h1 className="text-4xl font-bold text-primary mb-2">Privacy Policy</h1>
-          <p className="text-muted-foreground">Last updated: July 2026</p>
+          <p className="text-muted-foreground">Last updated: October 2026</p>
         </div>
 
         <Card className="bg-gradient-to-b from-white/10 to-white/5 border-2 border-primary/40 shadow-2xl">
@@ -62,6 +62,8 @@ export default function PrivacyPolicy() {
                     <li>Display name, gender selection, and date of birth (used only to verify you meet our minimum age and personalize your avatar)</li>
                     <li>A profile picture, if you choose to upload one</li>
                     <li>Anything you type into feedback, support, or in-game chat messages</li>
+                    <li><strong>Voice chat</strong> — during a multiplayer match, if you allow microphone access, your voice is sent live to your opponent. We do not record or store voice conversations.</li>
+                    <li>If you join through a friend's invite link, we remember who invited you, so that both of you can receive bonus marbles</li>
                   </ul>
                 </div>
                 <div>
@@ -80,7 +82,7 @@ export default function PrivacyPolicy() {
                   <ul className="list-disc list-inside mt-2 space-y-2 ml-4">
                     <li>We never ask for or store any payment details — there's nothing to buy in Kanche King</li>
                     <li>We don't track your physical location</li>
-                    <li>We don't build advertising profiles based on your interests or browsing elsewhere</li>
+                    <li>We ourselves don't build advertising profiles based on your interests or browsing elsewhere. The ads in the Android app are served by Google AdMob, which works under its own rules — see the Advertising section below</li>
                   </ul>
                 </div>
               </div>
@@ -97,7 +99,7 @@ export default function PrivacyPolicy() {
                 <li>To notice when something's broken and fix it</li>
               </ul>
               <p className="mt-4 leading-relaxed">
-                That's the whole list. We're not in the business of selling data or building ad profiles — Kanche King makes no money from what you tell us, so there's no incentive for us to do anything with it beyond running the game well.
+                That's the whole list. We never sell your personal information. Kanche King is free to play and earns its income from advertising shown through Google AdMob (see below) — not from selling what you tell us.
               </p>
             </section>
 
@@ -115,13 +117,33 @@ export default function PrivacyPolicy() {
             </section>
 
             <section>
+              <h2 className="text-2xl font-bold text-primary mb-4">Advertising (Google AdMob)</h2>
+              <p className="leading-relaxed">
+                The Kanche King Android app shows ads provided by Google AdMob: a banner on the mode selection screen, a full-screen ad now and then between games, and optional rewarded videos (for example, to earn bonus marbles). Players logged in on the website may see Google AdSense ads.
+              </p>
+              <ul className="list-disc list-inside mt-2 space-y-2 ml-4">
+                <li>To show and measure ads, Google may collect and use your device's <strong>Advertising ID</strong>, IP address, and basic device and app-usage information.</li>
+                <li>Depending on your region and settings, ads may be personalized. Where the law requires it (for example in the European Economic Area and the UK), we ask for your consent first.</li>
+                <li>You can reset your Advertising ID or opt out of ad personalization any time in your Android phone's <strong>Settings → Google → Ads</strong> (or Settings → Privacy → Ads).</li>
+                <li>We ask AdMob to show only ads suitable for a general audience, and Kanche King is for adults aged 18 and above.</li>
+              </ul>
+              <p className="leading-relaxed mt-3">
+                To learn how Google uses data from apps that use its services, see{" "}
+                <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer" className="text-primary underline">policies.google.com/technologies/partner-sites</a>{" "}
+                and{" "}
+                <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline">Google's Privacy Policy</a>.
+              </p>
+            </section>
+
+            <section>
               <h2 className="text-2xl font-bold text-primary mb-4">Who We Share Information With</h2>
               <p className="leading-relaxed mb-4">
                 We don't sell or rent your information to anyone. A short list of outside services helps us actually run the app, and they only see what's strictly needed to do their job:
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4">
                 <li><strong>Resend</strong> — delivers our login and redemption OTP emails</li>
-                <li><strong>Twilio</strong> — used only for the admin panel's login, not for regular players</li>
+                <li><strong>Twilio</strong> — provides the relay servers (TURN) that connect voice chat between players on different networks, and is also used for the admin panel's login. Voice is not recorded.</li>
+                <li><strong>Google (AdMob and AdSense)</strong> — shows ads and measures how they perform, as described in the Advertising section above</li>
                 <li>Our hosting and database providers, who store the app and its data securely</li>
                 <li>Law enforcement or government bodies, but only if we're legally required to respond to a valid request</li>
               </ul>
@@ -160,7 +182,7 @@ export default function PrivacyPolicy() {
               <div className="space-y-2">
                 <p><strong>Website:</strong> www.kancheking.com</p>
                 <p className="text-sm text-muted-foreground mt-4">
-                  Last updated July 2026.
+                  Last updated October 2026.
                 </p>
               </div>
             </section>

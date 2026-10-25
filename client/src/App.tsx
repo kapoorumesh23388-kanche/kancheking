@@ -35,6 +35,7 @@ import NotFound from "@/pages/not-found";
 import SplashScreen from "@/components/SplashScreen";
 import JoinInvite from "@/pages/JoinInvite";
 import { initAdMob, preloadInterstitial } from "@/lib/admob";
+import { initAppLinks } from "@/lib/appLinks";
 
 // Paths that must be reachable WITHOUT the email-OTP onboarding wall.
 // Google's AdSense reviewer/crawler visits these as a logged-out visitor —
@@ -104,7 +105,17 @@ function AppContent({ needsOnboarding }: { needsOnboarding: boolean }) {
       if (ok) preloadInterstitial();
     });
   }, []);
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
+
+  // Invite links opened in the installed Android app (App Links).
+  useEffect(() => {
+    let stop: () => void = () => {};
+    initAppLinks(navigate).then((remove) => {
+      stop = remove;
+    });
+    return () => stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Show the header even for logged-out visitors, as long as they're on
   // a public path — otherwise a crawler landing on /blog sees a bare page.

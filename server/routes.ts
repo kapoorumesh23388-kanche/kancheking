@@ -281,6 +281,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Android App Links: Google checks this file to confirm that the Kanche
+  // King app is allowed to open kancheking.com/join links. The fingerprints
+  // are the SHA-256 values from Play Console -> App integrity (App signing
+  // key AND upload key, comma separated). They can also be set without a
+  // code change through the ANDROID_CERT_SHA256 environment variable.
+  const ANDROID_CERT_SHA256 = (process.env.ANDROID_CERT_SHA256 || "REPLACE_WITH_PLAY_APP_SIGNING_SHA256")
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+  app.get("/.well-known/assetlinks.json", (_req, res) => {
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.json([
+      {
+        relation: ["delegate_permission/common.handle_all_urls"],
+        target: {
+          namespace: "android_app",
+          package_name: "com.kancheking.app",
+          sha256_cert_fingerprints: ANDROID_CERT_SHA256,
+        },
+      },
+    ]);
+  });
+
   // Name of the player behind an invite link (shown on the /join page).
   app.get("/api/referral/inviter/:code", async (req, res) => {
     try {
