@@ -9,18 +9,18 @@
 import { Capacitor } from "@capacitor/core";
 
 // ---------------------------------------------------------------------------
-// 1) SET THESE BEFORE RELEASE
+// 1) AD SETTINGS
 // ---------------------------------------------------------------------------
-// Keep true while developing. Google's official TEST ad units are used, so
-// you can click ads freely without risking an account ban.
-// Before uploading the Play Store build: set to false AND paste your real
-// ad unit IDs below (AdMob console -> Apps -> Kanche King -> Ad units).
-export const USE_TEST_ADS = true;
+// Master switch. Leave false for real ads. Set to true to force Google's
+// TEST ads everywhere (handy while you test on your own phone, so you never
+// risk clicking a real ad).
+export const USE_TEST_ADS = false;
 
+// Real Kanche King ad units (AdMob console -> Apps -> Kancheking -> Ad units).
 const REAL_AD_UNITS = {
-  banner: "ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX",
-  interstitial: "ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX",
-  rewarded: "ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX",
+  banner: "ca-app-pub-1911964390481789/5323520921",
+  interstitial: "ca-app-pub-1911964390481789/4817796452",
+  rewarded: "ca-app-pub-1911964390481789/6186096321",
 };
 
 // Google's public sample IDs (safe for testing, never earn money).
@@ -30,7 +30,22 @@ const TEST_AD_UNITS = {
   rewarded: "ca-app-pub-3940256099942544/5224354917",
 };
 
-const AD_UNITS = USE_TEST_ADS ? TEST_AD_UNITS : REAL_AD_UNITS;
+// Old builds (the closed-testing APK) still contain Google's TEST App ID, so
+// real ad units must NOT be requested from them. The new production build
+// ships with the @capacitor/app plugin and the real App ID together, so the
+// presence of that plugin tells us which build we are running in.
+function testMode(): boolean {
+  if (USE_TEST_ADS) return true;
+  try {
+    return !Capacitor.isPluginAvailable("App");
+  } catch {
+    return true;
+  }
+}
+
+function adUnits() {
+  return testMode() ? TEST_AD_UNITS : REAL_AD_UNITS;
+}
 
 // Interstitial pacing: never more than one every 3 finished games, and never
 // closer than 2 minutes apart. Keeps the game pleasant and policy-safe.
@@ -69,7 +84,7 @@ export function initAdMob(): Promise<boolean> {
       const { AdMob, MaxAdContentRating, AdmobConsentStatus } = await loadModule();
 
       await AdMob.initialize({
-        initializeForTesting: USE_TEST_ADS,
+        initializeForTesting: testMode(),
         // The game is family-friendly: only show ads suitable for general /
         // parental-guidance audiences.
         maxAdContentRating: MaxAdContentRating.ParentalGuidance,
@@ -110,11 +125,11 @@ export async function showBanner(): Promise<void> {
   try {
     const { AdMob, BannerAdSize, BannerAdPosition } = await loadModule();
     await AdMob.showBanner({
-      adId: AD_UNITS.banner,
+      adId: adUnits().banner,
       adSize: BannerAdSize.ADAPTIVE_BANNER,
       position: BannerAdPosition.BOTTOM_CENTER,
       margin: 0,
-      isTesting: USE_TEST_ADS,
+      isTesting: testMode(),
     });
     bannerVisible = true;
   } catch (e) {
@@ -161,7 +176,7 @@ async function prepareInterstitial(): Promise<void> {
   if (interstitialReady || !(await initAdMob())) return;
   try {
     const { AdMob } = await loadModule();
-    await AdMob.prepareInterstitial({ adId: AD_UNITS.interstitial, isTesting: USE_TEST_ADS });
+    await AdMob.prepareInterstitial({ adId: adUnits().interstitial, isTesting: testMode() });
     interstitialReady = true;
   } catch (e) {
     console.log("[AdMob] prepareInterstitial failed:", e);
@@ -230,7 +245,7 @@ export async function showRewardedAd(): Promise<RewardedResult> {
       }),
     );
 
-    await AdMob.prepareRewardVideoAd({ adId: AD_UNITS.rewarded, isTesting: USE_TEST_ADS });
+    await AdMob.prepareRewardVideoAd({ adId: adUnits().rewarded, isTesting: testMode() });
 
     // showRewardVideoAd resolves when the ad is finished / dismissed.
     await AdMob.showRewardVideoAd();
